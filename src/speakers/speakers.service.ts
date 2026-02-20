@@ -4,7 +4,8 @@ import { UpdateSpeakerDto } from './dto/update-speaker.dto';
 
 @Injectable()
 export class SpeakersService {
-  create(createSpeakerDto: CreateSpeakerDto) {
+  create(_createSpeakerDto: CreateSpeakerDto) {
+    void _createSpeakerDto;
     return 'This action adds a new speaker';
   }
 
@@ -16,7 +17,8 @@ export class SpeakersService {
     return `This action returns a #${id} speaker`;
   }
 
-  update(id: number, updateSpeakerDto: UpdateSpeakerDto) {
+  update(id: number, _updateSpeakerDto: UpdateSpeakerDto) {
+    void _updateSpeakerDto;
     return `This action updates a #${id} speaker`;
   }
 
