@@ -16,6 +16,8 @@ export class OffsetPaginationDto {
   limit?: number = 10;
 
   get skip(): number {
-    return (this.page - 1) * this.limit;
+    const page = this.page ?? 1;
+    const limit = this.limit ?? 10;
+    return (page - 1) * limit;
   }
 }
