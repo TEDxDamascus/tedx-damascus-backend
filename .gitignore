@@ -53,3 +53,4 @@ dist/
 
 # Cache
 .eslintcache
+/plans
