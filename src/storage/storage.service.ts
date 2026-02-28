@@ -1,14 +1,23 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigType } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
-import { CONFIG_KEYS } from '../common/config';
+import { Model } from 'mongoose';
+import { appConfig } from '../common/config/app.config';
+import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
+import { PaginatedResult } from '../common/pagination/interfaces/paginated-result.interface';
+import { buildPaginatedResult } from '../common/pagination/utils/pagination.util';
 import { UploadImageResultDto } from './dto/upload-image-result.dto';
+import { Media, MediaDocument } from './entities/media.entity';
+import { getBasename, getDisplayName } from './utils/filename.util';
 
 @Injectable()
 export class StorageService {
@@ -16,12 +25,15 @@ export class StorageService {
   private readonly supabase: SupabaseClient;
   private readonly bucketName: string;
 
-  constructor(private readonly configService: ConfigService) {
-    const url = this.configService.get<string>(CONFIG_KEYS.SUPABASE_PROJECT_URL);
-    const key = this.configService.get<string>(CONFIG_KEYS.SUPABASE_ANON_KEY);
-    const bucket = this.configService.get<string>(
-      CONFIG_KEYS.SUPABASE_STORAGE_NAME,
-    );
+  constructor(
+    @Inject(appConfig.KEY)
+    private readonly config: ConfigType<typeof appConfig>,
+    @InjectModel(Media.name)
+    private readonly mediaModel: Model<MediaDocument>,
+  ) {
+    const url = this.config.supabaseProjectUrl;
+    const key = this.config.supabaseAnonKey;
+    const bucket = this.config.supabaseStorageName;
 
     if (!url || !key || !bucket) {
       throw new Error(
@@ -76,11 +88,82 @@ export class StorageService {
     const bytes = file.size ?? 0;
     const sizeInMb = Math.round((bytes / (1024 * 1024)) * 100) / 100;
 
-    return {
+    const mime = file.mimetype || 'application/octet-stream';
+    const basename = getBasename(file.originalname || safeName);
+
+    const media = await this.mediaModel.create({
+      basename,
       url: urlData.publicUrl,
-      originalName: file.originalname || 'unknown',
-      mimetype: file.mimetype || 'application/octet-stream',
+      format: mime,
+      size: bytes,
+      is_active: true,
+    });
+
+    this.logger.log(
+      `Media persisted id=${media.id} basename=${media.basename} size=${media.size}B format=${media.format}`,
+    );
+
+    return {
+      id: media.id,
+      basename: media.basename,
+      name: getDisplayName(media.basename, media.format),
+      url: media.url,
+      createdAt: media.createdAt,
+      format: media.format,
+      size: media.size,
       sizeInMb,
     };
+  }
+
+  async updateMediaBasename(id: string, basename: string): Promise<Media> {
+    const media = await this.mediaModel
+      .findOneAndUpdate(
+        { _id: id, is_active: true },
+        { basename },
+        { new: true },
+      )
+      .exec();
+
+    if (!media) {
+      throw new NotFoundException('Media not found');
+    }
+
+    return media;
+  }
+
+  async deleteMedia(id: string): Promise<void> {
+    const result = await this.mediaModel
+      .findOneAndUpdate(
+        { _id: id, is_active: true },
+        { is_active: false },
+      )
+      .exec();
+
+    if (!result) {
+      throw new NotFoundException('Media not found');
+    }
+
+    this.logger.log(`Media soft-deleted id=${id}`);
+  }
+
+  async listMedia(
+    pagination: OffsetPaginationDto,
+  ): Promise<PaginatedResult<Media>> {
+    const page = pagination.page ?? 1;
+    const limit = pagination.limit ?? 10;
+
+    const filter = { is_active: true };
+
+    const [items, total] = await Promise.all([
+      this.mediaModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(limit)
+        .exec(),
+      this.mediaModel.countDocuments(filter).exec(),
+    ]);
+
+    return buildPaginatedResult(items, total, page, limit);
   }
 }
