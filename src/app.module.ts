@@ -12,8 +12,10 @@ import { BlogsModule } from './blogs/blogs.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      
     }),
-    MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/tedx-damascus'),
+    // process.env.MONGODB_URI || i removed it coz i dont wanna connect to the Atlas right now
+    MongooseModule.forRoot('mongodb://localhost:27017/tedx-damascus'),
     AuthModule,
     EventsModule,
     SpeakersModule,
