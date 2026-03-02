@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { apiReference } from '@scalar/nestjs-api-reference';
+import { setupDocs } from './doc/scala.doc';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -12,6 +15,7 @@ async function bootstrap() {
       stopAtFirstError: true,
     }),
   );
+  setupDocs(app); // scala docs
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
