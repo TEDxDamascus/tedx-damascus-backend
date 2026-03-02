@@ -11,6 +11,7 @@ import {
 import { Type } from 'class-transformer';
 import { EventType } from '../enums/event-type.enum';
 import { EventStatus } from '../enums/event-status.enum';
+
 export class CreateEventDto {
   @IsDefined()
   @IsString()
