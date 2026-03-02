@@ -17,7 +17,6 @@ export function setupDocs(app: INestApplication) {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Enter JWT access token',
       },
       'bearer',
     )
@@ -31,13 +30,14 @@ export function setupDocs(app: INestApplication) {
   app.use(
     '/docs',
     apiReference({
+      hideSearch: false,
       content: document,
       title: 'TEDx Damascus API',
       pageTitle: 'TEDx Damascus API Documentation',
       theme: 'default',
       showDeveloperTools: 'never',
       defaultOpenFirstTag: false,
-      defaultOpenAllTags: true,
+      defaultOpenAllTags: false,
       hideModels: true,
       hiddenClients: true,
       hideClientButton: true,
@@ -50,6 +50,7 @@ export function setupDocs(app: INestApplication) {
       orderSchemaPropertiesBy: 'preserve',
       agent: {
         disabled: false,
+        hideAddApi: true,
       },
       authentication: {
         preferredSecurityScheme: 'bearer',
