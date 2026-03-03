@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
@@ -13,22 +22,25 @@ export class BlogsController {
   }
 
   @Get()
-  findAll() {
-    return this.blogsService.findAll();
+  findAll(@Query() query: any) {
+    return this.blogsService.findAll(query);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.blogsService.findOne(+id);
+    return this.blogsService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBlogDto: UpdateBlogDto) {
-    return this.blogsService.update(+id, updateBlogDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateBlogDto: UpdateBlogDto,
+  ) {
+    return this.blogsService.update(id, updateBlogDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.blogsService.remove(+id);
+    return this.blogsService.remove(id);
   }
 }
