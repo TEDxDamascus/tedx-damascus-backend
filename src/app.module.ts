@@ -9,6 +9,7 @@ import { EventsModule } from './events/events.module';
 import { SpeakersModule } from './speakers/speakers.module';
 import { BlogsModule } from './blogs/blogs.module';
 import { StorageModule } from './storage/storage.module';
+import { UsersModule } from './users/users.module';
 import { appConfig } from './common/config/app.config';
 
 @Module({
@@ -25,6 +26,7 @@ import { appConfig } from './common/config/app.config';
       }),
     }),
     AuthModule,
+    UsersModule,
     EventsModule,
     SpeakersModule,
     BlogsModule,

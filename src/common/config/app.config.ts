@@ -6,6 +6,8 @@ const envSchema = Joi.object({
   SUPABASE_PROJECT_URL: Joi.string().uri().required(),
   SUPABASE_ANON_KEY: Joi.string().min(1).required(),
   SUPABASE_STORAGE_NAME: Joi.string().min(1).required(),
+  JWT_SECRET: Joi.string().min(8).default('dev-secret-key'),
+  JWT_EXPIRES_IN: Joi.string().min(2).default('7d'),
   PORT: Joi.number().port().default(3000),
 })
   .prefs({ abortEarly: false, convert: true })
@@ -24,6 +26,8 @@ function validateEnv(config: NodeJS.ProcessEnv) {
     SUPABASE_PROJECT_URL: string;
     SUPABASE_ANON_KEY: string;
     SUPABASE_STORAGE_NAME: string;
+    JWT_SECRET: string;
+    JWT_EXPIRES_IN: string;
     PORT: number;
   };
 }
@@ -36,7 +40,8 @@ export const appConfig = registerAs('app', () => {
     supabaseProjectUrl: env.SUPABASE_PROJECT_URL,
     supabaseAnonKey: env.SUPABASE_ANON_KEY,
     supabaseStorageName: env.SUPABASE_STORAGE_NAME,
+    jwtSecret: env.JWT_SECRET,
+    jwtExpiresIn: env.JWT_EXPIRES_IN,
     port: env.PORT,
   };
 });
-
