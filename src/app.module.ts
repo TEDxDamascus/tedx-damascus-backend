@@ -10,6 +10,7 @@ import { SpeakersModule } from './speakers/speakers.module';
 import { BlogsModule } from './blogs/blogs.module';
 import { StorageModule } from './storage/storage.module';
 import { appConfig } from './common/config/app.config';
+import { FormsModule } from './forms/forms.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { appConfig } from './common/config/app.config';
     SpeakersModule,
     BlogsModule,
     StorageModule,
+    FormsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
