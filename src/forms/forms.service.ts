@@ -25,6 +25,16 @@ import { buildPaginatedResult } from '../common/pagination/utils/pagination.util
 import { PaginatedResult } from '../common/pagination/interfaces/paginated-result.interface';
 import { FormQuestion } from './entities/form-question.schema';
 import { QuestionOption } from './entities/question-option.schema';
+import {
+  FormSubmissionResponse,
+  FormTemplateSchemaResponse,
+  FormTemplateSummaryResponse,
+} from './interfaces/form-responses.interface';
+import {
+  mapFormSubmission,
+  mapFormTemplateToSchema,
+  mapFormTemplateToSummary,
+} from './utils/form-mappers.util';
 
 @Injectable()
 export class FormsService {
@@ -35,16 +45,18 @@ export class FormsService {
     private formSubmissionModel: Model<FormSubmissionDocument>,
   ) {}
 
-  async create(dto: CreateFormTemplateDto): Promise<FormTemplateDocument> {
+  async create(dto: CreateFormTemplateDto): Promise<FormTemplateSummaryResponse> {
     const created = new this.formTemplateModel({
       ...dto,
       status: 'Draft' as FormStatus,
     });
-    return created.save();
+    const saved = await created.save();
+    return mapFormTemplateToSummary(saved);
   }
 
-  async findAll(): Promise<FormTemplateDocument[]> {
-    return this.formTemplateModel.find().sort({ createdAt: -1 }).exec();
+  async findAll(): Promise<FormTemplateSummaryResponse[]> {
+    const docs = await this.formTemplateModel.find().sort({ createdAt: -1 }).exec();
+    return docs.map((d) => mapFormTemplateToSummary(d));
   }
 
   async findOne(id: string): Promise<FormTemplateDocument> {
@@ -61,11 +73,12 @@ export class FormsService {
   async update(
     id: string,
     dto: UpdateFormTemplateDto,
-  ): Promise<FormTemplateDocument> {
+  ): Promise<FormTemplateSummaryResponse> {
     const template = await this.findOne(id);
     this.ensureDraft(template);
     Object.assign(template, dto);
-    return template.save();
+    const saved = await template.save();
+    return mapFormTemplateToSummary(saved);
   }
 
   async remove(id: string): Promise<void> {
@@ -77,7 +90,7 @@ export class FormsService {
   async addQuestion(
     formId: string,
     dto: CreateQuestionDto,
-  ): Promise<FormTemplateDocument> {
+  ): Promise<FormTemplateSchemaResponse> {
     const template = await this.findOne(formId);
     this.ensureDraft(template);
     const question: Partial<FormQuestion> = {
@@ -93,14 +106,15 @@ export class FormsService {
       } as QuestionOption)),
     };
     template.questions.push(question as FormQuestion);
-    return template.save();
+    const saved = await template.save();
+    return mapFormTemplateToSchema(saved);
   }
 
   async updateQuestion(
     formId: string,
     questionId: string,
     dto: Partial<CreateQuestionDto>,
-  ): Promise<FormTemplateDocument> {
+  ): Promise<FormTemplateSchemaResponse> {
     const template = await this.findOne(formId);
     this.ensureDraft(template);
     const idx = template.questions.findIndex(
@@ -121,13 +135,14 @@ export class FormsService {
         label: o.label,
       })) as unknown as QuestionOption[];
     }
-    return template.save();
+    const saved = await template.save();
+    return mapFormTemplateToSchema(saved);
   }
 
   async removeQuestion(
     formId: string,
     questionId: string,
-  ): Promise<FormTemplateDocument> {
+  ): Promise<FormTemplateSchemaResponse> {
     const template = await this.findOne(formId);
     this.ensureDraft(template);
     const idx = template.questions.findIndex(
@@ -137,48 +152,53 @@ export class FormsService {
       throw new NotFoundException('Question not found');
     }
     template.questions.splice(idx, 1);
-    return template.save();
+    const saved = await template.save();
+    return mapFormTemplateToSchema(saved);
   }
 
-  async publish(id: string): Promise<FormTemplateDocument> {
+  async publish(id: string): Promise<FormTemplateSummaryResponse> {
     const template = await this.findOne(id);
     this.ensureDraft(template);
     template.status = 'Published' as FormStatus;
     template.publishedAt = new Date();
-    return template.save();
+    const saved = await template.save();
+    return mapFormTemplateToSummary(saved);
   }
 
-  async unpublish(id: string): Promise<FormTemplateDocument> {
+  async unpublish(id: string): Promise<FormTemplateSummaryResponse> {
     const template = await this.findOne(id);
     if (template.status !== 'Published') {
       throw new BadRequestException('Form is not published');
     }
     template.status = 'Draft' as FormStatus;
     template.publishedAt = undefined;
-    return template.save();
+    const saved = await template.save();
+    return mapFormTemplateToSummary(saved);
   }
 
-  async getFormSchema(formId: string): Promise<object> {
+  async getFormSchema(formId: string): Promise<FormTemplateSchemaResponse> {
     const template = await this.findOne(formId);
     if (template.status !== 'Published') {
       throw new BadRequestException('Form is not published');
     }
-    return this.toFormSchema(template);
+    return mapFormTemplateToSchema(template);
   }
 
-  async listAvailableForms(userRole: TargetRole): Promise<object[]> {
+  async listAvailableForms(
+    userRole: TargetRole,
+  ): Promise<FormTemplateSummaryResponse[]> {
     const templates = await this.formTemplateModel
       .find({ status: 'Published', targetRole: userRole })
       .sort({ publishedAt: -1 })
       .exec();
-    return templates.map((t) => this.toFormSchemaSummary(t));
+    return templates.map((t) => mapFormTemplateToSummary(t));
   }
 
   async submitForm(
     formId: string,
     userId: string,
     dto: SubmitFormDto,
-  ): Promise<FormSubmissionDocument> {
+  ): Promise<FormSubmissionResponse> {
     const template = await this.findOne(formId);
     if (template.status !== 'Published') {
       throw new BadRequestException('Form is not published');
@@ -218,7 +238,8 @@ export class FormsService {
       submittedAt: new Date(),
       answers,
     });
-    return submission.save();
+    const saved = await submission.save();
+    return mapFormSubmission(saved);
   }
 
   async getMySubmission(
@@ -238,7 +259,7 @@ export class FormsService {
     if (!submission) {
       throw new NotFoundException('You have not submitted this form');
     }
-    const schema = this.toFormSchema(template);
+    const schema = mapFormTemplateToSchema(template);
     const answers: Record<string, unknown> = {};
     for (const a of submission.answers) {
       const qId = a.questionId?.toString();
@@ -258,7 +279,7 @@ export class FormsService {
     formId: string,
     page: number,
     limit: number,
-  ): Promise<PaginatedResult<FormSubmissionDocument>> {
+  ): Promise<PaginatedResult<FormSubmissionResponse>> {
     await this.findOne(formId);
     const skip = (page - 1) * limit;
     const [items, total] = await Promise.all([
@@ -272,13 +293,14 @@ export class FormsService {
         .countDocuments({ formTemplateId: new Types.ObjectId(formId) })
         .exec(),
     ]);
-    return buildPaginatedResult(items, total, page, limit);
+    const mappedItems = items.map((s) => mapFormSubmission(s));
+    return buildPaginatedResult(mappedItems, total, page, limit);
   }
 
   async getSubmission(
     formId: string,
     submissionId: string,
-  ): Promise<{ schema: object; submission: FormSubmissionDocument }> {
+  ): Promise<{ schema: FormTemplateSchemaResponse; submission: FormSubmissionResponse }> {
     const template = await this.findOne(formId);
     if (!Types.ObjectId.isValid(submissionId)) {
       throw new BadRequestException('Invalid submission ID');
@@ -292,8 +314,9 @@ export class FormsService {
     if (!submission) {
       throw new NotFoundException('Submission not found');
     }
-    const schema = this.toFormSchema(template);
-    return { schema, submission };
+    const schema = mapFormTemplateToSchema(template);
+    const mappedSubmission = mapFormSubmission(submission);
+    return { schema, submission: mappedSubmission };
   }
 
   private ensureDraft(template: FormTemplateDocument): void {
@@ -304,46 +327,4 @@ export class FormsService {
     }
   }
 
-  private toFormSchema(template: FormTemplateDocument): object {
-    return {
-      id: template._id?.toString(),
-      name: template.name,
-      description: template.description,
-      targetRole: template.targetRole,
-      questions: template.questions
-        .slice()
-        .sort((a, b) => a.orderIndex - b.orderIndex)
-        .map((q) => ({
-          id: (q as { _id?: { toString(): string } })._id?.toString(),
-          orderIndex: q.orderIndex,
-          type: q.type,
-          title: q.title,
-          helpText: q.helpText,
-          isRequired: q.isRequired,
-          config: q.config,
-          options: (q.options ?? [])
-            .slice()
-            .sort(
-              (a, b) =>
-                (a as { orderIndex: number }).orderIndex -
-                (b as { orderIndex: number }).orderIndex,
-            )
-            .map((o) => ({
-              id: (o as { _id?: Types.ObjectId })._id?.toString(),
-              orderIndex: (o as { orderIndex: number }).orderIndex,
-              label: (o as { label: { en: string; ar: string } }).label,
-            })),
-        })),
-    };
-  }
-
-  private toFormSchemaSummary(template: FormTemplateDocument): object {
-    return {
-      id: template._id?.toString(),
-      name: template.name,
-      description: template.description,
-      targetRole: template.targetRole,
-      publishedAt: template.publishedAt,
-    };
-  }
 }

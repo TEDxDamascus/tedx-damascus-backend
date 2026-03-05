@@ -26,6 +26,7 @@ export class FormQuestion {
     type: {
       en: { type: String, default: '' },
       ar: { type: String, default: '' },
+      _id: false,
     },
     required: true,
   })
@@ -35,6 +36,7 @@ export class FormQuestion {
     type: {
       en: { type: String, default: '' },
       ar: { type: String, default: '' },
+      _id: false,
     },
     required: false,
   })

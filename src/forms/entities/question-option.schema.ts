@@ -9,6 +9,7 @@ export class QuestionOption {
     type: {
       en: { type: String, default: '' },
       ar: { type: String, default: '' },
+      _id: false,
     },
     required: true,
   })

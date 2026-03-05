@@ -25,6 +25,7 @@ export class FormTemplate {
     type: {
       en: { type: String, default: '' },
       ar: { type: String, default: '' },
+      _id: false,
     },
     required: true,
   })
@@ -34,6 +35,7 @@ export class FormTemplate {
     type: {
       en: { type: String, default: '' },
       ar: { type: String, default: '' },
+      _id: false,
     },
     required: false,
   })
