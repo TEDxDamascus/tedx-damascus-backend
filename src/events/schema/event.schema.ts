@@ -2,29 +2,58 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import { EventStatus } from '../enums/event-status.enum';
 import { EventType } from '../enums/event-type.enum';
+import type { TranslationField } from 'src/common/type/translation-field';
+import { translationSchema } from 'src/common/utils/translation.schema';
 
 @Schema({ timestamps: true })
 export class Event {
-  @Prop({ required: true })
-  title: string;
+  //! Title
+  @Prop({
+    required: true,
+    type: translationSchema,
+    _id: false,
+  })
+  title: TranslationField;
+  //! Event_Type
   @Prop({ required: true, enum: EventType })
   event_type: EventType;
+  //! Event Image
   @Prop({ required: true })
-  event_image: string; //!ObjectId ref is Image
+  event_image: string; //$ ObjectId ref is Image
+  //! Event_Status
   @Prop({ required: true, enum: EventStatus })
   status: EventStatus;
-  @Prop({ required: true })
-  description: string;
-  @Prop({ required: false })
-  brief: string;
-  @Prop({ required: true })
-  location: string;
+  //! Description
+  @Prop({
+    required: true,
+    _id: false,
+    type: translationSchema,
+  })
+  description: TranslationField;
+  //! Brief(optional)
+  @Prop({
+    required: false,
+    type: translationSchema,
+    _id: false,
+  })
+  brief: TranslationField;
+  //! Location
+  @Prop({
+    required: true,
+    type: translationSchema,
+    _id: false,
+  })
+  location: TranslationField;
+  //! Date
   @Prop({ required: true })
   date: Date;
-  @Prop({ required: true })
-  gallery: string[]; //! ObjectId ref is Image
-  @Prop({ required: true })
-  speakers: string[]; //! ObjectId ref is Speaker
+  //! Gallery
+  @Prop({ required: true, type: [String] })
+  gallery: string[]; //$ ObjectId ref is Image
+  //! Speakers
+  @Prop({ required: true, type: [String] })
+  speakers: string[]; //$ ObjectId ref is Speaker
+  //! Is_deleted
   @Prop({ required: false, default: false })
   is_deleted: boolean;
 }
