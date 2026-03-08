@@ -18,8 +18,8 @@ export class Event {
   @Prop({ required: true, enum: EventType })
   event_type: EventType;
   //! Event Image
-  @Prop({ required: true })
-  event_image: string; //$ ObjectId ref is Image
+  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
+  event_image: mongoose.Types.ObjectId;
   //! Event_Status
   @Prop({ required: true, enum: EventStatus })
   status: EventStatus;
@@ -48,8 +48,11 @@ export class Event {
   @Prop({ required: true })
   date: Date;
   //! Gallery
-  @Prop({ required: true, type: [String] })
-  gallery: string[]; //$ ObjectId ref is Image
+  @Prop({
+    required: true,
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Media' }],
+  })
+  gallery: mongoose.Types.ObjectId[];
   //! Speakers
   @Prop({ required: true, type: [String] })
   speakers: string[]; //$ ObjectId ref is Speaker

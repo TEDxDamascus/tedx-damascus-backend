@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule } from '@nestjs/config';
 import type { ConfigType } from '@nestjs/config';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';

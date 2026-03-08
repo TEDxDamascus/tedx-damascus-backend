@@ -4,6 +4,7 @@ import {
   IsDate,
   IsDefined,
   IsEnum,
+  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -17,25 +18,29 @@ import { TranslationDto } from 'src/common/dto/translation.dto';
 export class CreateEventDto {
   //! Title
   @IsDefined()
-  @ValidateNested()
+  @ValidateNested({ message: 'title must contain both en and ar translations' })
   @Type(() => TranslationDto)
   title: TranslationDto;
 
   //! Description
   @IsDefined()
-  @ValidateNested()
+  @ValidateNested({
+    message: 'description must contain both en and ar translations',
+  })
   @Type(() => TranslationDto)
   description: TranslationDto;
 
   //! Brief
   @IsOptional()
-  @ValidateNested()
+  @ValidateNested({ message: 'brief must contain both en and ar translations' })
   @Type(() => TranslationDto)
   brief: TranslationDto;
 
   //! Location
   @IsDefined()
-  @ValidateNested()
+  @ValidateNested({
+    message: 'location must contain both en and ar translations',
+  })
   @Type(() => TranslationDto)
   location: TranslationDto;
 
@@ -49,9 +54,9 @@ export class CreateEventDto {
 
   //! Event Image
   @IsDefined()
-  @IsString()
+  @IsMongoId()
   @IsNotEmpty()
-  event_image: string; //$ Should be an Image Type
+  event_image: string;
 
   //! Event Status
   @IsDefined()
@@ -82,10 +87,9 @@ export class CreateEventDto {
 
   //! Gallery
   @IsDefined()
-  // @IsArray()
+  @IsMongoId({ each: true })
   @ArrayNotEmpty()
-  @IsString({ each: true })
-  gallery: string[]; //$ Should be Array of Image Type
+  gallery: string[];
 }
 
 // i think we should add a photo module ?

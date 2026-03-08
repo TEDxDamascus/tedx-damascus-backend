@@ -20,7 +20,12 @@ export class EventsService {
   }
   //! Get All Events
   async findAll(lang: string) {
-    const events = await this.eventModel.find().lean().exec();
+    const events = await this.eventModel
+      .find()
+      .populate('event_image')
+      .populate('gallery', 'url -_id')
+      .lean()
+      .exec();
     return events.map((event) => ({
       ...event,
       title: translateFieldHelper(event.title, lang),
@@ -31,14 +36,19 @@ export class EventsService {
   }
   //! Get Event By Id
   async findOne(id: string, lang: string) {
-    const event = await this.eventModel.findById(id).lean().exec();
+    const event = await this.eventModel
+      .findById(id)
+      .populate('event_image')
+      .populate('gallery', 'url -_id')
+      .lean()
+      .exec();
     if (!event)
       throw new NotFoundException(`Event with id ${id} was not found`);
     return {
       ...event,
       title: translateFieldHelper(event.title, lang),
       description: translateFieldHelper(event.description, lang),
-      brief: translateFieldHelper(event.brief, lang),
+      brief: event.brief ? translateFieldHelper(event.brief, lang) : undefined,
       location: translateFieldHelper(event.location, lang),
     };
   }
