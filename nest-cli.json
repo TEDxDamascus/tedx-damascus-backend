@@ -6,6 +6,12 @@
     "plugins": [
       "@nestjs/swagger/plugin"
     ],
+    "assets": [
+      {
+        "include": "i18n/**/*",
+        "watchAssets": true
+      }
+    ],
     "deleteOutDir": true
   }
 }
