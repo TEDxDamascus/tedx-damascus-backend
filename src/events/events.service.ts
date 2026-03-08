@@ -19,30 +19,30 @@ export class EventsService {
     return newEvent.save();
   }
   //! Get All Events
-async findAll(lang: string) {
-  const events = await this.eventModel
-    .find()
-    .populate('event_image')
-    .populate('gallery', 'url -_id')
-    .populate('speakers')
-    .lean()
-    .exec();
+  async findAll(lang: string) {
+    const events = await this.eventModel
+      .find()
+      .populate('event_image')
+      .populate('gallery', 'url -_id')
+      .populate('speakers')
+      .lean()
+      .exec();
 
-  return events.map((event) => ({
-    ...event,
-    title: translateFieldHelper(event.title, lang),
-    description: translateFieldHelper(event.description, lang),
-    brief: translateFieldHelper(event.brief, lang),
-    location: translateFieldHelper(event.location, lang),
+    return events.map((event) => ({
+      ...event,
+      title: translateFieldHelper(event.title, lang),
+      description: translateFieldHelper(event.description, lang),
+      brief: translateFieldHelper(event.brief, lang),
+      location: translateFieldHelper(event.location, lang),
 
-    speakers: event.speakers?.map((speaker) => ({
-      ...speaker,
-      name: translateFieldHelper(speaker.name, lang),
-      bio: translateFieldHelper(speaker.bio, lang),
-      description: translateFieldHelper(speaker.description, lang),
-    })),
-  }));
-}
+      speakers: (event.speakers as any[])?.map((speaker) => ({
+        ...speaker,
+        name: translateFieldHelper(speaker.name, lang),
+        bio: translateFieldHelper(speaker.bio, lang),
+        description: translateFieldHelper(speaker.description, lang),
+      })),
+    }));
+  }
   //! Get Event By Id
   async findOne(id: string, lang: string) {
     const event = await this.eventModel
