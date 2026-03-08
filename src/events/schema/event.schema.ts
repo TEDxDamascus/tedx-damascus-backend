@@ -54,8 +54,11 @@ export class Event {
   })
   gallery: mongoose.Types.ObjectId[];
   //! Speakers
-  @Prop({ required: true, type: [String] })
-  speakers: string[]; //$ ObjectId ref is Speaker
+  @Prop({
+    required: true,
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Speaker' }],
+  })
+  speakers: string[];
   //! Is_deleted
   @Prop({ required: false, default: false })
   is_deleted: boolean;

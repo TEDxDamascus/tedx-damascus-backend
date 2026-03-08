@@ -75,7 +75,7 @@ export class CreateEventDto {
 
   //! Speakers
   @IsDefined()
-  @IsString({ each: true })
+  @IsMongoId({ each: true })
   @ArrayNotEmpty()
   speakers: string[]; //$ Should be the Type Speaker
 
