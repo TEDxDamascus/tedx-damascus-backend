@@ -50,6 +50,9 @@ dist/
 # Upload directories (if you have file uploads)
 /uploads
 /temp
+/plans
+
 
 # Cache
 .eslintcache
+/plans
