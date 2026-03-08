@@ -10,9 +10,9 @@ import {
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
-import { ParseIdPipe } from './pipes/parse-id.pipe'; // custom pipe to parse the id from string to ObjectId of mongoose
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18n, I18nContext } from 'nestjs-i18n';
+import { ParseIdPipe } from 'src/common/pipes/parse-id.pipe';
 
 @ApiTags('Events')
 @Controller('events')

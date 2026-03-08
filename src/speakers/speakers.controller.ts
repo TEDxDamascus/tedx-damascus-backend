@@ -11,6 +11,7 @@ import { SpeakersService } from './speakers.service';
 import { CreateSpeakerDto } from './dto/create-speaker.dto';
 import { UpdateSpeakerDto } from './dto/update-speaker.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ParseIdPipe } from 'src/common/pipes/parse-id.pipe';
 
 @ApiTags('Speakers')
 @Controller('speakers')
@@ -31,19 +32,22 @@ export class SpeakersController {
 
   @ApiOperation({ summary: 'Get Existing Speaker By Id' })
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.speakersService.findOne(+id);
+  findOne(@Param('id', ParseIdPipe) id: string) {
+    return this.speakersService.findOne(id);
   }
 
   @ApiOperation({ summary: 'Update Existing Speaker By Id' })
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateSpeakerDto: UpdateSpeakerDto) {
-    return this.speakersService.update(+id, updateSpeakerDto);
+  update(
+    @Param('id', ParseIdPipe) id: string,
+    @Body() updateSpeakerDto: UpdateSpeakerDto,
+  ) {
+    return this.speakersService.update(id, updateSpeakerDto);
   }
 
   @ApiOperation({ summary: 'Delete Existing Speaker By Id' })
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.speakersService.remove(+id);
+  remove(@Param('id', ParseIdPipe) id: string) {
+    return this.speakersService.remove(id);
   }
 }
