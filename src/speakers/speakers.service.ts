@@ -4,29 +4,52 @@ import { UpdateSpeakerDto } from './dto/update-speaker.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Speaker } from './schemas/speaker.schema';
+import { translateFieldHelper } from 'src/common/utils/translate.helper';
+import { map } from 'rxjs';
 
 @Injectable()
 export class SpeakersService {
   constructor(
     @InjectModel(Speaker.name) private readonly speakerModel: Model<Speaker>,
   ) {}
+  //! Create Speaker
   create(createSpeakerDto: CreateSpeakerDto) {
     const newSpeaker = new this.speakerModel(createSpeakerDto);
     return newSpeaker.save();
   }
-
-  async findAll() {
-    const speakers = await this.speakerModel.find().exec();
-    return speakers;
+  //! Get all Speakers
+  async findAll(lang: string) {
+    const speakers = await this.speakerModel
+      .find()
+      .populate('speaker_image', 'url -_id')
+      .populate('gallery', 'url -_id')
+      .lean()
+      .exec();
+    return speakers.map((speaker) => ({
+      ...speaker,
+      name: translateFieldHelper(speaker.name, lang),
+      bio: translateFieldHelper(speaker.bio, lang),
+      description: translateFieldHelper(speaker.description, lang),
+    }));
   }
-
-  async findOne(id: string) {
-    const speaker = await this.speakerModel.findById(id);
+  //! Find Speaker By Id
+  async findOne(id: string, lang: string) {
+    const speaker = await this.speakerModel
+      .findById(id)
+      .populate('speaker_image', 'url -_id')
+      .populate('gallery', 'url -_id')
+      .lean()
+      .exec();
     if (!speaker)
       throw new NotFoundException(`Speaker with id ${id} was not found`);
-    return speaker;
+    return {
+      ...speaker,
+      name: translateFieldHelper(speaker.name, lang),
+      bio: translateFieldHelper(speaker.bio, lang),
+      description: translateFieldHelper(speaker.description, lang),
+    };
   }
-
+  //! Update Speaker By Id
   async update(id: string, updateSpeakerDto: UpdateSpeakerDto) {
     const speaker = await this.speakerModel.findByIdAndUpdate(
       id,
@@ -40,7 +63,7 @@ export class SpeakersService {
       throw new NotFoundException(`Speaker with id ${id} was not found`);
     return speaker;
   }
-
+  //! Delete Speaker By Id
   async remove(id: string) {
     const speaker = await this.speakerModel.findByIdAndDelete(id);
     if (!speaker) {

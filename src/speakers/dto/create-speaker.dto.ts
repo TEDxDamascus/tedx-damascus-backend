@@ -3,6 +3,7 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsDefined,
+  IsMongoId,
   IsNotEmpty,
   IsString,
   IsUrl,
@@ -30,10 +31,10 @@ export class CreateSpeakerDto {
   description: string;
 
   @IsDefined()
-  @IsString() //! testing
+  @IsMongoId()
   @IsNotEmpty()
   speaker_image: string;
-  
+
   @IsDefined()
   @IsArray()
   @ArrayNotEmpty()
@@ -41,7 +42,7 @@ export class CreateSpeakerDto {
   social_links: string[]; //$ until i make the Link Schema (hol up )
 
   @IsDefined()
-  @IsString({ each: true }) //! testing
+  @IsMongoId({ each: true })
   @ArrayNotEmpty()
   gallery: string[];
 

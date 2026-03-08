@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import mongoose from 'mongoose';
 import type { TranslationField } from 'src/common/type/translation-field';
 import { translationSchema } from 'src/common/utils/translation.schema';
 
@@ -31,7 +32,8 @@ export class Speaker {
   //! Speaker Image
   @Prop({
     required: true,
-    // type: mongoose.Schema.Types.ObjectId, ref: 'Media'
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Media',
   })
   speaker_image: string;
 
@@ -42,12 +44,12 @@ export class Speaker {
   //! Gallery
   @Prop({
     required: true,
-    // type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Media' }],
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Media' }],
   })
   gallery: string[];
 
   //! Video Link
   @Prop({ required: true })
-  video_link: string[];
+  video_link: string;
 }
 export const SpeakerSchema = SchemaFactory.createForClass(Speaker);
