@@ -1,26 +1,76 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateSpeakerDto } from './dto/create-speaker.dto';
 import { UpdateSpeakerDto } from './dto/update-speaker.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Speaker } from './schemas/speaker.schema';
+import { translateFieldHelper } from 'src/common/utils/translate.helper';
+import { map } from 'rxjs';
 
 @Injectable()
 export class SpeakersService {
+  constructor(
+    @InjectModel(Speaker.name) private readonly speakerModel: Model<Speaker>,
+  ) {}
+  //! Create Speaker
   create(createSpeakerDto: CreateSpeakerDto) {
-    return 'This action adds a new speaker';
+    const newSpeaker = new this.speakerModel(createSpeakerDto);
+    return newSpeaker.save();
   }
-
-  findAll() {
-    return `This action returns all speakers`;
+  //! Get all Speakers
+  async findAll(lang: string) {
+    const speakers = await this.speakerModel
+      .find()
+      .populate('speaker_image', 'url -_id')
+      .populate('gallery', 'url -_id')
+      .lean()
+      .exec();
+    return speakers.map((speaker) => ({
+      ...speaker,
+      name: translateFieldHelper(speaker.name, lang),
+      bio: translateFieldHelper(speaker.bio, lang),
+      description: translateFieldHelper(speaker.description, lang),
+    }));
   }
-
-  findOne(id: number) {
-    return `This action returns a #${id} speaker`;
+  //! Find Speaker By Id
+  async findOne(id: string, lang: string) {
+    const speaker = await this.speakerModel
+      .findById(id)
+      .populate('speaker_image', 'url -_id')
+      .populate('gallery', 'url -_id')
+      .lean()
+      .exec();
+    if (!speaker)
+      throw new NotFoundException(`Speaker with id ${id} was not found`);
+    return {
+      ...speaker,
+      name: translateFieldHelper(speaker.name, lang),
+      bio: translateFieldHelper(speaker.bio, lang),
+      description: translateFieldHelper(speaker.description, lang),
+    };
   }
-
-  update(id: number, updateSpeakerDto: UpdateSpeakerDto) {
-    return `This action updates a #${id} speaker`;
+  //! Update Speaker By Id
+  async update(id: string, updateSpeakerDto: UpdateSpeakerDto) {
+    const speaker = await this.speakerModel.findByIdAndUpdate(
+      id,
+      updateSpeakerDto,
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+    if (!speaker)
+      throw new NotFoundException(`Speaker with id ${id} was not found`);
+    return speaker;
   }
-
-  remove(id: number) {
-    return `This action removes a #${id} speaker`;
+  //! Delete Speaker By Id
+  async remove(id: string) {
+    const speaker = await this.speakerModel.findByIdAndDelete(id);
+    if (!speaker) {
+      throw new NotFoundException(`Speaker with id ${id} was not found`);
+    }
+    return {
+      message: `speaker (${speaker.name.en} | ${speaker.name.ar}) deleted successfully`,
+    };
   }
 }
