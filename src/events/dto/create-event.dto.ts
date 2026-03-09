@@ -1,1 +1,95 @@
-export class CreateEventDto {}
+import {
+  ArrayNotEmpty,
+  IsBoolean,
+  IsDate,
+  IsDefined,
+  IsEnum,
+  IsMongoId,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { EventType } from '../enums/event-type.enum';
+import { EventStatus } from '../enums/event-status.enum';
+import { TranslationDto } from 'src/common/dto/translation.dto';
+
+export class CreateEventDto {
+  //! Title
+  @IsDefined()
+  @ValidateNested({ message: 'title must contain both en and ar translations' })
+  @Type(() => TranslationDto)
+  title: TranslationDto;
+
+  //! Description
+  @IsDefined()
+  @ValidateNested({
+    message: 'description must contain both en and ar translations',
+  })
+  @Type(() => TranslationDto)
+  description: TranslationDto;
+
+  //! Brief
+  @IsOptional()
+  @ValidateNested({ message: 'brief must contain both en and ar translations' })
+  @Type(() => TranslationDto)
+  brief: TranslationDto;
+
+  //! Location
+  @IsDefined()
+  @ValidateNested({
+    message: 'location must contain both en and ar translations',
+  })
+  @Type(() => TranslationDto)
+  location: TranslationDto;
+
+  //! Event Type (salon,main_event,meetup)
+  @IsDefined()
+  @IsEnum(EventType, {
+    message: `event_type must be one of: [${Object.values(EventType).join(', ')}]`,
+  })
+  @IsNotEmpty()
+  event_type: string;
+
+  //! Event Image
+  @IsDefined()
+  @IsMongoId()
+  @IsNotEmpty()
+  event_image: string;
+
+  //! Event Status
+  @IsDefined()
+  @IsEnum(EventStatus, {
+    message: `status must be one of: [${Object.values(EventStatus).join(', ')}]`,
+  })
+  @IsNotEmpty()
+  status: string;
+
+  //! Date
+  @IsDefined()
+  @IsNotEmpty()
+  @Type(() => Date)
+  @IsDate()
+  date: Date;
+
+  //! Speakers
+  @IsDefined()
+  @IsMongoId({ each: true })
+  @ArrayNotEmpty()
+  speakers: string[]; //$ Should be the Type Speaker
+
+  //! is_deleted
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  is_deleted: boolean;
+
+  //! Gallery
+  @IsDefined()
+  @IsMongoId({ each: true })
+  @ArrayNotEmpty()
+  gallery: string[];
+}
+
+// i think we should add a photo module ?
