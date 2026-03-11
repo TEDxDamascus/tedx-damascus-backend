@@ -9,6 +9,7 @@ import { EventsModule } from './events/events.module';
 import { SpeakersModule } from './speakers/speakers.module';
 import { BlogsModule } from './blogs/blogs.module';
 import { StorageModule } from './storage/storage.module';
+import { UsersModule } from './users/users.module';
 import { appConfig } from './common/config/app.config';
 import { FormsModule } from './forms/forms.module';
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
@@ -41,6 +42,7 @@ import * as path from 'path';
     // process.env.MONGODB_URI || i removed it coz i dont wanna connect to the Atlas right now
     MongooseModule.forRoot('mongodb://localhost:27017/tedx-damascus'),
     AuthModule,
+    UsersModule,
     EventsModule,
     SpeakersModule,
     BlogsModule,
