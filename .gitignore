@@ -66,3 +66,9 @@ pnpm-lock.yaml
 /uploads
 /temp
 /plans
+
+
+# Cache
+.eslintcache
+/plans
+/docker
