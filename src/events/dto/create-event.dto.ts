@@ -13,7 +13,7 @@ import {
 import { Type } from 'class-transformer';
 import { EventType } from '../enums/event-type.enum';
 import { EventStatus } from '../enums/event-status.enum';
-import { TranslationDto } from 'src/common/dto/translation.dto';
+import { TranslationDto } from '../../common/dto/translation.dto';
 
 export class CreateEventDto {
   //! Title

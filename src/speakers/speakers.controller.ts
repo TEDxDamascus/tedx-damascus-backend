@@ -11,7 +11,7 @@ import { SpeakersService } from './speakers.service';
 import { CreateSpeakerDto } from './dto/create-speaker.dto';
 import { UpdateSpeakerDto } from './dto/update-speaker.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ParseIdPipe } from 'src/common/pipes/parse-id.pipe';
+import { ParseIdPipe } from '../common/pipes/parse-id.pipe';
 import { I18n, I18nContext } from 'nestjs-i18n';
 
 @ApiTags('Speakers')

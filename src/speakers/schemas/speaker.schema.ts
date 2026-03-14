@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
-import type { TranslationField } from 'src/common/type/translation-field';
-import { translationSchema } from 'src/common/utils/translation.schema';
+import type { TranslationField } from '../../common/type/translation-field';
+import { translationSchema } from '../../common/utils/translation.schema';
 
 @Schema({ timestamps: true })
 export class Speaker {

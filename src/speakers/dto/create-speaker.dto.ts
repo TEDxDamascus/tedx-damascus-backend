@@ -10,7 +10,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { string } from 'joi';
-import { TranslationDto } from 'src/common/dto/translation.dto';
+import { TranslationDto } from '../../common/dto/translation.dto';
 
 export class CreateSpeakerDto {
   @IsDefined()
