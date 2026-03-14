@@ -1,13 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-export async function setupDocs(app: INestApplication) {
-  // Dynamic import with eval prevents transpiler from converting to require(),
-  // which would fail because @scalar/core is ESM-only (ERR_REQUIRE_ESM)
-  const scalar = await eval(
-    "import('@scalar/nestjs-api-reference')",
-  ) as { apiReference: (options: Record<string, unknown>) => unknown };
-  const { apiReference } = scalar;
+export function setupDocs(app: INestApplication) {
   const config = new DocumentBuilder()
     .setTitle('TEDx Damascus API')
     .setDescription('Official backend API for TEDx Damascus platform.')
@@ -28,38 +22,5 @@ export async function setupDocs(app: INestApplication) {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-
-  //! swagger
-  // SwaggerModule.setup('docs', app, swgDocument);
-  //! Scala
-  app.use(
-    '/docs',
-    apiReference({
-      hideSearch: false,
-      content: document,
-      title: 'TEDx Damascus API',
-      pageTitle: 'TEDx Damascus API Documentation',
-      theme: 'default',
-      showDeveloperTools: 'never',
-      defaultOpenFirstTag: false,
-      defaultOpenAllTags: false,
-      hideModels: true,
-      hiddenClients: true,
-      hideClientButton: true,
-      expandAllModelSections: false,
-      expandAllResponses: false,
-      hideDownloadButton: true,
-      telemetry: false,
-      showOperationId: false,
-      orderRequiredPropertiesFirst: true,
-      orderSchemaPropertiesBy: 'preserve',
-      agent: {
-        disabled: false,
-        hideAddApi: true,
-      },
-      authentication: {
-        preferredSecurityScheme: 'bearer',
-      },
-    }),
-  );
+  SwaggerModule.setup('docs', app, document);
 }
