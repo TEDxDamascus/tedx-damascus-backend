@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { connect, model, disconnect } from 'mongoose';
 import {
   ADMIN_DEFAULT_PERMISSIONS,
