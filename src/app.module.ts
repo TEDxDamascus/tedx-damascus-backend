@@ -39,8 +39,6 @@ import * as path from 'path';
         AcceptLanguageResolver,
       ],
     }),
-    // process.env.MONGODB_URI || i removed it coz i dont wanna connect to the Atlas right now
-    MongooseModule.forRoot('mongodb://localhost:27017/tedx-damascus'),
     AuthModule,
     UsersModule,
     EventsModule,
