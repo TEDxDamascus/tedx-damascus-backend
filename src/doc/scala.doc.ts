@@ -1,8 +1,13 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { apiReference } from '@scalar/nestjs-api-reference';
 
-export function setupDocs(app: INestApplication) {
+export async function setupDocs(app: INestApplication) {
+  // Dynamic import with eval prevents transpiler from converting to require(),
+  // which would fail because @scalar/core is ESM-only (ERR_REQUIRE_ESM)
+  const scalar = await eval(
+    "import('@scalar/nestjs-api-reference')",
+  ) as { apiReference: (options: Record<string, unknown>) => unknown };
+  const { apiReference } = scalar;
   const config = new DocumentBuilder()
     .setTitle('TEDx Damascus API')
     .setDescription('Official backend API for TEDx Damascus platform.')
