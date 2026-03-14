@@ -4,7 +4,7 @@ import { UpdateSpeakerDto } from './dto/update-speaker.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Speaker } from './schemas/speaker.schema';
-import { translateFieldHelper } from 'src/common/utils/translate.helper';
+import { translateFieldHelper } from '../common/utils/translate.helper';
 import { map } from 'rxjs';
 
 @Injectable()

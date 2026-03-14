@@ -5,7 +5,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Event } from './schema/event.schema';
 import { Model } from 'mongoose';
 import { I18nContext, I18nService } from 'nestjs-i18n';
-import { translateFieldHelper } from 'src/common/utils/translate.helper';
+import { translateFieldHelper } from '../common/utils/translate.helper';
 
 @Injectable()
 export class EventsService {

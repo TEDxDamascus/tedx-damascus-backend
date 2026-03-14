@@ -12,7 +12,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18n, I18nContext } from 'nestjs-i18n';
-import { ParseIdPipe } from 'src/common/pipes/parse-id.pipe';
+import { ParseIdPipe } from '../common/pipes/parse-id.pipe';
 
 @ApiTags('Events')
 @Controller('events')
