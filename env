@@ -1,5 +1,0 @@
-MONGODB_URI = mongodb+srv://tedxdamascus084_db_user:lpWV73Kd43qFeCca@tedx.ajxifbo.mongodb.net/?appName=Tedx
-
-SUPABASE_PROJECT_URL = https://akqhnasddaehwhphxsiq.supabase.co
-SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrcWhuYXNkZGFlaHdocGh4c2lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MTEzNjksImV4cCI6MjA4NzA4NzM2OX0.8vp82Rj3y7SbIye2ur-r3IaDt3TBB1YOD0b6crKR0Kw
-SUPABASE_STORAGE_NAME = TedXDamascus Storage

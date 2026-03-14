@@ -32,12 +32,12 @@ importers:
       '@nestjs/swagger':
         specifier: ^11.2.5
         version: 11.2.5(@nestjs/common@11.1.12(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.12)(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)
-      '@scalar/nestjs-api-reference':
-        specifier: ^1.0.29
-        version: 1.0.29
       '@supabase/supabase-js':
         specifier: ^2.47.0
         version: 2.98.0
+      '@scalar/nestjs-api-reference':
+        specifier: ^1.0.29
+        version: 1.0.29
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
