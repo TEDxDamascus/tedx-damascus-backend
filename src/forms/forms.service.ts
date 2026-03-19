@@ -20,7 +20,10 @@ import { CreateFormTemplateDto } from './dto/create-form-template.dto';
 import { UpdateFormTemplateDto } from './dto/update-form-template.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { SubmitFormDto } from './dto/submit-form.dto';
-import { validateAnswers, normalizeAnswerValue } from './validators/answer.validator';
+import {
+  validateAnswers,
+  normalizeAnswerValue,
+} from './validators/answer.validator';
 import { buildPaginatedResult } from '../common/pagination/utils/pagination.util';
 import { PaginatedResult } from '../common/pagination/interfaces/paginated-result.interface';
 import { FormQuestion } from './entities/form-question.schema';
@@ -266,9 +269,24 @@ export class FormsService {
       if (qId) {
         let v: unknown = a.value;
         if (v instanceof Date) v = v.toISOString();
-        if (Array.isArray(v))
+        if (Array.isArray(v)) {
           v = v.map((x) => (x instanceof Types.ObjectId ? x.toString() : x));
-        else if (v instanceof Types.ObjectId) v = v.toString();
+        } else if (v instanceof Types.ObjectId) {
+          v = v.toString();
+        } else if (v && typeof v === 'object') {
+          const obj = v as Record<string, unknown>;
+          const result: Record<string, unknown> = {};
+          for (const [key, val] of Object.entries(obj)) {
+            if (val instanceof Date) {
+              result[key] = val.toISOString();
+            } else if (val instanceof Types.ObjectId) {
+              result[key] = val.toString();
+            } else {
+              result[key] = val;
+            }
+          }
+          v = result;
+        }
         answers[qId] = v;
       }
     }
