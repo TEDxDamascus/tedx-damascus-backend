@@ -159,8 +159,8 @@ export function mapFormSubmission(
     id: toId(s._id),
     formTemplateId: toId(s.formTemplateId),
     userId: toId(s.userId),
-    status: s.status,
-    submittedAt: s.submittedAt,
+    status: s.status ?? 'submitted',
+    ...(s.submittedAt != null ? { submittedAt: s.submittedAt } : {}),
     answers: (s.answers ?? []).map((a: any) => mapSubmissionAnswer(a)),
   };
 }

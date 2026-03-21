@@ -59,7 +59,8 @@ export interface FormSubmissionResponse {
   formTemplateId: string;
   userId: string;
   status: string;
-  submittedAt: Date;
+  /** Present only when status is submitted. */
+  submittedAt?: Date;
   answers: FormSubmissionAnswerResponse[];
 }
 

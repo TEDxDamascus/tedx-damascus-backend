@@ -93,6 +93,36 @@ function validateCheckboxGroup(
   }
 }
 
+/** Draft save: option IDs must be valid; min/max selected not enforced. */
+function validateCheckboxGroupDraft(
+  value: unknown,
+  question: QuestionWithId,
+): void {
+  const arr = Array.isArray(value) ? value : [value];
+  if (!arr.every((v) => typeof v === 'string')) {
+    throw new Error('Expected array of option ID strings');
+  }
+  const optionIds = question.options.map((o) =>
+    (o as { _id?: { toString(): string } })._id?.toString(),
+  );
+  for (const v of arr) {
+    if (!optionIds.includes(v as string)) {
+      throw new Error('Invalid option selected');
+    }
+  }
+}
+
+/** Draft save: must be string; min/max length not enforced. */
+function validateShortTextDraft(value: unknown): void {
+  if (typeof value !== 'string') {
+    throw new Error('Expected string');
+  }
+}
+
+function validateLongTextDraft(value: unknown): void {
+  validateShortTextDraft(value);
+}
+
 function validateDate(value: unknown, config: Record<string, unknown>): void {
   const date = value instanceof Date ? value : new Date(value as string);
   if (isNaN(date.getTime())) {
@@ -223,6 +253,66 @@ function validateFileUpload(value: unknown): void {
     throw new Error('url is required');
   }
   validateUrl(url);
+}
+
+/**
+ * Validates only answers that are present. Does not enforce isRequired.
+ * Text min/max length and checkbox min/max counts are relaxed so users can save partial progress.
+ */
+export function validateDraftAnswers(
+  template: FormTemplateDocument,
+  answers: Record<string, unknown>,
+): void {
+  for (const question of template.questions) {
+    const qId = (question as { _id?: { toString(): string } })._id?.toString();
+    if (!qId) continue;
+    const value = answers[qId];
+    if (value === undefined || value === null || value === '') {
+      continue;
+    }
+    const config = question.config || {};
+    try {
+      switch (question.type as QuestionType) {
+        case 'short_text':
+          validateShortTextDraft(value);
+          break;
+        case 'long_text':
+          validateLongTextDraft(value);
+          break;
+        case 'single_choice':
+          validateSingleChoice(value, question);
+          break;
+        case 'checkbox_group':
+          validateCheckboxGroupDraft(value, question);
+          break;
+        case 'date':
+          validateDate(value, config);
+          break;
+        case 'phone_number':
+          validatePhoneNumber(value);
+          break;
+        case 'url':
+          validateUrl(value);
+          break;
+        case 'rating':
+          validateRating(value, config);
+          break;
+        case 'date_range':
+          validateDateRange(value, config);
+          break;
+        case 'file_upload':
+          validateFileUpload(value);
+          break;
+        default:
+          throw new Error(`Unknown question type: ${question.type}`);
+      }
+    } catch (err) {
+      throw new AnswerValidationError(
+        err instanceof Error ? err.message : 'Invalid answer',
+        qId,
+      );
+    }
+  }
 }
 
 export function validateAnswers(

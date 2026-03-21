@@ -176,13 +176,32 @@ export class FormSubmissionResponseDto {
   @ApiProperty()
   userId: string;
 
-  @ApiProperty({ example: 'submitted' })
+  @ApiProperty({ example: 'submitted', enum: ['draft', 'submitted'] })
   status: string;
 
-  @ApiProperty({ type: String, format: 'date-time' })
-  submittedAt: Date;
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    description: 'Set only when status is submitted.',
+  })
+  submittedAt?: Date;
 
   @ApiProperty({ type: [FormSubmissionAnswerResponseDto] })
   answers: FormSubmissionAnswerResponseDto[];
+}
+
+export class MySubmissionResponseDto {
+  @ApiProperty({ type: FormTemplateSchemaResponseDto })
+  schema: FormTemplateSchemaResponseDto;
+
+  @ApiProperty({
+    description: 'Answers keyed by question ID',
+    type: 'object',
+    additionalProperties: true,
+  })
+  answers: Record<string, unknown>;
+
+  @ApiProperty({ enum: ['draft', 'submitted'] })
+  status: string;
 }
 

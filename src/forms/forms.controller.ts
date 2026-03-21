@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Patch,
+  Put,
   Param,
   Delete,
   Query,
@@ -34,8 +35,10 @@ import {
   FormSubmissionResponseDto,
   FormTemplateSchemaResponseDto,
   FormTemplateSummaryResponseDto,
+  MySubmissionResponseDto,
 } from './dto/form-responses.dto';
 import { FormAvailabilityGuard } from './guards/form-availability.guard';
+import { MOCK_FORMS_USER_OBJECT_ID, resolveFormsUserId } from './constants/forms-dev-user.constant';
 
 @ApiTags('forms')
 @ApiBearerAuth('bearer')
@@ -206,18 +209,50 @@ export class FormsController {
     return this.formsService.unpublish(id);
   }
 
-  @Post(':id/submit')
+  @Put(':id/draft')
   @UseGuards(FormAvailabilityGuard)
   @ApiOperation({
-    summary: 'User: Submit form',
+    summary: 'User: Save draft',
     description:
-      'Submits answers for a published form. Answer value shapes depend on question types (see SubmitFormDto).',
+      'Saves partial answers without requiring required fields. Same body shape as submit. Cannot be used after a successful submit. Finalize with POST /forms/:id/submit.',
   })
   @ApiHeader({
     name: 'x-user-id',
     required: false,
     description:
-      'User ID submitting the form. If omitted, a placeholder ID is used (for development).',
+      `MongoDB ObjectId (24 hex chars). If omitted or invalid, mock user ${MOCK_FORMS_USER_OBJECT_ID} is used until auth is wired.`,
+  })
+  @ApiOkResponse({ type: FormSubmissionResponseDto })
+  @ApiBadRequestResponse({ description: 'Validation error or invalid form ID.' })
+  @ApiForbiddenResponse({
+    description:
+      'Form not published, not yet open, submission window closed, or submission limit reached.',
+  })
+  @ApiResponse({
+    status: 410,
+    description: 'Form has expired (expires_at).',
+  })
+  @ApiBody({ type: SubmitFormDto })
+  saveDraft(
+    @Param('id') formId: string,
+    @Headers('x-user-id') userId: string,
+    @Body() dto: SubmitFormDto,
+  ) {
+    return this.formsService.saveDraft(formId, resolveFormsUserId(userId), dto);
+  }
+
+  @Post(':id/submit')
+  @UseGuards(FormAvailabilityGuard)
+  @ApiOperation({
+    summary: 'User: Submit form',
+    description:
+      'Final submit with full validation (required questions). If a draft exists for this user, it is upgraded to submitted.',
+  })
+  @ApiHeader({
+    name: 'x-user-id',
+    required: false,
+    description:
+      `MongoDB ObjectId (24 hex chars). If omitted or invalid, mock user ${MOCK_FORMS_USER_OBJECT_ID} is used until auth is wired.`,
   })
   @ApiCreatedResponse({ type: FormSubmissionResponseDto })
   @ApiBadRequestResponse({ description: 'Validation error or invalid form ID.' })
@@ -235,8 +270,7 @@ export class FormsController {
     @Headers('x-user-id') userId: string,
     @Body() dto: SubmitFormDto,
   ) {
-    const uid = userId || '000000000000000000000000';
-    return this.formsService.submitForm(formId, uid, dto);
+    return this.formsService.submitForm(formId, resolveFormsUserId(userId), dto);
   }
 
   @Get(':id/submissions')
@@ -269,25 +303,21 @@ export class FormsController {
 
   @Get(':id/my-submission')
   @ApiOperation({
-    summary: 'User: View own submission',
+    summary: 'User: View own draft or submission',
     description:
-      'Returns the published form schema and the current user’s answers keyed by question ID.',
+      'Returns the published form schema, answers keyed by question ID, and status (draft or submitted).',
   })
   @ApiHeader({
     name: 'x-user-id',
     required: false,
     description:
-      'User ID whose submission should be returned. If omitted, a placeholder ID is used (for development).',
+      `MongoDB ObjectId (24 hex chars). If omitted or invalid, mock user ${MOCK_FORMS_USER_OBJECT_ID} is used until auth is wired.`,
   })
-  @ApiOkResponse({
-    description:
-      'Object containing { schema, answers }. schema matches FormTemplateSchemaResponseDto; answers is a map of questionId to value.',
-  })
+  @ApiOkResponse({ type: MySubmissionResponseDto })
   getMySubmission(
     @Param('id') formId: string,
     @Headers('x-user-id') userId: string,
   ) {
-    const uid = userId || '000000000000000000000000';
-    return this.formsService.getMySubmission(formId, uid);
+    return this.formsService.getMySubmission(formId, resolveFormsUserId(userId));
   }
 }

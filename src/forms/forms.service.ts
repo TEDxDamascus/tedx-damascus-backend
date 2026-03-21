@@ -17,13 +17,17 @@ import {
 import {
   FormSubmission,
   FormSubmissionDocument,
+  SubmissionStatus,
 } from './entities/form-submission.schema';
+import { SubmissionAnswer } from './entities/submission-answer.schema';
 import { CreateFormTemplateDto } from './dto/create-form-template.dto';
 import { UpdateFormTemplateDto } from './dto/update-form-template.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { SubmitFormDto } from './dto/submit-form.dto';
 import {
+  AnswerValidationError,
   validateAnswers,
+  validateDraftAnswers,
   normalizeAnswerValue,
 } from './validators/answer.validator';
 import { buildPaginatedResult } from '../common/pagination/utils/pagination.util';
@@ -393,6 +397,53 @@ export class FormsService {
     return templates.map((t) => mapFormTemplateToSummary(t));
   }
 
+  async saveDraft(
+    formId: string,
+    userId: string,
+    dto: SubmitFormDto,
+  ): Promise<FormSubmissionResponse> {
+    const template = await this.assertFormAcceptingSubmission(formId);
+    const userObjectId = new Types.ObjectId(userId);
+    const existing = await this.formSubmissionModel
+      .findOne({
+        formTemplateId: new Types.ObjectId(formId),
+        userId: userObjectId,
+      })
+      .exec();
+    if (existing && existing.status !== 'draft') {
+      throw new ConflictException(
+        'Cannot save draft after the form has been submitted',
+      );
+    }
+    try {
+      validateDraftAnswers(template, dto.answers);
+    } catch (err) {
+      if (err instanceof AnswerValidationError) {
+        throw new BadRequestException({
+          message: err.message,
+          questionId: err.questionId,
+        });
+      }
+      throw err;
+    }
+    const answers = this.buildNormalizedSubmissionAnswers(template, dto.answers);
+    if (!existing) {
+      const created = new this.formSubmissionModel({
+        formTemplateId: formId,
+        userId: userObjectId,
+        status: 'draft',
+        answers,
+      });
+      const saved = await created.save();
+      return mapFormSubmission(saved);
+    }
+    existing.answers = answers;
+    existing.status = 'draft';
+    existing.submittedAt = undefined;
+    const saved = await existing.save();
+    return mapFormSubmission(saved);
+  }
+
   async submitForm(
     formId: string,
     userId: string,
@@ -406,29 +457,32 @@ export class FormsService {
         userId: userObjectId,
       })
       .exec();
-    if (existing) {
+    if (existing && existing.status !== 'draft') {
       throw new ConflictException('You have already submitted this form');
     }
-    validateAnswers(template, dto.answers);
-    const qWithId = template.questions as Array<
-      FormQuestion & { _id: Types.ObjectId }
-    >;
-    const answers = qWithId
-      .filter((q) => {
-        const qId = q._id?.toString();
-        return qId && dto.answers[qId] !== undefined && dto.answers[qId] !== '';
-      })
-      .map((q) => {
-        const qId = q._id.toString();
-        const raw = dto.answers[qId];
-        const value = normalizeAnswerValue(
-          q as { _id?: Types.ObjectId } & FormQuestion,
-          raw,
-        );
-        return { questionId: q._id, value };
-      });
-    const freshCount = await this.countSubmissions(formId);
-    throwIfSubmissionCapReached(template, freshCount);
+    try {
+      validateAnswers(template, dto.answers);
+    } catch (err) {
+      if (err instanceof AnswerValidationError) {
+        throw new BadRequestException({
+          message: err.message,
+          questionId: err.questionId,
+        });
+      }
+      throw err;
+    }
+    const answers = this.buildNormalizedSubmissionAnswers(template, dto.answers);
+    const submittedCount = await this.countSubmissions(formId);
+    throwIfSubmissionCapReached(template, submittedCount);
+
+    if (existing?.status === 'draft') {
+      existing.answers = answers;
+      existing.status = 'submitted';
+      existing.submittedAt = new Date();
+      const saved = await existing.save();
+      return mapFormSubmission(saved);
+    }
+
     const submission = new this.formSubmissionModel({
       formTemplateId: formId,
       userId: userObjectId,
@@ -440,10 +494,37 @@ export class FormsService {
     return mapFormSubmission(saved);
   }
 
+  private buildNormalizedSubmissionAnswers(
+    template: FormTemplateDocument,
+    answers: Record<string, unknown>,
+  ): SubmissionAnswer[] {
+    const qWithId = template.questions as Array<
+      FormQuestion & { _id: Types.ObjectId }
+    >;
+    return qWithId
+      .filter((q) => {
+        const qId = q._id?.toString();
+        return qId && answers[qId] !== undefined && answers[qId] !== '';
+      })
+      .map((q) => {
+        const qId = q._id.toString();
+        const raw = answers[qId];
+        const value = normalizeAnswerValue(
+          q as { _id?: Types.ObjectId } & FormQuestion,
+          raw,
+        );
+        return { questionId: q._id, value } as SubmissionAnswer;
+      });
+  }
+
   async getMySubmission(
     formId: string,
     userId: string,
-  ): Promise<{ schema: object; answers: Record<string, unknown> }> {
+  ): Promise<{
+    schema: object;
+    answers: Record<string, unknown>;
+    status: SubmissionStatus;
+  }> {
     const template = await this.findOne(formId);
     if (template.status !== 'Published') {
       throw new BadRequestException('Form is not published');
@@ -455,7 +536,9 @@ export class FormsService {
       })
       .exec();
     if (!submission) {
-      throw new NotFoundException('You have not submitted this form');
+      throw new NotFoundException(
+        'You have no saved draft or submission for this form',
+      );
     }
     const schema = mapFormTemplateToSchema(template);
     const answers: Record<string, unknown> = {};
@@ -485,7 +568,11 @@ export class FormsService {
         answers[qId] = v;
       }
     }
-    return { schema, answers };
+    return {
+      schema,
+      answers,
+      status: (submission.status ?? 'submitted') as SubmissionStatus,
+    };
   }
 
   async listSubmissions(
@@ -495,16 +582,21 @@ export class FormsService {
   ): Promise<PaginatedResult<FormSubmissionResponse>> {
     await this.findOne(formId);
     const skip = (page - 1) * limit;
+    const filter = {
+      formTemplateId: new Types.ObjectId(formId),
+      $or: [
+        { status: 'submitted' },
+        { status: { $exists: false } },
+      ],
+    };
     const [items, total] = await Promise.all([
       this.formSubmissionModel
-        .find({ formTemplateId: new Types.ObjectId(formId) })
+        .find(filter)
         .sort({ submittedAt: -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
-      this.formSubmissionModel
-        .countDocuments({ formTemplateId: new Types.ObjectId(formId) })
-        .exec(),
+      this.formSubmissionModel.countDocuments(filter).exec(),
     ]);
     const mappedItems = items.map((s) => mapFormSubmission(s));
     return buildPaginatedResult(mappedItems, total, page, limit);
@@ -522,6 +614,10 @@ export class FormsService {
       .findOne({
         _id: new Types.ObjectId(submissionId),
         formTemplateId: new Types.ObjectId(formId),
+        $or: [
+          { status: 'submitted' },
+          { status: { $exists: false } },
+        ],
       })
       .exec();
     if (!submission) {
@@ -546,7 +642,13 @@ export class FormsService {
 
   private async countSubmissions(formId: string): Promise<number> {
     return this.formSubmissionModel
-      .countDocuments({ formTemplateId: new Types.ObjectId(formId) })
+      .countDocuments({
+        formTemplateId: new Types.ObjectId(formId),
+        $or: [
+          { status: 'submitted' },
+          { status: { $exists: false } },
+        ],
+      })
       .exec();
   }
 

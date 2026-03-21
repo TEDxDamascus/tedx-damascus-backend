@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * Answers keyed by question ID (string).
+ * Used for both PUT /forms/:id/draft (partial save) and POST /forms/:id/submit (final).
  *
  * Supported answer shapes per question type:
  * - short_text, long_text: string
