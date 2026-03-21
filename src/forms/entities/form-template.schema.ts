@@ -44,6 +44,22 @@ export class FormTemplate {
   @Prop({ required: false })
   publishedAt?: Date;
 
+  /** Inclusive start of submission window (UTC). */
+  @Prop({ required: false })
+  starts_at?: Date;
+
+  /** Inclusive end of submission window (UTC). */
+  @Prop({ required: false })
+  ends_at?: Date;
+
+  /** After this instant, form is expired (410 on submit). */
+  @Prop({ required: false })
+  expires_at?: Date;
+
+  /** Max total submissions; omit for unlimited. */
+  @Prop({ required: false })
+  max_submissions?: number;
+
   @Prop({ type: [FormQuestionSchema], default: [] })
   questions: FormQuestion[];
 }

@@ -38,6 +38,10 @@ import {
   mapFormTemplateToSchema,
   mapFormTemplateToSummary,
 } from './utils/form-mappers.util';
+import {
+  throwIfFormNotAcceptingSubmission,
+  throwIfSubmissionCapReached,
+} from './utils/form-availability.util';
 
 @Injectable()
 export class FormsService {
@@ -50,7 +54,13 @@ export class FormsService {
 
   async create(dto: CreateFormTemplateDto): Promise<FormTemplateSummaryResponse> {
     const created = new this.formTemplateModel({
-      ...dto,
+      name: dto.name,
+      description: dto.description,
+      targetRole: dto.targetRole,
+      starts_at: dto.starts_at ? new Date(dto.starts_at) : undefined,
+      ends_at: dto.ends_at ? new Date(dto.ends_at) : undefined,
+      expires_at: dto.expires_at ? new Date(dto.expires_at) : undefined,
+      max_submissions: dto.max_submissions,
       status: 'Draft' as FormStatus,
     });
     const saved = await created.save();
@@ -79,7 +89,23 @@ export class FormsService {
   ): Promise<FormTemplateSummaryResponse> {
     const template = await this.findOne(id);
     this.ensureDraft(template);
-    Object.assign(template, dto);
+    if (dto.name !== undefined) template.name = dto.name as FormTemplate['name'];
+    if (dto.description !== undefined) {
+      template.description = dto.description as FormTemplate['description'];
+    }
+    if (dto.targetRole !== undefined) template.targetRole = dto.targetRole;
+    if (dto.starts_at !== undefined) {
+      template.starts_at = dto.starts_at ? new Date(dto.starts_at) : undefined;
+    }
+    if (dto.ends_at !== undefined) {
+      template.ends_at = dto.ends_at ? new Date(dto.ends_at) : undefined;
+    }
+    if (dto.expires_at !== undefined) {
+      template.expires_at = dto.expires_at ? new Date(dto.expires_at) : undefined;
+    }
+    if (dto.max_submissions !== undefined) {
+      template.max_submissions = dto.max_submissions;
+    }
     const saved = await template.save();
     return mapFormTemplateToSummary(saved);
   }
@@ -202,10 +228,7 @@ export class FormsService {
     userId: string,
     dto: SubmitFormDto,
   ): Promise<FormSubmissionResponse> {
-    const template = await this.findOne(formId);
-    if (template.status !== 'Published') {
-      throw new BadRequestException('Form is not published');
-    }
+    const template = await this.assertFormAcceptingSubmission(formId);
     const userObjectId = new Types.ObjectId(userId);
     const existing = await this.formSubmissionModel
       .findOne({
@@ -234,6 +257,8 @@ export class FormsService {
         );
         return { questionId: q._id, value };
       });
+    const freshCount = await this.countSubmissions(formId);
+    throwIfSubmissionCapReached(template, freshCount);
     const submission = new this.formSubmissionModel({
       formTemplateId: formId,
       userId: userObjectId,
@@ -335,6 +360,24 @@ export class FormsService {
     const schema = mapFormTemplateToSchema(template);
     const mappedSubmission = mapFormSubmission(submission);
     return { schema, submission: mappedSubmission };
+  }
+
+  /**
+   * Used by FormAvailabilityGuard and submit flow. Loads template + submission count and enforces rules.
+   */
+  async assertFormAcceptingSubmission(
+    formId: string,
+  ): Promise<FormTemplateDocument> {
+    const template = await this.findOne(formId);
+    const count = await this.countSubmissions(formId);
+    throwIfFormNotAcceptingSubmission(template, count);
+    return template;
+  }
+
+  private async countSubmissions(formId: string): Promise<number> {
+    return this.formSubmissionModel
+      .countDocuments({ formTemplateId: new Types.ObjectId(formId) })
+      .exec();
   }
 
   private ensureDraft(template: FormTemplateDocument): void {

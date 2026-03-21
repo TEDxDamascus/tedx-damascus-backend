@@ -27,6 +27,10 @@ export interface FormTemplateSummaryResponse {
   targetRole: string;
   status: string;
   publishedAt?: Date;
+  starts_at?: Date;
+  ends_at?: Date;
+  expires_at?: Date;
+  max_submissions?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -36,6 +40,10 @@ export interface FormTemplateSchemaResponse {
   name: LocalizedText;
   description?: LocalizedText;
   targetRole: string;
+  starts_at?: Date;
+  ends_at?: Date;
+  expires_at?: Date;
+  max_submissions?: number;
   questions: FormQuestionResponse[];
 }
 

@@ -92,6 +92,10 @@ export function mapFormTemplateToSchema(
         }
       : undefined,
     targetRole: t.targetRole,
+    starts_at: t.starts_at,
+    ends_at: t.ends_at,
+    expires_at: t.expires_at,
+    max_submissions: t.max_submissions,
     questions: (t.questions ?? [])
       .slice()
       .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -118,6 +122,10 @@ export function mapFormTemplateToSummary(
     targetRole: t.targetRole,
     status: t.status,
     publishedAt: t.publishedAt,
+    starts_at: t.starts_at,
+    ends_at: t.ends_at,
+    expires_at: t.expires_at,
+    max_submissions: t.max_submissions,
     createdAt: (t as any).createdAt,
     updatedAt: (t as any).updatedAt,
   };

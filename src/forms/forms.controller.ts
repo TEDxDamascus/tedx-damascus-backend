@@ -8,16 +8,19 @@ import {
   Delete,
   Query,
   Headers,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { FormsService } from './forms.service';
@@ -32,6 +35,7 @@ import {
   FormTemplateSchemaResponseDto,
   FormTemplateSummaryResponseDto,
 } from './dto/form-responses.dto';
+import { FormAvailabilityGuard } from './guards/form-availability.guard';
 
 @ApiTags('forms')
 @ApiBearerAuth('bearer')
@@ -203,6 +207,7 @@ export class FormsController {
   }
 
   @Post(':id/submit')
+  @UseGuards(FormAvailabilityGuard)
   @ApiOperation({
     summary: 'User: Submit form',
     description:
@@ -215,7 +220,15 @@ export class FormsController {
       'User ID submitting the form. If omitted, a placeholder ID is used (for development).',
   })
   @ApiCreatedResponse({ type: FormSubmissionResponseDto })
-  @ApiBadRequestResponse({ description: 'Validation error or form not published.' })
+  @ApiBadRequestResponse({ description: 'Validation error or invalid form ID.' })
+  @ApiForbiddenResponse({
+    description:
+      'Form not published, not yet open, submission window closed, or submission limit reached.',
+  })
+  @ApiResponse({
+    status: 410,
+    description: 'Form has expired (expires_at).',
+  })
   @ApiBody({ type: SubmitFormDto })
   submit(
     @Param('id') formId: string,

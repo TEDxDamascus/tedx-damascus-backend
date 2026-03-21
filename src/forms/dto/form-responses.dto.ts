@@ -86,6 +86,18 @@ export class FormTemplateSummaryResponseDto {
 
   @ApiPropertyOptional({ type: String, format: 'date-time' })
   updatedAt?: Date;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  starts_at?: Date;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  ends_at?: Date;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  expires_at?: Date;
+
+  @ApiPropertyOptional({ description: 'Max total submissions; omit for unlimited' })
+  max_submissions?: number;
 }
 
 export class FormTemplateSchemaResponseDto {
@@ -103,6 +115,18 @@ export class FormTemplateSchemaResponseDto {
     example: 'Attender',
   })
   targetRole: string;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  starts_at?: Date;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  ends_at?: Date;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  expires_at?: Date;
+
+  @ApiPropertyOptional({ description: 'Max total submissions; omit for unlimited' })
+  max_submissions?: number;
 
   @ApiProperty({ type: [FormQuestionResponseDto] })
   questions: FormQuestionResponseDto[];
