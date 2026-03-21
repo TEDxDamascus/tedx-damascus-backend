@@ -84,7 +84,7 @@ export class FormsController {
   @ApiOkResponse({ type: FormTemplateSummaryResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid form template ID' })
   findOne(@Param('id') id: string) {
-    return this.formsService.findOne(id);
+    return this.formsService.findOneForAdmin(id);
   }
 
   @Get(':id/schema')

@@ -98,6 +98,18 @@ export class FormTemplateSummaryResponseDto {
 
   @ApiPropertyOptional({ description: 'Max total submissions; omit for unlimited' })
   max_submissions?: number;
+
+  @ApiPropertyOptional({
+    type: LocalizedTextDto,
+    description: 'Human-readable URL slugs. Unique per locale.',
+  })
+  slug?: LocalizedTextDto;
+
+  @ApiPropertyOptional({
+    type: LocalizedTextDto,
+    description: 'Full shareable URLs for copying and sharing.',
+  })
+  shareable_url?: LocalizedTextDto;
 }
 
 export class FormTemplateSchemaResponseDto {

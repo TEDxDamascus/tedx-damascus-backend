@@ -4,8 +4,10 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { MongoServerError } from 'mongodb';
 import {
   FormTemplate,
   FormTemplateDocument,
@@ -50,9 +52,105 @@ export class FormsService {
     private formTemplateModel: Model<FormTemplateDocument>,
     @InjectModel(FormSubmission.name)
     private formSubmissionModel: Model<FormSubmissionDocument>,
+    private configService: ConfigService,
   ) {}
 
+  private getBaseUrl(): string {
+    return (
+      this.configService.get<string>('app.publicSiteUrl')?.replace(/\/$/, '') ||
+      'http://localhost:3000'
+    );
+  }
+
+  private slugifyFromName(name: string): string {
+    const slug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    return slug || 'form';
+  }
+
+  private slugifyFromNameForAr(name: string): string {
+    const slug = name
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    return slug || 'form';
+  }
+
+  private buildShareableUrlForLocale(slugSegment: string): string {
+    if (!slugSegment || !slugSegment.trim()) return '';
+    const base = this.getBaseUrl();
+    const encoded = encodeURIComponent(slugSegment.trim());
+    return `${base}/apply/${encoded}`;
+  }
+
+  private buildShareableUrls(slug: {
+    en?: string;
+    ar?: string;
+  }): { en: string; ar: string } {
+    return {
+      en: this.buildShareableUrlForLocale(slug?.en ?? ''),
+      ar: this.buildShareableUrlForLocale(slug?.ar ?? ''),
+    };
+  }
+
+  private async ensureUniqueSlugEn(
+    base: string,
+    excludeId?: Types.ObjectId,
+  ): Promise<string> {
+    if (!base?.trim()) return '';
+    let candidate = base.trim();
+    let n = 1;
+    while (true) {
+      const query: Record<string, unknown> = { 'slug.en': candidate };
+      if (excludeId) query['_id'] = { $ne: excludeId };
+      const exists = await this.formTemplateModel.findOne(query).exec();
+      if (!exists) return candidate;
+      candidate = `${base.trim()}-${++n}`;
+    }
+  }
+
+  private async ensureUniqueSlugAr(
+    base: string,
+    excludeId?: Types.ObjectId,
+  ): Promise<string> {
+    if (!base?.trim()) return '';
+    let candidate = base.trim();
+    let n = 1;
+    while (true) {
+      const query: Record<string, unknown> = { 'slug.ar': candidate };
+      if (excludeId) query['_id'] = { $ne: excludeId };
+      const exists = await this.formTemplateModel.findOne(query).exec();
+      if (!exists) return candidate;
+      candidate = `${base.trim()}-${++n}`;
+    }
+  }
+
   async create(dto: CreateFormTemplateDto): Promise<FormTemplateSummaryResponse> {
+    let slugEn = dto.slug?.en?.trim() ?? '';
+    let slugAr = dto.slug?.ar?.trim() ?? '';
+    if (slugEn) {
+      slugEn = await this.ensureUniqueSlugEn(slugEn);
+    }
+    if (slugAr) {
+      slugAr = await this.ensureUniqueSlugAr(slugAr);
+    }
+    const slug =
+      slugEn || slugAr ? { en: slugEn, ar: slugAr } : undefined;
+    let shareable_url: { en: string; ar: string } | undefined;
+    if (slug) {
+      shareable_url = this.buildShareableUrls({ en: slugEn, ar: slugAr });
+    } else if (dto.shareable_url && (dto.shareable_url.en || dto.shareable_url.ar)) {
+      shareable_url = {
+        en: dto.shareable_url.en ?? '',
+        ar: dto.shareable_url.ar ?? '',
+      };
+    }
     const created = new this.formTemplateModel({
       name: dto.name,
       description: dto.description,
@@ -62,9 +160,15 @@ export class FormsService {
       expires_at: dto.expires_at ? new Date(dto.expires_at) : undefined,
       max_submissions: dto.max_submissions,
       status: 'Draft' as FormStatus,
+      ...(slug && { slug }),
+      ...(shareable_url && { shareable_url }),
     });
-    const saved = await created.save();
-    return mapFormTemplateToSummary(saved);
+    try {
+      const saved = await created.save();
+      return mapFormTemplateToSummary(saved);
+    } catch (e) {
+      this.handleSlugConflict(e);
+    }
   }
 
   async findAll(): Promise<FormTemplateSummaryResponse[]> {
@@ -83,12 +187,18 @@ export class FormsService {
     return doc;
   }
 
+  async findOneForAdmin(id: string): Promise<FormTemplateSummaryResponse> {
+    const doc = await this.findOne(id);
+    return mapFormTemplateToSummary(doc);
+  }
+
   async update(
     id: string,
     dto: UpdateFormTemplateDto,
   ): Promise<FormTemplateSummaryResponse> {
     const template = await this.findOne(id);
     this.ensureDraft(template);
+    const excludeId = new Types.ObjectId(id);
     if (dto.name !== undefined) template.name = dto.name as FormTemplate['name'];
     if (dto.description !== undefined) {
       template.description = dto.description as FormTemplate['description'];
@@ -106,8 +216,49 @@ export class FormsService {
     if (dto.max_submissions !== undefined) {
       template.max_submissions = dto.max_submissions;
     }
-    const saved = await template.save();
-    return mapFormTemplateToSummary(saved);
+    const currentSlugEn = template.slug?.en?.trim() ?? '';
+    const currentSlugAr = template.slug?.ar?.trim() ?? '';
+    const incomingSlugEn = dto.slug?.en?.trim() ?? '';
+    const incomingSlugAr = dto.slug?.ar?.trim() ?? '';
+    const slugEnChanged = dto.slug && 'en' in dto.slug && incomingSlugEn !== currentSlugEn;
+    const slugArChanged = dto.slug && 'ar' in dto.slug && incomingSlugAr !== currentSlugAr;
+    let finalSlugEn = currentSlugEn;
+    let finalSlugAr = currentSlugAr;
+    if (slugEnChanged && incomingSlugEn) {
+      finalSlugEn = await this.ensureUniqueSlugEn(incomingSlugEn, excludeId);
+      template.slug = template.slug ?? { en: '', ar: '' };
+      template.slug.en = finalSlugEn;
+    } else if (dto.slug?.en !== undefined) {
+      template.slug = template.slug ?? { en: '', ar: '' };
+      template.slug.en = incomingSlugEn;
+      finalSlugEn = incomingSlugEn;
+    }
+    if (slugArChanged && incomingSlugAr) {
+      finalSlugAr = await this.ensureUniqueSlugAr(incomingSlugAr, excludeId);
+      template.slug = template.slug ?? { en: '', ar: '' };
+      template.slug.ar = finalSlugAr;
+    } else if (dto.slug?.ar !== undefined) {
+      template.slug = template.slug ?? { en: '', ar: '' };
+      template.slug.ar = incomingSlugAr;
+      finalSlugAr = incomingSlugAr;
+    }
+    template.shareable_url = template.shareable_url ?? { en: '', ar: '' };
+    if (slugEnChanged && finalSlugEn) {
+      template.shareable_url.en = this.buildShareableUrlForLocale(finalSlugEn);
+    } else if (dto.shareable_url?.en !== undefined && !slugEnChanged) {
+      template.shareable_url.en = dto.shareable_url.en ?? '';
+    }
+    if (slugArChanged && finalSlugAr) {
+      template.shareable_url.ar = this.buildShareableUrlForLocale(finalSlugAr);
+    } else if (dto.shareable_url?.ar !== undefined && !slugArChanged) {
+      template.shareable_url.ar = dto.shareable_url.ar ?? '';
+    }
+    try {
+      const saved = await template.save();
+      return mapFormTemplateToSummary(saved);
+    } catch (e) {
+      this.handleSlugConflict(e);
+    }
   }
 
   async remove(id: string): Promise<void> {
@@ -188,10 +339,29 @@ export class FormsService {
   async publish(id: string): Promise<FormTemplateSummaryResponse> {
     const template = await this.findOne(id);
     this.ensureDraft(template);
+    const excludeId = new Types.ObjectId(id);
+    let slugEn = template.slug?.en?.trim() ?? '';
+    let slugAr = template.slug?.ar?.trim() ?? '';
+    if (!slugEn && template.name?.en) {
+      const base = this.slugifyFromName(template.name.en);
+      slugEn = await this.ensureUniqueSlugEn(base, excludeId);
+    }
+    if (!slugAr && template.name?.ar) {
+      const base = this.slugifyFromNameForAr(template.name.ar);
+      slugAr = await this.ensureUniqueSlugAr(base, excludeId);
+    }
+    if (slugEn || slugAr) {
+      template.slug = { en: slugEn, ar: slugAr };
+      template.shareable_url = this.buildShareableUrls({ en: slugEn, ar: slugAr });
+    }
     template.status = 'Published' as FormStatus;
     template.publishedAt = new Date();
-    const saved = await template.save();
-    return mapFormTemplateToSummary(saved);
+    try {
+      const saved = await template.save();
+      return mapFormTemplateToSummary(saved);
+    } catch (e) {
+      this.handleSlugConflict(e);
+    }
   }
 
   async unpublish(id: string): Promise<FormTemplateSummaryResponse> {
@@ -388,4 +558,12 @@ export class FormsService {
     }
   }
 
+  private handleSlugConflict(err: unknown): never {
+    if (err instanceof MongoServerError && err.code === 11000) {
+      throw new ConflictException(
+        'A form with this slug already exists. Please use a different slug.',
+      );
+    }
+    throw err;
+  }
 }

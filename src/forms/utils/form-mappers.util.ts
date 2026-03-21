@@ -126,6 +126,14 @@ export function mapFormTemplateToSummary(
     ends_at: t.ends_at,
     expires_at: t.expires_at,
     max_submissions: t.max_submissions,
+    slug:
+      t.slug && (t.slug.en || t.slug.ar)
+        ? { en: t.slug.en ?? '', ar: t.slug.ar ?? '' }
+        : undefined,
+    shareable_url:
+      t.shareable_url && (t.shareable_url.en || t.shareable_url.ar)
+        ? { en: t.shareable_url.en ?? '', ar: t.shareable_url.ar ?? '' }
+        : undefined,
     createdAt: (t as any).createdAt,
     updatedAt: (t as any).updatedAt,
   };

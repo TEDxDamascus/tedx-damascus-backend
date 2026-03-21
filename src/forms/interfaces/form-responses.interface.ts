@@ -31,6 +31,8 @@ export interface FormTemplateSummaryResponse {
   ends_at?: Date;
   expires_at?: Date;
   max_submissions?: number;
+  slug?: LocalizedText;
+  shareable_url?: LocalizedText;
   createdAt?: Date;
   updatedAt?: Date;
 }

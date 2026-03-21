@@ -10,6 +10,8 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { I18nDto } from './i18n.dto';
+import { SlugI18nDto } from './slug.dto';
+import { ShareableUrlI18nDto } from './shareable-url.dto';
 import { TARGET_ROLES } from '../entities/form-template.schema';
 
 export class CreateFormTemplateDto {
@@ -72,4 +74,24 @@ export class CreateFormTemplateDto {
   @IsInt()
   @Min(1)
   max_submissions?: number;
+
+  @ApiPropertyOptional({
+    type: SlugI18nDto,
+    description: 'Human-readable URL slugs. Unique per locale. Auto-generated on publish if omitted.',
+  })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => SlugI18nDto)
+  slug?: SlugI18nDto;
+
+  @ApiPropertyOptional({
+    type: ShareableUrlI18nDto,
+    description: 'Full shareable URLs. Auto-generated from slug when slug changes; can be set manually.',
+  })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ShareableUrlI18nDto)
+  shareable_url?: ShareableUrlI18nDto;
 }
