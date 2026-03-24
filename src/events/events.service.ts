@@ -4,7 +4,6 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Event } from './schema/event.schema';
 import { Model } from 'mongoose';
-import { I18nContext, I18nService } from 'nestjs-i18n';
 import { translateFieldHelper } from '../common/utils/translate.helper';
 
 @Injectable()
@@ -22,9 +21,21 @@ export class EventsService {
   async findAll(lang: string) {
     const events = await this.eventModel
       .find()
-      .populate('event_image')
+      .populate('event_image', 'url -_id')
       .populate('gallery', 'url -_id')
-      .populate('speakers')
+      .populate({
+        path: 'speakers',
+        populate: [
+          {
+            path: 'speaker_image',
+            select: 'url -_id',
+          },
+          {
+            path: 'gallery',
+            select: 'url -_id',
+          },
+        ],
+      })
       .lean()
       .exec();
 
@@ -34,12 +45,15 @@ export class EventsService {
       description: translateFieldHelper(event.description, lang),
       brief: translateFieldHelper(event.brief, lang),
       location: translateFieldHelper(event.location, lang),
-
+      event_image: (event.event_image as any)?.url,
+      gallery: (event.gallery as any[])?.map((img) => img.url) || [],
       speakers: (event.speakers as any[])?.map((speaker) => ({
         ...speaker,
         name: translateFieldHelper(speaker.name, lang),
         bio: translateFieldHelper(speaker.bio, lang),
         description: translateFieldHelper(speaker.description, lang),
+        speaker_image: speaker.speaker_image.url as string,
+        gallery: (speaker.gallery as any[]).map((gall) => gall.url),
       })),
     }));
   }
@@ -47,8 +61,17 @@ export class EventsService {
   async findOne(id: string, lang: string) {
     const event = await this.eventModel
       .findById(id)
-      .populate('event_image')
+      .populate('event_image', 'url -_id')
       .populate('gallery', 'url -_id')
+      .populate({
+        path: 'speakers',
+        populate: [
+          {
+            path: 'speaker_image',
+            select: 'url -_id',
+          },
+        ],
+      })
       .lean()
       .exec();
     if (!event)
@@ -59,6 +82,13 @@ export class EventsService {
       description: translateFieldHelper(event.description, lang),
       brief: event.brief ? translateFieldHelper(event.brief, lang) : undefined,
       location: translateFieldHelper(event.location, lang),
+      event_image: (event.event_image as any).url,
+      gallery: (event.gallery as any[])?.map((gall) => gall.url),
+      speakers: (event.speakers as any[])?.map((speaker) => ({
+        name: translateFieldHelper(speaker.name, lang),
+        bio: translateFieldHelper(speaker.bio, lang),
+        speaker_image: speaker.speaker_image?.url || null,
+      })),
     };
   }
   //! Update Event By Id
