@@ -30,6 +30,8 @@ export class SpeakersService {
       name: translateFieldHelper(speaker.name, lang),
       bio: translateFieldHelper(speaker.bio, lang),
       description: translateFieldHelper(speaker.description, lang),
+      speaker_image: (speaker.speaker_image as any).url,
+      gallery: (speaker.gallery as any[]).map((gall) => gall.url),
     }));
   }
   //! Find Speaker By Id
@@ -47,6 +49,8 @@ export class SpeakersService {
       name: translateFieldHelper(speaker.name, lang),
       bio: translateFieldHelper(speaker.bio, lang),
       description: translateFieldHelper(speaker.description, lang),
+      speaker_image: (speaker.speaker_image as any).url,
+      gallery: (speaker.gallery as any[]).map((gall) => gall.url),
     };
   }
   //! Update Speaker By Id
