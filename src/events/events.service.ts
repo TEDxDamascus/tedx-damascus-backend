@@ -46,14 +46,14 @@ export class EventsService {
       brief: translateFieldHelper(event.brief, lang),
       location: translateFieldHelper(event.location, lang),
       event_image: (event.event_image as any)?.url,
-      gallery: (event.gallery as any[])?.map((img) => img.url) || [],
-      speakers: (event.speakers as any[])?.map((speaker) => ({
+      gallery: (event.gallery as any[])?.map((img) => img.url) || [], //event gallery
+      speakers: (event.speakers as any[])?.map(({gallery,...speaker}) => ({
         ...speaker,
         name: translateFieldHelper(speaker.name, lang),
         bio: translateFieldHelper(speaker.bio, lang),
         description: translateFieldHelper(speaker.description, lang),
         speaker_image: speaker.speaker_image.url as string,
-        gallery: (speaker.gallery as any[]).map((gall) => gall.url),
+        // gallery: (speaker.gallery as any[]).map((gall) => gall.url),// speaker gallery  
       })),
     }));
   }

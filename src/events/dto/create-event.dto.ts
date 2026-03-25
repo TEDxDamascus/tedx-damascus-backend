@@ -1,5 +1,6 @@
 import {
   ArrayNotEmpty,
+  ArrayUnique,
   IsBoolean,
   IsDate,
   IsDefined,
@@ -77,7 +78,8 @@ export class CreateEventDto {
   @IsDefined()
   @IsMongoId({ each: true })
   @ArrayNotEmpty()
-  speakers: string[]; //$ Should be the Type Speaker
+  @ArrayUnique({ message: 'Speakers must be unique'}) 
+  speakers: string[];
 
   //! is_deleted
   @IsOptional()
