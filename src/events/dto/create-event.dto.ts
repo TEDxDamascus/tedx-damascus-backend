@@ -78,7 +78,7 @@ export class CreateEventDto {
   @IsDefined()
   @IsMongoId({ each: true })
   @ArrayNotEmpty()
-  @ArrayUnique({ message: 'Speakers must be unique'}) 
+  @ArrayUnique({ message: 'Each speaker can only be added once' })
   speakers: string[];
 
   //! is_deleted

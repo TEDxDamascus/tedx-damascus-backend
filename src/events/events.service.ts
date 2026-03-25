@@ -38,22 +38,20 @@ export class EventsService {
       })
       .lean()
       .exec();
-
+    //! remove gallery of the speaker
     return events.map((event) => ({
       ...event,
       title: translateFieldHelper(event.title, lang),
       description: translateFieldHelper(event.description, lang),
       brief: translateFieldHelper(event.brief, lang),
       location: translateFieldHelper(event.location, lang),
-      event_image: (event.event_image as any)?.url,
-      gallery: (event.gallery as any[])?.map((img) => img.url) || [], //event gallery
-      speakers: (event.speakers as any[])?.map(({gallery,...speaker}) => ({
-        ...speaker,
+      event_image: event.event_image.url,
+      gallery: event.gallery.map((img) => img.url),
+      speakers: event.speakers.map((speaker) => ({
         name: translateFieldHelper(speaker.name, lang),
         bio: translateFieldHelper(speaker.bio, lang),
         description: translateFieldHelper(speaker.description, lang),
-        speaker_image: speaker.speaker_image.url as string,
-        // gallery: (speaker.gallery as any[]).map((gall) => gall.url),// speaker gallery  
+        speaker_image: speaker.speaker_image.url,
       })),
     }));
   }
@@ -82,12 +80,12 @@ export class EventsService {
       description: translateFieldHelper(event.description, lang),
       brief: event.brief ? translateFieldHelper(event.brief, lang) : undefined,
       location: translateFieldHelper(event.location, lang),
-      event_image: (event.event_image as any).url,
-      gallery: (event.gallery as any[])?.map((gall) => gall.url),
-      speakers: (event.speakers as any[])?.map((speaker) => ({
+      event_image: event.event_image.url,
+      gallery: event.gallery.map((gall) => gall.url),
+      speakers: event.speakers.map((speaker) => ({
         name: translateFieldHelper(speaker.name, lang),
         bio: translateFieldHelper(speaker.bio, lang),
-        speaker_image: speaker.speaker_image?.url || null,
+        speaker_image: speaker.speaker_image.url,
       })),
     };
   }
@@ -108,9 +106,5 @@ export class EventsService {
     if (!event) {
       throw new NotFoundException(`Event with id ${id} was not found`);
     }
-    return {
-      success: true,
-      message: `Event "${event.title}" deleted successfully`,
-    };
   }
 }

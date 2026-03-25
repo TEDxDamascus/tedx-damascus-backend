@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import type { TranslationField } from '../../common/type/translation-field';
 import { translationSchema } from '../../common/utils/translation.schema';
+import { Media } from 'src/storage/entities/media.entity';
 
 @Schema({ timestamps: true })
 export class Speaker {
@@ -35,7 +36,7 @@ export class Speaker {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Media',
   })
-  speaker_image: string;
+  speaker_image: Media;
 
   //! Social Link
   @Prop({ required: true })
@@ -46,7 +47,7 @@ export class Speaker {
     required: true,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Media' }],
   })
-  gallery: string[];
+  gallery: Media[];
 
   //! Video Link
   @Prop({ required: true })
