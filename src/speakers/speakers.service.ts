@@ -6,6 +6,7 @@ import { Model } from 'mongoose';
 import { Speaker } from './schemas/speaker.schema';
 import { translateFieldHelper } from '../common/utils/translate.helper';
 import { map } from 'rxjs';
+import { PaginationQueryDto } from 'src/events/dto/pagination.dto';
 
 @Injectable()
 export class SpeakersService {
@@ -18,9 +19,12 @@ export class SpeakersService {
     return newSpeaker.save();
   }
   //! Get all Speakers
-  async findAll(lang: string) {
+  async findAll(lang: string, paginationQueryDto: PaginationQueryDto) {
+    const { limit, offset } = paginationQueryDto;
     const speakers = await this.speakerModel
       .find()
+      .skip(offset)
+      .limit(limit)
       .populate('speaker_image', 'url -_id')
       .populate('gallery', 'url -_id')
       .lean()
