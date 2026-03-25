@@ -15,6 +15,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18n, I18nContext } from 'nestjs-i18n';
 import { ParseIdPipe } from '../common/pipes/parse-id.pipe';
 import { PaginationQueryDto } from './dto/pagination.dto';
+import { EventQueryDto } from './dto/search.events.dto';
 
 @ApiTags('Events')
 @Controller('events')
@@ -32,8 +33,13 @@ export class EventsController {
   async findAll(
     @I18n() i18n: I18nContext,
     @Query() paginationQuery: PaginationQueryDto,
+    @Query() eventQuery: EventQueryDto,
   ) {
-    return await this.eventsService.findAll(i18n.lang, paginationQuery);
+    return await this.eventsService.findAll(
+      i18n.lang,
+      paginationQuery,
+      eventQuery,
+    );
   }
   //! Get Event By Id
   @ApiOperation({ summary: 'Get Event By Id' })

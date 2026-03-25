@@ -44,7 +44,7 @@ export class Event {
     _id: false,
   })
   brief: TranslationField;
-  
+
   //! Location
   @Prop({
     required: true,
@@ -52,7 +52,7 @@ export class Event {
     _id: false,
   })
   location: TranslationField;
-  
+
   //! Date
   @Prop({ required: true })
   date: Date;
@@ -70,7 +70,7 @@ export class Event {
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Speaker' }],
   })
   speakers: Speaker[];
-  
+
   //! Is_deleted
   @Prop({ required: false, default: false })
   is_deleted: boolean;
@@ -79,3 +79,8 @@ export class Event {
 export const EventSchema = SchemaFactory.createForClass(Event);
 
 // waiting for Speaker Module and the Image
+
+EventSchema.index({
+  'title.en': 'text',
+  'title.ar': 'text',
+});

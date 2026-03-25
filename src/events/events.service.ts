@@ -6,6 +6,7 @@ import { Event } from './schema/event.schema';
 import { Model } from 'mongoose';
 import { translateFieldHelper } from '../common/utils/translate.helper';
 import { PaginationQueryDto } from './dto/pagination.dto';
+import { EventQueryDto } from './dto/search.events.dto';
 
 @Injectable()
 export class EventsService {
@@ -19,11 +20,44 @@ export class EventsService {
     return newEvent.save();
   }
   //! Get All Events
-  async findAll(lang: string, paginationQueryDto: PaginationQueryDto) {
+  async findAll(
+    lang: string,
+    paginationQueryDto: PaginationQueryDto,
+    eventQuery: EventQueryDto,
+  ) {
     const { limit, offset } = paginationQueryDto;
+    const { title, year, type } = eventQuery;
+
+    const filters: any = {}; // remove any later
+    //$ search title
+    if (title) {
+      const cleanTitle = title?.trim();
+      const escaped = cleanTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (cleanTitle) {
+        filters[`title.${lang}`] = {
+          $regex: `^${escaped}`,
+          $options: 'i',
+        };
+      } else {
+        filters.$text = { $search: cleanTitle };
+      }
+    }
+    //$ filter the types [salon,meetup,main_event]
+    if (type) {
+      filters.event_type = type;
+    }
+    //$ filter the year
+    if (year) {
+      //! add limit and return and not doing
+      const y = Number(year);
+      filters.date = {
+        $gte: new Date(`${y}-01-01`),
+        $lte: new Date(`${y}-12-31`),
+      };
+    }
 
     const events = await this.eventModel
-      .find()
+      .find(filters)
       .skip(offset)
       .limit(limit)
       .populate('event_image', 'url -_id')
