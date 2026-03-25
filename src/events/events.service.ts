@@ -5,6 +5,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Event } from './schema/event.schema';
 import { Model } from 'mongoose';
 import { translateFieldHelper } from '../common/utils/translate.helper';
+import { PaginationQueryDto } from './dto/pagination.dto';
 
 @Injectable()
 export class EventsService {
@@ -18,9 +19,13 @@ export class EventsService {
     return newEvent.save();
   }
   //! Get All Events
-  async findAll(lang: string) {
+  async findAll(lang: string, paginationQueryDto: PaginationQueryDto) {
+    const { limit, offset } = paginationQueryDto;
+
     const events = await this.eventModel
       .find()
+      .skip(offset)
+      .limit(limit)
       .populate('event_image', 'url -_id')
       .populate('gallery', 'url -_id')
       .populate({
