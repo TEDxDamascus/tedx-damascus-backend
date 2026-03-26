@@ -1,27 +1,42 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export type BlogDocument = Blog & Document;
+export type BlogDocument = Blog &
+  Document & {
+    createdAt: Date;
+    updatedAt: Date;
+  };
+
+const localizedStringSchema = {
+  ar: { type: String, trim: true, default: '' },
+  en: { type: String, trim: true, default: '' },
+};
 
 @Schema({ timestamps: true })
 export class Blog {
-  @Prop({ required: true })
-  title: string;
+  @Prop({ type: localizedStringSchema, required: true })
+  title: { ar: string; en: string };
 
-  @Prop()
-  slug: string;
+  @Prop({ type: localizedStringSchema, required: true })
+  slug: { ar: string; en: string };
 
   @Prop({ type: Types.ObjectId, ref: 'Image' })
-  og_image: Types.ObjectId;
+  blog_image?: Types.ObjectId;
 
-  @Prop()
-  description: string;
+  @Prop({ type: Types.ObjectId, ref: 'Image' })
+  og_image?: Types.ObjectId;
 
-  @Prop({ required: true })
-  content: string;
+  @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
+  description: { ar: string; en: string };
+
+  @Prop({ type: localizedStringSchema, required: true })
+  content: { ar: string; en: string };
 
   @Prop({ default: 'draft' })
-  status: string; // draft | published
+  status: string;
+
+  @Prop()
+  publishedAt?: Date;
 
   @Prop()
   category: string;
@@ -32,15 +47,46 @@ export class Blog {
   @Prop({ default: 0 })
   read_time: number;
 
-  @Prop()
-  meta_title: string;
+  @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
+  meta_title: { ar: string; en: string };
+
+  @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
+  meta_description: { ar: string; en: string };
+
+  @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
+  meta_keywords: { ar: string; en: string };
 
   @Prop()
-  meta_description: string;
+  canonical_url?: string;
 
-  // ✅ NEW FIELD
+  @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
+  og_title: { ar: string; en: string };
+
+  @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
+  og_description: { ar: string; en: string };
+
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Image' }] })
   gallery: Types.ObjectId[];
 }
 
 export const BlogSchema = SchemaFactory.createForClass(Blog);
+
+BlogSchema.index(
+  { 'slug.en': 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      'slug.en': { $exists: true, $type: 'string', $ne: '' },
+    },
+  },
+);
+
+BlogSchema.index(
+  { 'slug.ar': 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      'slug.ar': { $exists: true, $type: 'string', $ne: '' },
+    },
+  },
+);

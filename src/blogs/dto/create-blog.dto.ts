@@ -1,33 +1,54 @@
 import {
-  IsString,
-  IsOptional,
   IsArray,
+  IsDateString,
   IsMongoId,
   IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { LocalizedStringDto } from './localized-string.dto';
 
 export class CreateBlogDto {
-  @IsString()
-  title: string;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  title: LocalizedStringDto;
 
   @IsOptional()
-  @IsString()
-  slug?: string;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  slug?: LocalizedStringDto;
+
+  @IsOptional()
+  @IsMongoId()
+  blog_image?: string;
 
   @IsOptional()
   @IsMongoId()
   og_image?: string;
 
   @IsOptional()
-  @IsString()
-  description?: string;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  description?: LocalizedStringDto;
 
-  @IsString()
-  content: string;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  content: LocalizedStringDto;
 
   @IsOptional()
   @IsString()
   status?: string;
+
+  @IsOptional()
+  @IsDateString()
+  publishedAt?: string;
 
   @IsOptional()
   @IsString()
@@ -38,12 +59,38 @@ export class CreateBlogDto {
   read_time?: number;
 
   @IsOptional()
-  @IsString()
-  meta_title?: string;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  meta_title?: LocalizedStringDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  meta_description?: LocalizedStringDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  meta_keywords?: LocalizedStringDto;
 
   @IsOptional()
   @IsString()
-  meta_description?: string;
+  canonical_url?: string;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  og_title?: LocalizedStringDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  og_description?: LocalizedStringDto;
 
   @IsOptional()
   @IsArray()
