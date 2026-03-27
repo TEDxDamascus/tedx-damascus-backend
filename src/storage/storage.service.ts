@@ -133,10 +133,7 @@ export class StorageService {
 
   async deleteMedia(id: string): Promise<void> {
     const result = await this.mediaModel
-      .findOneAndUpdate(
-        { _id: id, is_active: true },
-        { is_active: false },
-      )
+      .findOneAndUpdate({ _id: id, is_active: true }, { is_active: false })
       .exec();
 
     if (!result) {
@@ -165,5 +162,10 @@ export class StorageService {
     ]);
 
     return buildPaginatedResult(items, total, page, limit);
+  }
+
+  // yahiea added this for the image existing validator method
+  async findOneById(id: string) {
+    return await this.mediaModel.findById(id).exec();
   }
 }

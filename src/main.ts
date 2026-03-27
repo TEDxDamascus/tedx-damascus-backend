@@ -4,7 +4,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { ValidationError } from 'class-validator';
+import { useContainer, ValidationError } from 'class-validator';
 import { AppModule } from './app.module';
 import { docsCdnRewriteMiddleware, setupDocs } from './doc/scala.doc';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -62,6 +62,9 @@ async function bootstrap() {
         }),
     }),
   );
+
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
+
   // Rewrite docs HTML to load Swagger UI static assets from CDN (fixes 404 on Vercel/serverless).
   app.use(docsCdnRewriteMiddleware);
   setupDocs(app);

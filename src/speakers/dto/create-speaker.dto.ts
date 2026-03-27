@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { string } from 'joi';
 import { TranslationDto } from '../../common/dto/translation.dto';
+import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
 
 export class CreateSpeakerDto {
   @IsDefined()
@@ -33,6 +34,7 @@ export class CreateSpeakerDto {
   @IsDefined()
   @IsMongoId()
   @IsNotEmpty()
+  @IsExistingMedia()
   speaker_image: string;
 
   @IsDefined()
@@ -44,6 +46,7 @@ export class CreateSpeakerDto {
   @IsDefined()
   @IsMongoId({ each: true })
   @ArrayNotEmpty()
+  @IsExistingMedia({ each: true })
   gallery: string[];
 
   @IsDefined()

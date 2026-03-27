@@ -15,5 +15,6 @@ import { Speaker, SpeakerSchema } from './schemas/speaker.schema';
   ],
   controllers: [SpeakersController],
   providers: [SpeakersService],
+  exports:[SpeakersService]
 })
 export class SpeakersModule {}

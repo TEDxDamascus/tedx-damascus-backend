@@ -15,6 +15,8 @@ import { Type } from 'class-transformer';
 import { EventType } from '../enums/event-type.enum';
 import { EventStatus } from '../enums/event-status.enum';
 import { TranslationDto } from '../../common/dto/translation.dto';
+import { IsExistingSpeaker } from 'src/common/decorators/is-existing-speaker.decorator';
+import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
 
 export class CreateEventDto {
   //! Title
@@ -57,6 +59,7 @@ export class CreateEventDto {
   @IsDefined()
   @IsMongoId()
   @IsNotEmpty()
+  @IsExistingMedia()
   event_image: string;
 
   //! Event Status
@@ -79,6 +82,7 @@ export class CreateEventDto {
   @IsMongoId({ each: true })
   @ArrayNotEmpty()
   @ArrayUnique({ message: 'Each speaker can only be added once' })
+  @IsExistingSpeaker({ each: true })
   speakers: string[];
 
   //! is_deleted
@@ -91,6 +95,7 @@ export class CreateEventDto {
   @IsDefined()
   @IsMongoId({ each: true })
   @ArrayNotEmpty()
+  @IsExistingMedia({ each: true })
   gallery: string[];
 }
 
