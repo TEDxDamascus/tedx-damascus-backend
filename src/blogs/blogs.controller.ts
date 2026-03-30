@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
@@ -25,25 +26,28 @@ export class BlogsController {
 
   @ApiOperation({ summary: 'Get All Blogs' })
   @Get()
-  findAll() {
-    return this.blogsService.findAll();
+  findAll(@Query() query: any) {
+    return this.blogsService.findAll(query);
   }
 
   @ApiOperation({ summary: 'Get Blog By Id' })
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.blogsService.findOne(+id);
+    return this.blogsService.findOne(id);
   }
 
   @ApiOperation({ summary: 'Update Existing Blog By Id' })
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBlogDto: UpdateBlogDto) {
-    return this.blogsService.update(+id, updateBlogDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateBlogDto: UpdateBlogDto,
+  ) {
+    return this.blogsService.update(id, updateBlogDto);
   }
 
   @ApiOperation({ summary: 'Delete Existing Blog By Id' })
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.blogsService.remove(+id);
+    return this.blogsService.remove(id);
   }
 }
