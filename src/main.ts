@@ -1,10 +1,12 @@
 import {
   HttpStatus,
+  INestApplication,
   UnprocessableEntityException,
   ValidationPipe,
 } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { useContainer, ValidationError } from 'class-validator';
+import serverless from 'serverless-http';
 import { AppModule } from './app.module';
 import { docsCdnRewriteMiddleware, setupDocs } from './doc/scala.doc';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -44,7 +46,7 @@ function flattenValidationErrors(
   return details;
 }
 
-async function bootstrap() {
+async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(
@@ -72,6 +74,31 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseInterceptor());
   // app.useGlobalFilters(new HttpExceptionFilter());
 
+  return app;
+}
+
+async function bootstrap() {
+  const app = await createApp();
   await app.listen(process.env.PORT ?? 3000);
 }
-void bootstrap();
+
+/** Vercel sets VERCEL=1 for builds and serverless runtime. */
+function isVercelServerless(): boolean {
+  return process.env.VERCEL === '1';
+}
+
+let cachedHandler: ReturnType<typeof serverless> | undefined;
+
+export default async function handler(req: unknown, res: unknown) {
+  if (!cachedHandler) {
+    const app = await createApp();
+    await app.init();
+    const expressApp = app.getHttpAdapter().getInstance();
+    cachedHandler = serverless(expressApp);
+  }
+  return cachedHandler(req as never, res as never);
+}
+
+if (!isVercelServerless()) {
+  void bootstrap();
+}
