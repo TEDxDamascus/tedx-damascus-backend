@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
 import type { TranslationField } from '../../common/type/translation-field';
 import { translationSchema } from '../../common/utils/translation.schema';
-import { Media } from 'src/storage/entities/media.entity';
+import { Media } from '../../storage/entities/media.entity';
 
 @Schema({ timestamps: true })
 export class Speaker {

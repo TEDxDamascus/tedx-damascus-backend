@@ -15,8 +15,8 @@ import { Type } from 'class-transformer';
 import { EventType } from '../enums/event-type.enum';
 import { EventStatus } from '../enums/event-status.enum';
 import { TranslationDto } from '../../common/dto/translation.dto';
-import { IsExistingSpeaker } from 'src/common/decorators/is-existing-speaker.decorator';
-import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
+import { IsExistingSpeaker } from '../../common/decorators/is-existing-speaker.decorator';
+import { IsExistingMedia } from '../../common/decorators/is-existing-media.decorator';
 
 export class CreateEventDto {
   //! Title

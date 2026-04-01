@@ -7,7 +7,7 @@ import {
   ValidatorConstraintInterface,
 } from 'class-validator';
 import { Types } from 'mongoose';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from '../../storage/storage.service';
 
 @ValidatorConstraint({ async: true }) 
 @Injectable()

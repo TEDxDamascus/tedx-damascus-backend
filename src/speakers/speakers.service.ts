@@ -6,7 +6,7 @@ import { Model } from 'mongoose';
 import { Speaker } from './schemas/speaker.schema';
 import { translateFieldHelper } from '../common/utils/translate.helper';
 import { map } from 'rxjs';
-import { PaginationQueryDto } from 'src/events/dto/pagination.dto';
+import { PaginationQueryDto } from '../events/dto/pagination.dto';
 
 @Injectable()
 export class SpeakersService {

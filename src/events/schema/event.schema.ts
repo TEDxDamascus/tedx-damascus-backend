@@ -4,8 +4,8 @@ import { EventStatus } from '../enums/event-status.enum';
 import { EventType } from '../enums/event-type.enum';
 import type { TranslationField } from '../../common/type/translation-field';
 import { translationSchema } from '../../common/utils/translation.schema';
-import { Speaker } from 'src/speakers/schemas/speaker.schema';
-import { Media } from 'src/storage/entities/media.entity';
+import { Speaker } from '../../speakers/schemas/speaker.schema';
+import { Media } from '../../storage/entities/media.entity';
 
 @Schema({ timestamps: true })
 export class Event {

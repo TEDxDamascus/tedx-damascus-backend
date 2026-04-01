@@ -14,7 +14,7 @@ import { UpdateSpeakerDto } from './dto/update-speaker.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ParseIdPipe } from '../common/pipes/parse-id.pipe';
 import { I18n, I18nContext } from 'nestjs-i18n';
-import { PaginationQueryDto } from 'src/events/dto/pagination.dto';
+import { PaginationQueryDto } from '../events/dto/pagination.dto';
 
 @ApiTags('Speakers')
 @Controller('speakers')
