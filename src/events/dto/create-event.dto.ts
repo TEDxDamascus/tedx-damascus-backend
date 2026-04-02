@@ -9,6 +9,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -57,7 +58,7 @@ export class CreateEventDto {
 
   //! Event Image
   @IsDefined()
-  @IsMongoId()
+  @IsUrl() // it will be returned as URL not being empty
   @IsNotEmpty()
   @IsExistingMedia()
   event_image: string;
@@ -93,7 +94,7 @@ export class CreateEventDto {
 
   //! Gallery
   @IsDefined()
-  @IsMongoId({ each: true })
+  @IsUrl({}, { each: true })
   @ArrayNotEmpty()
   @IsExistingMedia({ each: true })
   gallery: string[];

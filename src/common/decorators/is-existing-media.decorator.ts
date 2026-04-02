@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   registerDecorator,
   ValidationArguments,
@@ -6,20 +6,26 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
-import { Types } from 'mongoose';
+import { error } from 'console';
 import { StorageService } from 'src/storage/storage.service';
 
-@ValidatorConstraint({ async: true }) 
+@ValidatorConstraint({ async: true })
 @Injectable()
 export class IsExistingMediaConstrain implements ValidatorConstraintInterface {
   constructor(private readonly storageService: StorageService) {}
-  async validate(id: string) {
-    if (!Types.ObjectId.isValid(id)) return false;
-    const img = await this.storageService.findOneById(id);
-    return !!img;
+
+  async validate(url: string) {
+    try {
+      const img = await this.storageService.findOneByURL(url);
+      if (!img) return false;
+      console.log('the URL inserted Media ID is ', img.id);
+      return true;
+    } catch {
+      return false;
+    }
   }
   defaultMessage(args: ValidationArguments) {
-    return `Media with id "${args.value}" does not exist`;
+    return `Media with URL "${args.value}" does not exist`;
   }
 }
 
