@@ -18,7 +18,7 @@ export class IsExistingMediaConstrain implements ValidatorConstraintInterface {
     try {
       const img = await this.storageService.findOneByURL(url);
       if (!img) return false;
-      console.log('the URL inserted Media ID is ', img.id);
+      console.log('the URL inserted Media ID is ', img.id); // ✅ safe now
       return true;
     } catch {
       return false;

@@ -32,7 +32,7 @@ export class CreateSpeakerDto {
   description: string;
 
   @IsDefined()
-  @IsMongoId()
+  @IsUrl()
   @IsNotEmpty()
   @IsExistingMedia()
   speaker_image: string;
@@ -44,9 +44,12 @@ export class CreateSpeakerDto {
   social_links: string[]; //$ until i make the Link Schema (hol up )
 
   @IsDefined()
-  @IsMongoId({ each: true })
+  @IsUrl({}, { each: true })
   @ArrayNotEmpty()
-  @IsExistingMedia({ each: true })
+  @IsExistingMedia({
+    each: true,
+    message: 'One or more gallery images do not exist in storage',
+  })
   gallery: string[];
 
   @IsDefined()
