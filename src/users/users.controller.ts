@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -50,8 +51,12 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
   @Permissions(UserPermission.USERS_UPDATE)
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @Req() req: { user: { id: string; role: string } },
+  ) {
+    return this.usersService.update(id, updateUserDto, req.user);
   }
 
   @Patch(':id/permissions')
@@ -69,16 +74,22 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SUPERADMIN)
   @Permissions(UserPermission.USERS_UPDATE)
-  disable(@Param('id') id: string) {
-    return this.usersService.setActive(id, false);
+  disable(
+    @Param('id') id: string,
+    @Req() req: { user: { id: string; role: string } },
+  ) {
+    return this.usersService.setActive(id, false, req.user);
   }
 
   @Patch(':id/enable')
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.SUPERADMIN)
   @Permissions(UserPermission.USERS_UPDATE)
-  enable(@Param('id') id: string) {
-    return this.usersService.setActive(id, true);
+  enable(
+    @Param('id') id: string,
+    @Req() req: { user: { id: string; role: string } },
+  ) {
+    return this.usersService.setActive(id, true, req.user);
   }
 
   @Delete(':id')

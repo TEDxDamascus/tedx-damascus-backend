@@ -86,8 +86,25 @@ export class UsersService {
     };
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+    actor?: { id: string; role: string },
+  ) {
     const payload: UpdateUserDto = { ...updateUserDto };
+    const isSuperadminSelfAction = this.isSuperadminSelfAction(actor, id);
+
+    if (isSuperadminSelfAction && payload.role !== undefined) {
+      throw new BadRequestException(
+        'Superadmin cannot change their own role',
+      );
+    }
+
+    if (isSuperadminSelfAction && payload.is_active === false) {
+      throw new BadRequestException(
+        'Superadmin cannot disable themselves',
+      );
+    }
 
     if (payload.email) {
       payload.email = payload.email.toLowerCase();
@@ -203,7 +220,17 @@ export class UsersService {
     };
   }
 
-  async setActive(id: string, isActive: boolean) {
+  async setActive(
+    id: string,
+    isActive: boolean,
+    actor?: { id: string; role: string },
+  ) {
+    if (!isActive && this.isSuperadminSelfAction(actor, id)) {
+      throw new BadRequestException(
+        'Superadmin cannot disable themselves',
+      );
+    }
+
     const user = await this.userModel
       .findByIdAndUpdate(
         id,
@@ -277,5 +304,15 @@ export class UsersService {
     }
 
     return permissions;
+  }
+
+  private isSuperadminSelfAction(
+    actor: { id: string; role: string } | undefined,
+    targetUserId: string,
+  ): boolean {
+    return (
+      actor?.role === UserRole.SUPERADMIN &&
+      actor.id === targetUserId
+    );
   }
 }
