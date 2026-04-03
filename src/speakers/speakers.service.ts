@@ -40,8 +40,8 @@ export class SpeakersService {
     const { limit, offset } = paginationQueryDto;
     const speakers = await this.speakerModel
       .find()
-      .skip(offset)
-      .limit(limit)
+      .skip(offset!)
+      .limit(limit!)
       .populate('speaker_image', 'url -_id')
       .populate('gallery', 'url -_id')
       .lean()
