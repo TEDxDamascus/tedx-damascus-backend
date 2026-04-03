@@ -76,8 +76,8 @@ export class EventsService {
 
     const events = await this.eventModel
       .find(filters)
-      .skip(offset!)
-      .limit(limit!)
+      .skip(offset)
+      .limit(limit)
       .populate('event_image', 'url -_id')
       .populate('gallery', 'url -_id')
       .populate({
