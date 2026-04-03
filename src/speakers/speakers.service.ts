@@ -5,19 +5,36 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Speaker } from './schemas/speaker.schema';
 import { translateFieldHelper } from '../common/utils/translate.helper';
-import { map } from 'rxjs';
 import { PaginationQueryDto } from 'src/events/dto/pagination.dto';
+import { StorageService } from 'src/storage/storage.service';
 
 @Injectable()
 export class SpeakersService {
   constructor(
     @InjectModel(Speaker.name) private readonly speakerModel: Model<Speaker>,
+    private readonly storageservice: StorageService,
   ) {}
   //! Create Speaker
-  create(createSpeakerDto: CreateSpeakerDto) {
-    const newSpeaker = new this.speakerModel(createSpeakerDto);
+  async create(createSpeakerDto: CreateSpeakerDto) {
+    const speakerImage = await this.storageservice.findOneByURL(
+      createSpeakerDto.speaker_image,
+    );
+
+    const gallery = await Promise.all(
+      createSpeakerDto.gallery.map((url) =>
+        this.storageservice.findOneByURL(url),
+      ),
+    );
+
+    const newSpeaker = new this.speakerModel({
+      ...createSpeakerDto,
+      speaker_image: speakerImage._id,
+      gallery: gallery.map((g) => g._id),
+    });
+
     return newSpeaker.save();
   }
+
   //! Get all Speakers
   async findAll(lang: string, paginationQueryDto: PaginationQueryDto) {
     const { limit, offset } = paginationQueryDto;
