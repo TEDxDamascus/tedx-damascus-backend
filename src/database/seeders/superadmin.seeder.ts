@@ -19,8 +19,7 @@ async function seedSuperAdmin() {
 
   try {
     const email =
-      process.env.SUPERADMIN_EMAIL?.trim().toLowerCase() ??
-      'tedxdamascus';
+      process.env.SUPERADMIN_EMAIL?.trim().toLowerCase() ?? 'tedxdamascus';
     const password = process.env.SUPERADMIN_PASSWORD?.trim() ?? '12345678';
 
     const existing = await UserModel.findOne({ email }).lean();

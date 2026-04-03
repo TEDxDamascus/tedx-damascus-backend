@@ -10,10 +10,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  FileTypeValidator,
-  MaxFileSizeValidator,
-} from '@nestjs/common/pipes';
+import { FileTypeValidator, MaxFileSizeValidator } from '@nestjs/common/pipes';
 import {
   ApiBody,
   ApiConsumes,
@@ -46,7 +43,11 @@ export class StorageController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @ApiResponse({ status: 201, description: 'Image uploaded', type: UploadImageResultDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Image uploaded',
+    type: UploadImageResultDto,
+  })
   @ApiResponse({ status: 400, description: 'Invalid or missing file' })
   async uploadImage(
     @UploadedFile(
@@ -72,7 +73,10 @@ export class StorageController {
     @Param('id') id: string,
     @Body() dto: UpdateMediaBasenameDto,
   ): Promise<MediaDto> {
-    const media = await this.storageService.updateMediaBasename(id, dto.basename);
+    const media = await this.storageService.updateMediaBasename(
+      id,
+      dto.basename,
+    );
     return MediaDto.fromEntity(media);
   }
 

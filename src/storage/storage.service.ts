@@ -133,10 +133,7 @@ export class StorageService {
 
   async deleteMedia(id: string): Promise<void> {
     const result = await this.mediaModel
-      .findOneAndUpdate(
-        { _id: id, is_active: true },
-        { is_active: false },
-      )
+      .findOneAndUpdate({ _id: id, is_active: true }, { is_active: false })
       .exec();
 
     if (!result) {
