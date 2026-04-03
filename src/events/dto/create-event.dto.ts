@@ -24,7 +24,7 @@ export class CreateEventDto {
   @IsDefined()
   @ValidateNested({ message: 'title must contain both en and ar translations' })
   @Type(() => TranslationDto)
-  title: TranslationDto;
+  title!: TranslationDto;
 
   //! Description
   @IsDefined()
@@ -32,13 +32,13 @@ export class CreateEventDto {
     message: 'description must contain both en and ar translations',
   })
   @Type(() => TranslationDto)
-  description: TranslationDto;
+  description!: TranslationDto;
 
   //! Brief
   @IsOptional()
   @ValidateNested({ message: 'brief must contain both en and ar translations' })
   @Type(() => TranslationDto)
-  brief: TranslationDto;
+  brief?: TranslationDto;
 
   //! Location
   @IsDefined()
@@ -46,7 +46,7 @@ export class CreateEventDto {
     message: 'location must contain both en and ar translations',
   })
   @Type(() => TranslationDto)
-  location: TranslationDto;
+  location!: TranslationDto;
 
   //! Event Type (salon,main_event,meetup)
   @IsDefined()
@@ -54,14 +54,14 @@ export class CreateEventDto {
     message: `event_type must be one of: [${Object.values(EventType).join(', ')}]`,
   })
   @IsNotEmpty()
-  event_type: string;
+  event_type!: string;
 
   //! Event Image
   @IsDefined()
   @IsUrl() // it will be returned as URL not being empty
   @IsNotEmpty()
   @IsExistingMedia()
-  event_image: string;
+  event_image!: string;
 
   //! Event Status
   @IsDefined()
@@ -69,14 +69,14 @@ export class CreateEventDto {
     message: `status must be one of: [${Object.values(EventStatus).join(', ')}]`,
   })
   @IsNotEmpty()
-  status: string;
+  status!: string;
 
   //! Date
   @IsDefined()
   @IsNotEmpty()
   @Type(() => Date)
   @IsDate()
-  date: Date;
+  date!: Date;
 
   //! Speakers
   @IsDefined()
@@ -84,13 +84,13 @@ export class CreateEventDto {
   @ArrayNotEmpty()
   @ArrayUnique({ message: 'Each speaker can only be added once' })
   @IsExistingSpeaker({ each: true })
-  speakers: string[];
+  speakers!: string[];
 
   //! is_deleted
   @IsOptional()
   @IsBoolean()
   @Type(() => Boolean)
-  is_deleted: boolean;
+  is_deleted?: boolean;
 
   //! Gallery
   @IsDefined()
@@ -100,7 +100,7 @@ export class CreateEventDto {
     each: true,
     message: 'One or more gallery images do not exist in storage',
   })
-  gallery: string[];
+  gallery!: string[];
 }
 
 // i think we should add a photo module ?
