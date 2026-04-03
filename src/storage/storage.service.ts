@@ -163,4 +163,9 @@ export class StorageService {
 
     return buildPaginatedResult(items, total, page, limit);
   }
+
+  // yahiea added this for the image existing validator method
+  async findOneById(id: string) {
+    return await this.mediaModel.findById(id).exec();
+  }
 }

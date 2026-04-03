@@ -53,7 +53,10 @@ export class StorageController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new FileTypeValidator({ fileType: ALLOWED_IMAGE_MIME }),
+          new FileTypeValidator({
+            fileType: ALLOWED_IMAGE_MIME,
+            skipMagicNumbersValidation: true,
+          }),
           new MaxFileSizeValidator({ maxSize: MAX_IMAGE_SIZE_BYTES }),
         ],
         fileIsRequired: true,
