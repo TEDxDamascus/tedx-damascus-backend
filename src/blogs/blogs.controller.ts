@@ -6,7 +6,10 @@ import {
   Patch,
   Param,
   Delete,
+<<<<<<< HEAD
+=======
   Query,
+>>>>>>> origin/main
 } from '@nestjs/common';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';

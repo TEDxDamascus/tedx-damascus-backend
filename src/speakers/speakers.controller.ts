@@ -6,7 +6,10 @@ import {
   Patch,
   Param,
   Delete,
+<<<<<<< HEAD
+=======
   Query,
+>>>>>>> origin/main
 } from '@nestjs/common';
 import { SpeakersService } from './speakers.service';
 import { CreateSpeakerDto } from './dto/create-speaker.dto';
