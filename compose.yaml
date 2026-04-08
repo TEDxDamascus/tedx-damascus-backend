@@ -1,0 +1,34 @@
+name: tedx-app
+
+services:
+
+  #! Backend Service 
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    ports:
+      - 3000:3000
+    environment:
+      MONGODB_URI: mongodb://db:27017/tedx_damascus
+    env_file:
+      - .env
+
+  #! Database service 
+  db:
+    image: mongo:7.0
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo_data:
+
