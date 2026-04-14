@@ -1,26 +1,34 @@
 import { Injectable } from '@nestjs/common';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Partner } from './schema/partner.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class PartnersService {
+  constructor(
+    @InjectModel(Partner.name) private readonly partnerModel: Model<Partner>,
+  ) {}
+
   create(createPartnerDto: CreatePartnerDto) {
-    return 'This action adds a new partner';
+    const newPartner = new this.partnerModel(createPartnerDto);
+    return newPartner.save();
   }
 
   findAll() {
-    return `This action returns all partners`;
+    return this.partnerModel.find().exec();
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return `This action returns a #${id} partner`;
   }
 
-  update(id: number, updatePartnerDto: UpdatePartnerDto) {
+  update(id: string, updatePartnerDto: UpdatePartnerDto) {
     return `This action updates a #${id} partner`;
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return `This action removes a #${id} partner`;
   }
 }
