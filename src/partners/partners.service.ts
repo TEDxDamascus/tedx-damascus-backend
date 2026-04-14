@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
 import { InjectModel } from '@nestjs/mongoose';
@@ -11,24 +11,40 @@ export class PartnersService {
     @InjectModel(Partner.name) private readonly partnerModel: Model<Partner>,
   ) {}
 
+  //! Create new partners
   create(createPartnerDto: CreatePartnerDto) {
     const newPartner = new this.partnerModel(createPartnerDto);
     return newPartner.save();
   }
 
+  //! return all partners
   findAll() {
     return this.partnerModel.find().exec();
   }
 
+  //! find existing partner by Id
   findOne(id: string) {
-    return `This action returns a #${id} partner`;
+    const foundPartner = this.partnerModel.findById(id).exec();
+    return foundPartner;
   }
 
-  update(id: string, updatePartnerDto: UpdatePartnerDto) {
-    return `This action updates a #${id} partner`;
+  //! Update existing partner by Id
+  async update(id: string, updatePartnerDto: UpdatePartnerDto) {
+    const partner = await this.partnerModel
+      .findByIdAndUpdate(id, updatePartnerDto, {
+        new: true,
+        runValidators: true,
+      })
+      .exec();
+    if (!partner) {
+      throw new NotFoundException(`partner with id ${id} was not found`);
+    }
+    return partner;
   }
 
+  //! Delete existing partner by Id
   remove(id: string) {
-    return `This action removes a #${id} partner`;
+    const partner = this.partnerModel.findByIdAndDelete(id).exec();
+    return partner;
   }
 }

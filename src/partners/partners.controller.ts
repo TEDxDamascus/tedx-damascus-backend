@@ -30,18 +30,18 @@ export class PartnersController {
   //! get partner by Id
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.partnersService.findOne(+id);
+    return this.partnersService.findOne(id);
   }
 
   //! Update partner by Id
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePartnerDto: UpdatePartnerDto) {
-    return this.partnersService.update(+id, updatePartnerDto);
+    return this.partnersService.update(id, updatePartnerDto);
   }
 
   //! Delete partner by Id
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.partnersService.remove(+id);
+    return this.partnersService.remove(id);
   }
 }
