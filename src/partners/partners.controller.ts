@@ -10,6 +10,7 @@ import {
 import { PartnersService } from './partners.service';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
+import { I18n, I18nContext } from 'nestjs-i18n';
 
 @Controller('partners')
 export class PartnersController {
@@ -21,16 +22,16 @@ export class PartnersController {
     return this.partnersService.create(createPartnerDto);
   }
 
-  //! get all partners
+  //! get all partners + Language
   @Get()
-  findAll() {
-    return this.partnersService.findAll();
+  findAll(@I18n() i18n: I18nContext) {
+    return this.partnersService.findAll(i18n.lang);
   }
 
-  //! get partner by Id
+  //! get partner by Id + Language
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.partnersService.findOne(id);
+  findOne(@Param('id') id: string, @I18n() i18n: I18nContext) {
+    return this.partnersService.findOne(id, i18n.lang);
   }
 
   //! Update partner by Id
