@@ -57,7 +57,7 @@ export class CreateEventDto {
 
   //! Event Image
   @IsDefined()
-  @IsMongoId()
+  // @IsMongoId()
   @IsNotEmpty()
   @IsExistingMedia()
   event_image: string;

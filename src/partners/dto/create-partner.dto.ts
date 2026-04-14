@@ -7,6 +7,7 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
+import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
 import { TranslationDto } from 'src/common/dto/translation.dto';
 
 export class CreatePartnerDto {
@@ -21,6 +22,8 @@ export class CreatePartnerDto {
   //! image
   @IsDefined()
   @IsString()
+  @IsNotEmpty()
+  @IsExistingMedia()
   image!: string;
 
   //! Slug
