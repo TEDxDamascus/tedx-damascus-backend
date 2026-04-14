@@ -6,11 +6,14 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { PartnersService } from './partners.service';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
 import { I18n, I18nContext } from 'nestjs-i18n';
+import { PaginationQueryDto } from 'src/events/dto/pagination.dto';
+import { PartnerQueryDto } from './dto/partner-pagination.dto';
 
 @Controller('partners')
 export class PartnersController {
@@ -24,8 +27,16 @@ export class PartnersController {
 
   //! get all partners + Language
   @Get()
-  findAll(@I18n() i18n: I18nContext) {
-    return this.partnersService.findAll(i18n.lang);
+  findAll(
+    @I18n() i18n: I18nContext,
+    @Query() paginationQuery: PaginationQueryDto,
+    @Query() partnerQuery: PartnerQueryDto,
+  ) {
+    return this.partnersService.findAll(
+      i18n.lang,
+      paginationQuery, // for offset and limit
+      partnerQuery, // for filter with name
+    );
   }
 
   //! get partner by Id + Language

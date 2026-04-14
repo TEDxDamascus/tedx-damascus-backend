@@ -3,8 +3,10 @@ import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Partner } from './schema/partner.schema';
-import { Model } from 'mongoose';
 import { translateFieldHelper } from 'src/common/utils/translate.helper';
+import { PaginationQueryDto } from 'src/events/dto/pagination.dto';
+import { PartnerQueryDto } from './dto/partner-pagination.dto';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class PartnersService {
@@ -19,8 +21,25 @@ export class PartnersService {
   }
 
   //! return all partners + language
-  async findAll(lang: string) {
-    const partners = await this.partnerModel.find().lean().exec();
+  async findAll(
+    lang: string,
+    paginationQueryDto: PaginationQueryDto,
+    partnerQuery: PartnerQueryDto, //TODO filter by name and partnership type
+  ) {
+    const { limit, offset } = paginationQueryDto;
+    const { name } = partnerQuery;
+
+    const filter: any = {};
+    if (name) {
+      filter[`name.${lang}`] = { $regex: `^${name}`, $options: 'i' };
+    }
+
+    const partners = await this.partnerModel
+      .find(filter)
+      .skip(offset)
+      .limit(limit)
+      .lean()
+      .exec();
     if (!partners)
       throw new NotFoundException(`Something Went Wrong no partners`);
     return partners.map((foundPartner) => ({

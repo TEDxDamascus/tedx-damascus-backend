@@ -5,6 +5,7 @@ import {
   IsDefined,
   IsNotEmpty,
   IsString,
+  IsUrl,
   ValidateNested,
 } from 'class-validator';
 import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
@@ -21,7 +22,7 @@ export class CreatePartnerDto {
 
   //! image
   @IsDefined()
-  @IsString()
+  @IsUrl()
   @IsNotEmpty()
   @IsExistingMedia()
   image!: string;
