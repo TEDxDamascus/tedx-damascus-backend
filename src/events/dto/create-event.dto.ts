@@ -9,6 +9,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -57,7 +58,7 @@ export class CreateEventDto {
 
   //! Event Image
   @IsDefined()
-  @IsMongoId()
+  @IsUrl() // url is the right pick if you see an conflict
   @IsNotEmpty()
   @IsExistingMedia()
   event_image: string;
