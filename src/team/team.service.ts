@@ -5,6 +5,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Team } from './schema/team.schema';
 import { translateFieldHelper } from 'src/common/utils/translate.helper';
+import { PaginationQueryDto } from 'src/events/dto/pagination.dto';
+import { TeamQueryDto } from './dto/search-team.dto';
 
 @Injectable()
 export class TeamService {
@@ -18,8 +20,36 @@ export class TeamService {
   }
 
   //! Get All Team Members
-  async findAll(lang: string) {
-    const team = await this.teamModel.find().lean().exec();
+  async findAll(
+    lang: string,
+    paginationQueryDto: PaginationQueryDto,
+    teamQuery: TeamQueryDto,
+  ) {
+    //! add filtering by Name
+    const { limit, offset } = paginationQueryDto;
+    const { name, year } = teamQuery;
+
+    const filters: Record<string, unknown> = {};
+
+    if (name?.trim()) {
+      const cleanName = name.trim();
+      const escaped = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      filters[`name.${lang}`] = {
+        $regex: escaped,
+        $options: 'i',
+      };
+    }
+    if (year) {
+      filters.year = Number(year);
+    }
+
+    const team = await this.teamModel
+      .find(filters)
+      .lean()
+      .skip(offset)
+      .limit(limit)
+      .exec();
     return team.map((teamMember) => ({
       ...teamMember,
       name: translateFieldHelper(teamMember.name, lang),
@@ -32,7 +62,6 @@ export class TeamService {
     const teamMember = await this.teamModel.findById(id).lean().exec();
     if (!teamMember)
       throw new NotFoundException(`Team Member with id ${id} was not found`);
-
     return {
       ...teamMember,
       name: translateFieldHelper(teamMember.name, lang),

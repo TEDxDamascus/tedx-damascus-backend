@@ -20,6 +20,7 @@ export class SpeakersService {
   }
   //! Get all Speakers
   async findAll(lang: string, paginationQueryDto: PaginationQueryDto) {
+    //TODO add filter by name
     const { limit, offset } = paginationQueryDto;
     const speakers = await this.speakerModel
       .find()
