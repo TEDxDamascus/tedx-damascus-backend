@@ -44,7 +44,10 @@ export class CreateSpeakerDto {
   @IsDefined()
   @IsUrl({}, { each: true })
   @ArrayNotEmpty()
-  @IsExistingMedia({ each: true })
+  @IsExistingMedia({
+    each: true,
+    message: 'One or more gallery images do not exist in storage',
+  })
   gallery!: string[];
 
   @IsDefined()

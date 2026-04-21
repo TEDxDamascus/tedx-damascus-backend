@@ -38,7 +38,7 @@ export class CreateEventDto {
   @IsOptional()
   @ValidateNested({ message: 'brief must contain both en and ar translations' })
   @Type(() => TranslationDto)
-  brief!: TranslationDto;
+  brief?: TranslationDto;
 
   //! Location
   @IsDefined()
@@ -58,7 +58,7 @@ export class CreateEventDto {
 
   //! Event Image
   @IsDefined()
-  @IsUrl()
+  @IsUrl() // it will be returned as URL not being empty
   @IsNotEmpty()
   @IsExistingMedia()
   event_image!: string;
@@ -90,13 +90,16 @@ export class CreateEventDto {
   @IsOptional()
   @IsBoolean()
   @Type(() => Boolean)
-  is_deleted!: boolean;
+  is_deleted?: boolean;
 
   //! Gallery
   @IsDefined()
   @IsUrl({}, { each: true })
   @ArrayNotEmpty()
-  @IsExistingMedia({ each: true })
+  @IsExistingMedia({
+    each: true,
+    message: 'One or more gallery images do not exist in storage',
+  })
   gallery!: string[];
 }
 

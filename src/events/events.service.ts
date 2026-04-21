@@ -7,18 +7,36 @@ import { Model } from 'mongoose';
 import { translateFieldHelper } from '../common/utils/translate.helper';
 import { PaginationQueryDto } from './dto/pagination.dto';
 import { EventQueryDto } from './dto/search.events.dto';
+import { StorageService } from 'src/storage/storage.service';
 
 @Injectable()
 export class EventsService {
   constructor(
     @InjectModel(Event.name) private readonly eventModel: Model<Event>,
+    private readonly storageservice: StorageService,
   ) {}
 
   //! Create New Event
-  create(createEventDto: CreateEventDto) {
-    const newEvent = new this.eventModel(createEventDto);
+  async create(createEventDto: CreateEventDto) {
+    const eventImage = await this.storageservice.findOneByURL(
+      createEventDto.event_image,
+    );
+
+    const gallery = await Promise.all(
+      createEventDto.gallery.map((url) =>
+        this.storageservice.findOneByURL(url),
+      ),
+    );
+
+    const newEvent = new this.eventModel({
+      ...createEventDto,
+      event_image: eventImage._id,
+      gallery: gallery.map((g) => g._id),
+    });
+
     return newEvent.save();
   }
+
   //! Get All Events
   async findAll(
     lang: string,
