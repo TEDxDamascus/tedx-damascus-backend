@@ -4,7 +4,9 @@ import type { TranslationField } from 'src/common/type/translation-field';
 import { translationSchema } from 'src/common/utils/translation.schema';
 import { Media } from 'src/storage/entities/media.entity';
 
-@Schema()
+@Schema({
+  timestamps: true,
+})
 export class Team {
   //! name
   @Prop({
