@@ -5,10 +5,12 @@ import {
   IsInt,
   IsNotEmpty,
   IsString,
+  IsUrl,
   Max,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
 import { TranslationDto } from 'src/common/dto/translation.dto';
 
 export class CreateTeamDto {
@@ -17,7 +19,9 @@ export class CreateTeamDto {
   @Type(() => TranslationDto)
   name!: TranslationDto;
   @IsDefined()
-  @IsString()
+  @IsUrl()
+  @IsNotEmpty()
+  @IsExistingMedia()
   image!: string;
   //! what year he contributed
   @IsDefined({ message: 'year isnt defined' })
