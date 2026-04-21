@@ -13,7 +13,7 @@ import { UsersModule } from './users/users.module';
 import { appConfig } from './common/config/app.config';
 import { FormsModule } from './forms/forms.module';
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
-import { TeamModule } from './team/team.module';
+import { PartnersModule } from './partners/partners.module';
 import * as path from 'path';
 
 @Module({
@@ -47,7 +47,7 @@ import * as path from 'path';
     BlogsModule,
     StorageModule,
     FormsModule,
-    TeamModule,
+    PartnersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

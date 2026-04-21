@@ -10,6 +10,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  IsUrl,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -58,7 +59,7 @@ export class CreateEventDto {
 
   //! Event Image
   @IsDefined()
-  @IsUrl() // it will be returned as URL not being empty
+  @IsUrl() // url is the right pick if you see an conflict
   @IsNotEmpty()
   @IsExistingMedia()
   event_image!: string;

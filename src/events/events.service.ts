@@ -73,7 +73,6 @@ export class EventsService {
         $lte: new Date(`${y}-12-31`),
       };
     }
-
     const events = await this.eventModel
       .find(filters)
       .skip(offset)
