@@ -168,4 +168,12 @@ export class StorageService {
   async findOneById(id: string) {
     return await this.mediaModel.findById(id).exec();
   }
+
+  async findOneByURL(url: string) {
+    const media = await this.mediaModel.findOne({ url: url }).exec();
+    if (!media) {
+      throw new NotFoundException(`Media with ${url} not found`);
+    }
+    return media;
+  }
 }

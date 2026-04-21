@@ -3,9 +3,7 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsDefined,
-  IsMongoId,
   IsNotEmpty,
-  IsString,
   IsUrl,
   ValidateNested,
 } from 'class-validator';
@@ -17,40 +15,40 @@ export class CreateSpeakerDto {
   @IsDefined()
   @ValidateNested({ message: 'name must contain both en and ar translations' })
   @Type(() => TranslationDto)
-  name: TranslationDto;
+  name!: TranslationDto;
 
   @IsDefined()
   @ValidateNested({ message: 'bio must contain both en and ar translations' })
   @Type(() => TranslationDto)
-  bio: string;
+  bio!: string;
 
   @IsDefined()
   @ValidateNested({
     message: 'description must contain both en and ar translations',
   })
   @Type(() => TranslationDto)
-  description: string;
+  description!: string;
 
   @IsDefined()
-  @IsMongoId()
+  @IsUrl()
   @IsNotEmpty()
   @IsExistingMedia()
-  speaker_image: string;
+  speaker_image!: string;
 
   @IsDefined()
   @IsArray()
   @ArrayNotEmpty()
   @IsUrl({}, { each: true })
-  social_links: string[]; //$ until i make the Link Schema (hol up )
+  social_links!: string[]; //$ until i make the Link Schema (hol up )
 
   @IsDefined()
-  @IsMongoId({ each: true })
+  @IsUrl({}, { each: true })
   @ArrayNotEmpty()
   @IsExistingMedia({ each: true })
-  gallery: string[];
+  gallery!: string[];
 
   @IsDefined()
   @IsNotEmpty()
   @IsUrl()
-  video_link: string;
+  video_link!: string;
 }

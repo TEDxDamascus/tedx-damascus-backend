@@ -22,7 +22,7 @@ import { IsExistingMediaConstrain } from 'src/common/decorators/is-existing-medi
   providers: [
     EventsService,
     IsExistingSpeakerConstrain,
-    IsExistingMediaConstrain,
+    // IsExistingMediaConstrain,
   ],
 })
 export class EventsModule {}
