@@ -3,6 +3,8 @@ import { SpeakersService } from './speakers.service';
 import { SpeakersController } from './speakers.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Speaker, SpeakerSchema } from './schemas/speaker.schema';
+import { StorageModule } from 'src/storage/storage.module';
+import { IsExistingMediaConstrain } from 'src/common/decorators/is-existing-media.decorator';
 
 @Module({
   imports: [
@@ -12,9 +14,10 @@ import { Speaker, SpeakerSchema } from './schemas/speaker.schema';
         schema: SpeakerSchema,
       },
     ]),
+    StorageModule,
   ],
   controllers: [SpeakersController],
-  providers: [SpeakersService],
-  exports:[SpeakersService]
+  providers: [SpeakersService, IsExistingMediaConstrain],
+  exports: [SpeakersService],
 })
 export class SpeakersModule {}
