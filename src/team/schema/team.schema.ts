@@ -16,12 +16,8 @@ export class Team {
   })
   name!: TranslationField; //TODO later later take from storage service
   //! image
-  @Prop({
-    required: true,
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Media',
-  })
-  image!: Media; //! year joined
+  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
+  image: Media;
   @Prop()
   year!: number;
   //! social links
