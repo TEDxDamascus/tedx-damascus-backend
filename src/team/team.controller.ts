@@ -10,6 +10,7 @@ import {
 import { TeamService } from './team.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
+import { I18n, I18nContext } from 'nestjs-i18n';
 
 @Controller('team')
 export class TeamController {
@@ -21,16 +22,16 @@ export class TeamController {
     return this.teamService.create(createTeamDto);
   }
 
-  //! Get All Members
+  //! Get All Members with Translations
   @Get()
-  findAll() {
-    return this.teamService.findAll();
+  findAll(@I18n() i18n: I18nContext) {
+    return this.teamService.findAll(i18n.lang);
   }
 
-  //! Get Team Member By Id
+  //! Get Team Member By Id  With Translations
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.teamService.findOne(id);
+  findOne(@I18n() i18n: I18nContext, @Param('id') id: string) {
+    return this.teamService.findOne(id,i18n.lang);
   }
 
   //! Update Team Member

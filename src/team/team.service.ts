@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Team } from './schema/team.schema';
+import { translateFieldHelper } from 'src/common/utils/translate.helper';
 
 @Injectable()
 export class TeamService {
@@ -17,15 +18,26 @@ export class TeamService {
   }
 
   //! Get All Team Members
-  findAll() {
-    const team = this.teamModel.find().lean().exec();
-    return team;
+  async findAll(lang: string) {
+    const team = await this.teamModel.find().lean().exec();
+    return team.map((teamMember) => ({
+      ...teamMember,
+      name: translateFieldHelper(teamMember.name, lang),
+      bio: translateFieldHelper(teamMember.bio, lang),
+    }));
   }
 
   //! Get Team Member Detail
-  findOne(id: string) {
-    const teamMember = this.teamModel.findById(id).lean().exec();
-    return teamMember;
+  async findOne(id: string, lang: string) {
+    const teamMember = await this.teamModel.findById(id).lean().exec();
+    if (!teamMember)
+      throw new NotFoundException(`Team Member with id ${id} was not found`);
+
+    return {
+      ...teamMember,
+      name: translateFieldHelper(teamMember.name, lang),
+      bio: translateFieldHelper(teamMember.bio, lang),
+    };
   }
 
   //! Get Team Member By ID
@@ -37,12 +49,16 @@ export class TeamService {
       })
       .lean()
       .exec();
+    if (!teamMember)
+      throw new NotFoundException(`Team Member with id ${id} was not found`);
     return teamMember;
   }
 
   //! Remove Team Member By ID
   remove(id: string) {
     const teamMember = this.teamModel.findByIdAndDelete(id).lean().exec();
+    if (!teamMember)
+      throw new NotFoundException(`Team Member with id ${id} was not found`);
     return teamMember;
   }
 }
