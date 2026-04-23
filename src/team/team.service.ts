@@ -7,15 +7,23 @@ import { Team } from './schema/team.schema';
 import { translateFieldHelper } from 'src/common/utils/translate.helper';
 import { PaginationQueryDto } from 'src/events/dto/pagination.dto';
 import { TeamQueryDto } from './dto/search-team.dto';
+import { StorageService } from 'src/storage/storage.service';
 
 @Injectable()
 export class TeamService {
   constructor(
     @InjectModel(Team.name) private readonly teamModel: Model<Team>,
+    private readonly storageservice: StorageService,
   ) {}
   //! Create New Team Member
-  create(createTeamDto: CreateTeamDto) {
-    const newTeam = new this.teamModel(createTeamDto);
+  async create(createTeamDto: CreateTeamDto) {
+    const teamImage = await this.storageservice.findOneByURL(
+      createTeamDto.image,
+    );
+    const newTeam = new this.teamModel({
+      ...createTeamDto,
+      image: teamImage.id,
+    });
     return newTeam.save();
   }
 
@@ -47,8 +55,8 @@ export class TeamService {
     const team = await this.teamModel
       .find(filters)
       .lean()
-      .skip(offset)
-      .limit(limit)
+      .skip(offset ?? 0)
+      .limit(limit ?? 10)
       .exec();
     return team.map((teamMember) => ({
       ...teamMember,

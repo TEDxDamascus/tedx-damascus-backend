@@ -10,7 +10,6 @@ import {
   IsOptional,
   IsString,
   IsUrl,
-  IsUrl,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';

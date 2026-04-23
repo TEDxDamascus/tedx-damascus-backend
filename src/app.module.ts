@@ -15,6 +15,7 @@ import { FormsModule } from './forms/forms.module';
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
 import { PartnersModule } from './partners/partners.module';
 import * as path from 'path';
+import { TeamModule } from './team/team.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import * as path from 'path';
     StorageModule,
     FormsModule,
     PartnersModule,
+    TeamModule
   ],
   controllers: [AppController],
   providers: [AppService],
