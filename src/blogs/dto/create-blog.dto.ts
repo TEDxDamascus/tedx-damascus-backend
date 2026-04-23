@@ -51,8 +51,8 @@ export class CreateBlogDto {
   publishedAt?: string;
 
   @IsOptional()
-  @IsString()
-  category?: string;
+  @IsMongoId()
+  category_id?: string;
 
   @IsOptional()
   @IsNumber()

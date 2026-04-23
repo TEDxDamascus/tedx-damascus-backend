@@ -1,0 +1,462 @@
+{
+  "info": {
+    "name": "TEDx Damascus Backend API",
+    "_postman_id": "d1b4ec6f-0b2f-4b2e-b71d-8b25c8f1a001",
+    "description": "Postman collection for testing the TEDx Damascus backend. Start with the health check, then create a category, copy its returned _id into the collection variable category_id, and use that in the blog requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "category_id",
+      "value": "PUT_CATEGORY_ID_HERE"
+    },
+    {
+      "key": "blog_id",
+      "value": "PUT_BLOG_ID_HERE"
+    },
+    {
+      "key": "homesettings_id",
+      "value": "PUT_HOMESETTINGS_ID_HERE"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Get Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": {\n    \"ar\": \"تقنية\",\n    \"en\": \"Technology\"\n  },\n  \"description\": {\n    \"ar\": \"مقالات عن التقنية والابتكار\",\n    \"en\": \"Articles about technology and innovation\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "Create a category first, then copy the returned _id into the collection variable category_id."
+          },
+          "response": []
+        },
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories/{{category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories",
+                "{{category_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": {\n    \"ar\": \"تقنية متقدمة\",\n    \"en\": \"Advanced Technology\"\n  },\n  \"description\": {\n    \"ar\": \"مقالات عن التقنية والابتكار والتحول الرقمي\",\n    \"en\": \"Articles about technology, innovation, and digital transformation\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/categories/{{category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories",
+                "{{category_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories/{{category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "categories",
+                "{{category_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Home Settings",
+      "item": [
+        {
+          "name": "Create Home Settings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hero\": {\n    \"isVisible\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/homesettings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "homesettings"
+              ]
+            },
+            "description": "Creates a new home settings document. Copy the returned _id into homesettings_id."
+          },
+          "response": []
+        },
+        {
+          "name": "List Home Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/homesettings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "homesettings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Home Settings By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/homesettings/{{homesettings_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "homesettings",
+                "{{homesettings_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Home Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hero\": {\n    \"isVisible\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/homesettings/{{homesettings_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "homesettings",
+                "{{homesettings_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Home Settings",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/homesettings/{{homesettings_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "homesettings",
+                "{{homesettings_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Blogs",
+      "item": [
+        {
+          "name": "Create Blog",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {\n    \"ar\": \"مستقبل الأفكار\",\n    \"en\": \"The Future of Ideas\"\n  },\n  \"description\": {\n    \"ar\": \"مقالة قصيرة عن الأفكار التي تشكل المستقبل\",\n    \"en\": \"A short article about ideas shaping the future\"\n  },\n  \"content\": {\n    \"ar\": \"هذا محتوى تجريبي للمقال باللغة العربية.\",\n    \"en\": \"This is sample blog content in English.\"\n  },\n  \"status\": \"published\",\n  \"publishedAt\": \"2026-04-22T10:00:00.000Z\",\n  \"category_id\": \"{{category_id}}\",\n  \"read_time\": 4,\n  \"meta_title\": {\n    \"ar\": \"مستقبل الأفكار | TEDx Damascus\",\n    \"en\": \"The Future of Ideas | TEDx Damascus\"\n  },\n  \"meta_description\": {\n    \"ar\": \"وصف SEO عربي للمقال\",\n    \"en\": \"English SEO description for the blog\"\n  },\n  \"meta_keywords\": {\n    \"ar\": \"أفكار, ابتكار, مستقبل\",\n    \"en\": \"ideas, innovation, future\"\n  },\n  \"canonical_url\": \"https://tedxdamascus.com/blogs/the-future-of-ideas\",\n  \"og_title\": {\n    \"ar\": \"مستقبل الأفكار\",\n    \"en\": \"The Future of Ideas\"\n  },\n  \"og_description\": {\n    \"ar\": \"وصف Open Graph عربي\",\n    \"en\": \"English Open Graph description\"\n  },\n  \"gallery\": []\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/blogs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs"
+              ]
+            },
+            "description": "Requires a valid category_id from the Categories requests."
+          },
+          "response": []
+        },
+        {
+          "name": "List Blogs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blogs?page=1&limit=10&status=published",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "published"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Blogs By Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blogs?page=1&limit=10&category_id={{category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "category_id",
+                  "value": "{{category_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Blogs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blogs?page=1&limit=10&search=future",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "future"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Blog By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blogs/{{blog_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blog_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Blog",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {\n    \"ar\": \"مستقبل الأفكار المحدث\",\n    \"en\": \"The Future of Ideas Updated\"\n  },\n  \"description\": {\n    \"ar\": \"تم تحديث وصف المقال\",\n    \"en\": \"The blog description has been updated\"\n  },\n  \"category_id\": \"{{category_id}}\",\n  \"status\": \"published\",\n  \"read_time\": 6\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/blogs/{{blog_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blog_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Blog",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blogs/{{blog_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blog_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

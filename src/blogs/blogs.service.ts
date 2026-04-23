@@ -10,6 +10,7 @@ import { Blog, BlogDocument } from './entities/blog.entity';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { buildLocalizedSlug, generateLocaleSlug } from './utils/blog-slug.util';
+import { Category, CategoryDocument } from '../categories/entities/category.entity';
 
 type Locale = 'ar' | 'en';
 
@@ -44,10 +45,14 @@ export class BlogsService {
   constructor(
     @InjectModel(Blog.name)
     private blogModel: Model<BlogDocument>,
+    @InjectModel(Category.name)
+    private readonly categoryModel: Model<CategoryDocument>,
     private readonly configService: ConfigService,
   ) {}
 
   async create(createBlogDto: CreateBlogDto) {
+    await this.assertCategoryExists(createBlogDto.category_id);
+
     try {
       const blog = new this.blogModel(this.prepareBlogPayload(createBlogDto));
       const savedBlog = await blog.save();
@@ -64,6 +69,7 @@ export class BlogsService {
       limit = 10,
       search,
       status,
+      category_id,
       category,
       sort = 'createdAt',
       order = 'desc',
@@ -72,7 +78,7 @@ export class BlogsService {
     const filter: any = {};
 
     if (status) filter.status = status;
-    if (category) filter.category = category;
+    if (category_id || category) filter.category_id = category_id || category;
 
     if (search) {
       filter.$or = [
@@ -87,6 +93,7 @@ export class BlogsService {
 
     const blogs = await this.blogModel
       .find(filter)
+      .populate('category_id')
       .populate('blog_image')
       .populate('og_image')
       .populate('gallery')
@@ -107,6 +114,7 @@ export class BlogsService {
   async findOne(id: string) {
     const blog = await this.blogModel
       .findById(id)
+      .populate('category_id')
       .populate('blog_image')
       .populate('og_image')
       .populate('gallery');
@@ -124,6 +132,8 @@ export class BlogsService {
     if (!existingBlog) {
       throw new NotFoundException('Blog not found');
     }
+
+    await this.assertCategoryExists(updateBlogDto.category_id);
 
     try {
       existingBlog.set(this.prepareBlogPayload(updateBlogDto, existingBlog));
@@ -176,6 +186,18 @@ export class BlogsService {
         payload.og_description,
       ),
     };
+  }
+
+  private async assertCategoryExists(categoryId?: string) {
+    if (!categoryId) {
+      return;
+    }
+
+    const categoryExists = await this.categoryModel.exists({ _id: categoryId });
+
+    if (!categoryExists) {
+      throw new NotFoundException('Category not found');
+    }
   }
 
   private resolvePublishedAt(

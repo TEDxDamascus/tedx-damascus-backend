@@ -38,8 +38,8 @@ export class Blog {
   @Prop()
   publishedAt?: Date;
 
-  @Prop()
-  category: string;
+  @Prop({ type: Types.ObjectId, ref: 'Category' })
+  category_id?: Types.ObjectId;
 
   @Prop({ default: 0 })
   views_count: number;
@@ -70,6 +70,8 @@ export class Blog {
 }
 
 export const BlogSchema = SchemaFactory.createForClass(Blog);
+
+BlogSchema.index({ category_id: 1 });
 
 BlogSchema.index(
   { 'slug.en': 1 },

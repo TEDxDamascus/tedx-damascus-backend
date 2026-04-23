@@ -7,6 +7,8 @@ import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
 import { SpeakersModule } from './speakers/speakers.module';
 import { BlogsModule } from './blogs/blogs.module';
+import { CategoriesModule } from './categories/categories.module';
+import { HomeSettingsModule } from './home-settings/home-settings.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { BlogsModule } from './blogs/blogs.module';
     EventsModule,
     SpeakersModule,
     BlogsModule,
+    CategoriesModule,
+    HomeSettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
