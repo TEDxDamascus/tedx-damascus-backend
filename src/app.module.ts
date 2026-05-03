@@ -51,7 +51,7 @@ import { OrganizerModule } from './organizer/organizer.module';
     FormsModule,
     PartnersModule,
     TeamModule,
-    OrganizerModule
+    OrganizerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

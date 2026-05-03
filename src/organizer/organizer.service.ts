@@ -1,26 +1,48 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateOrganizerDto } from './dto/create-organizer.dto';
 import { UpdateOrganizerDto } from './dto/update-organizer.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Organizer } from './schema/organizer.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class OrganizerService {
+  constructor(
+    @InjectModel(Organizer.name)
+    private readonly organizerModel: Model<Organizer>,
+  ) {}
+
+  //! Creating new Org
   create(createOrganizerDto: CreateOrganizerDto) {
-    return 'This action adds a new organizer';
+    const org = new this.organizerModel({ createOrganizerDto });
+    return org.save();
   }
 
+  //! Get ALl orgs
   findAll() {
-    return `This action returns all organizer`;
+    const data = this.organizerModel.find();
+    return data;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} organizer`;
+  //! get org details by id
+  findOne(id: string) {
+    const org = this.organizerModel.findById(id);
+    return org;
   }
 
-  update(id: number, updateOrganizerDto: UpdateOrganizerDto) {
-    return `This action updates a #${id} organizer`;
+  //! update org details by id
+  update(id: string, updateOrganizerDto: UpdateOrganizerDto) {
+    const org = this.organizerModel.findByIdAndUpdate(id, updateOrganizerDto, {
+      new: true,
+      runValidators: true,
+    });
+    if (!org) throw new NotFoundException(`org with id ${id} was not found`);
+    return org;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} organizer`;
+  //! remove org by id
+  remove(id: string) {
+    const org = this.organizerModel.findByIdAndDelete(id);
+    return org;
   }
 }

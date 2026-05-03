@@ -1,4 +1,4 @@
-import { IsDefined, IsNotEmpty, IsString } from 'class-validator';
+import { IsDefined, IsEnum, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateOrganizerDto {
   @IsDefined()
@@ -8,17 +8,17 @@ export class CreateOrganizerDto {
   
   @IsDefined()
   image!: string;
-  
+
   @IsDefined()
-  @IsString()       
+  @IsString()
   @IsNotEmpty()
   bio!: string;
 
   @IsDefined()
-  social_links!: string[];
+  social_links!: string[]; //TODO make it object
 
   @IsDefined()
-  role!: string; //TODO make it enum (organizer or co-organizer)
+  role!: string;
 
   @IsDefined()
   gallery!: string[]; // this was called Memories in the old TEDx

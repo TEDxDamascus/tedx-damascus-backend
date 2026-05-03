@@ -52,4 +52,3 @@ export interface FormSubmissionResponse {
   submittedAt: Date;
   answers: FormSubmissionAnswerResponse[];
 }
-

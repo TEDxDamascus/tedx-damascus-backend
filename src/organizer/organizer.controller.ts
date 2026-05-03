@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { OrganizerService } from './organizer.service';
 import { CreateOrganizerDto } from './dto/create-organizer.dto';
 import { UpdateOrganizerDto } from './dto/update-organizer.dto';
@@ -19,16 +27,19 @@ export class OrganizerController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.organizerService.findOne(+id);
+    return this.organizerService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrganizerDto: UpdateOrganizerDto) {
-    return this.organizerService.update(+id, updateOrganizerDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateOrganizerDto: UpdateOrganizerDto,
+  ) {
+    return this.organizerService.update(id, updateOrganizerDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.organizerService.remove(+id);
+    return this.organizerService.remove(id);
   }
 }
