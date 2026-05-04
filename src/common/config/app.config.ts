@@ -28,6 +28,7 @@ const envSchema = Joi.object({
   JWT_SECRET: Joi.string().min(8).default('dev-secret-key'),
   JWT_EXPIRES_IN: Joi.string().min(2).default('7d'),
   PORT: Joi.number().port().default(3000),
+  PUBLIC_SITE_URL: Joi.string().uri().default('http://localhost:3000'),
 })
   .prefs({ abortEarly: false, convert: true })
   .unknown(true);
@@ -53,6 +54,7 @@ function validateEnv(config: NodeJS.ProcessEnv) {
     JWT_SECRET: string;
     JWT_EXPIRES_IN: string;
     PORT: number;
+    PUBLIC_SITE_URL: string;
   };
 }
 
@@ -72,5 +74,6 @@ export const appConfig = registerAs('app', () => {
     jwtSecret: env.JWT_SECRET,
     jwtExpiresIn: env.JWT_EXPIRES_IN,
     port: env.PORT,
+    publicSiteUrl: env.PUBLIC_SITE_URL.replace(/\/$/, ''),
   };
 });

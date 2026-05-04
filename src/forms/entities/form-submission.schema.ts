@@ -5,7 +5,7 @@ import {
   SubmissionAnswerSchema,
 } from './submission-answer.schema';
 
-export const SUBMISSION_STATUSES = ['submitted'] as const;
+export const SUBMISSION_STATUSES = ['draft', 'submitted'] as const;
 
 export type SubmissionStatus = (typeof SUBMISSION_STATUSES)[number];
 
@@ -19,11 +19,17 @@ export class FormSubmission {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   userId: Types.ObjectId;
 
-  @Prop({ type: String, required: true, enum: SUBMISSION_STATUSES, default: 'submitted' })
+  @Prop({
+    type: String,
+    required: true,
+    enum: SUBMISSION_STATUSES,
+    default: 'submitted',
+  })
   status: SubmissionStatus;
 
-  @Prop({ required: true })
-  submittedAt: Date;
+  /** Set only when status is submitted. */
+  @Prop({ required: false })
+  submittedAt?: Date;
 
   @Prop({ type: [SubmissionAnswerSchema], default: [] })
   answers: SubmissionAnswer[];

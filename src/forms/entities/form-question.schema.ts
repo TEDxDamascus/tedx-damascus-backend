@@ -10,6 +10,11 @@ export const QUESTION_TYPES = [
   'single_choice',
   'checkbox_group',
   'date',
+  'phone_number',
+  'url',
+  'rating',
+  'date_range',
+  'file_upload',
 ] as const;
 
 export type QuestionType = (typeof QUESTION_TYPES)[number];

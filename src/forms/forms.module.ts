@@ -12,6 +12,7 @@ import {
 } from './entities/form-submission.schema';
 import { AdminGuard } from './guards/admin.guard';
 import { TargetRoleGuard } from './guards/target-role.guard';
+import { FormAvailabilityGuard } from './guards/form-availability.guard';
 
 @Module({
   imports: [
@@ -21,6 +22,11 @@ import { TargetRoleGuard } from './guards/target-role.guard';
     ]),
   ],
   controllers: [FormsController],
-  providers: [FormsService, AdminGuard, TargetRoleGuard],
+  providers: [
+    FormsService,
+    AdminGuard,
+    TargetRoleGuard,
+    FormAvailabilityGuard,
+  ],
 })
 export class FormsModule {}

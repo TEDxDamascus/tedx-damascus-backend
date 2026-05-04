@@ -92,6 +92,10 @@ export function mapFormTemplateToSchema(
         }
       : undefined,
     targetRole: t.targetRole,
+    starts_at: t.starts_at,
+    ends_at: t.ends_at,
+    expires_at: t.expires_at,
+    max_submissions: t.max_submissions,
     questions: (t.questions ?? [])
       .slice()
       .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -118,6 +122,18 @@ export function mapFormTemplateToSummary(
     targetRole: t.targetRole,
     status: t.status,
     publishedAt: t.publishedAt,
+    starts_at: t.starts_at,
+    ends_at: t.ends_at,
+    expires_at: t.expires_at,
+    max_submissions: t.max_submissions,
+    slug:
+      t.slug && (t.slug.en || t.slug.ar)
+        ? { en: t.slug.en ?? '', ar: t.slug.ar ?? '' }
+        : undefined,
+    shareable_url:
+      t.shareable_url && (t.shareable_url.en || t.shareable_url.ar)
+        ? { en: t.shareable_url.en ?? '', ar: t.shareable_url.ar ?? '' }
+        : undefined,
     createdAt: (t as any).createdAt,
     updatedAt: (t as any).updatedAt,
   };
@@ -143,8 +159,8 @@ export function mapFormSubmission(
     id: toId(s._id),
     formTemplateId: toId(s.formTemplateId),
     userId: toId(s.userId),
-    status: s.status,
-    submittedAt: s.submittedAt,
+    status: s.status ?? 'submitted',
+    ...(s.submittedAt != null ? { submittedAt: s.submittedAt } : {}),
     answers: (s.answers ?? []).map((a: any) => mapSubmissionAnswer(a)),
   };
 }

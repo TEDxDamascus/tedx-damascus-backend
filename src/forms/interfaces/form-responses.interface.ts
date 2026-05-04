@@ -27,6 +27,12 @@ export interface FormTemplateSummaryResponse {
   targetRole: string;
   status: string;
   publishedAt?: Date;
+  starts_at?: Date;
+  ends_at?: Date;
+  expires_at?: Date;
+  max_submissions?: number;
+  slug?: LocalizedText;
+  shareable_url?: LocalizedText;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -36,6 +42,10 @@ export interface FormTemplateSchemaResponse {
   name: LocalizedText;
   description?: LocalizedText;
   targetRole: string;
+  starts_at?: Date;
+  ends_at?: Date;
+  expires_at?: Date;
+  max_submissions?: number;
   questions: FormQuestionResponse[];
 }
 
@@ -49,7 +59,8 @@ export interface FormSubmissionResponse {
   formTemplateId: string;
   userId: string;
   status: string;
-  submittedAt: Date;
+  /** Present only when status is submitted. */
+  submittedAt?: Date;
   answers: FormSubmissionAnswerResponse[];
 }
 
