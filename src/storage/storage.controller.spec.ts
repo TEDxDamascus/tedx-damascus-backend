@@ -6,7 +6,7 @@ describe('StorageController', () => {
   let controller: StorageController;
 
   const mockStorageService = {
-    uploadImage: jest.fn(),
+    uploadFile: jest.fn(),
   };
 
   beforeEach(async () => {

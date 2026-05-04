@@ -5,6 +5,7 @@ import { Types } from 'mongoose';
 import { FormsService } from './forms.service';
 import { FormTemplate } from './entities/form-template.schema';
 import { FormSubmission } from './entities/form-submission.schema';
+import { StorageService } from '../storage/storage.service';
 
 const mockFormTemplateModel = {
   find: jest.fn(),
@@ -24,6 +25,10 @@ const mockConfigService = {
   get: jest.fn((key: string) =>
     key === 'app.publicSiteUrl' ? 'https://tedx.example.com' : undefined,
   ),
+};
+
+const mockStorageService = {
+  uploadFormUserFile: jest.fn(),
 };
 
 describe('FormsService', () => {
@@ -48,6 +53,10 @@ describe('FormsService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: StorageService,
+          useValue: mockStorageService,
         },
       ],
     }).compile();

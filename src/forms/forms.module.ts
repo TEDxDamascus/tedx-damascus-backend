@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { StorageModule } from '../storage/storage.module';
 import { FormsService } from './forms.service';
 import { FormsController } from './forms.controller';
 import {
@@ -16,6 +17,7 @@ import { FormAvailabilityGuard } from './guards/form-availability.guard';
 
 @Module({
   imports: [
+    StorageModule,
     MongooseModule.forFeature([
       { name: FormTemplate.name, schema: FormTemplateSchema },
       { name: FormSubmission.name, schema: FormSubmissionSchema },

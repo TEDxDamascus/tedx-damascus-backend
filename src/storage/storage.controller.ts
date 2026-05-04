@@ -10,10 +10,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  FileTypeValidator,
-  MaxFileSizeValidator,
-} from '@nestjs/common/pipes';
+import { MaxFileSizeValidator } from '@nestjs/common/pipes';
 import {
   ApiBody,
   ApiConsumes,
@@ -23,14 +20,13 @@ import {
 } from '@nestjs/swagger';
 import { Query } from '@nestjs/common/decorators';
 import { StorageService } from './storage.service';
-import { UploadImageResultDto } from './dto/upload-image-result.dto';
+import { UploadFileResultDto } from './dto/upload-file-result.dto';
 import { UpdateMediaBasenameDto } from './dto/update-media-name.dto';
 import { MediaDto } from './dto/media.dto';
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
 import { PaginatedResult } from '../common/pagination/interfaces/paginated-result.interface';
 
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-const ALLOWED_IMAGE_MIME = /^(image\/jpeg|image\/png|image\/webp|image\/gif)$/;
+const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 @ApiTags('storage')
 @Controller('storage')
@@ -46,24 +42,18 @@ export class StorageController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @ApiResponse({ status: 201, description: 'Image uploaded', type: UploadImageResultDto })
+  @ApiResponse({ status: 201, description: 'File uploaded', type: UploadFileResultDto })
   @ApiResponse({ status: 400, description: 'Invalid or missing file' })
-  async uploadImage(
+  async uploadFile(
     @UploadedFile(
       new ParseFilePipe({
-        validators: [
-          new FileTypeValidator({
-            fileType: ALLOWED_IMAGE_MIME,
-            skipMagicNumbersValidation: true,
-          }),
-          new MaxFileSizeValidator({ maxSize: MAX_IMAGE_SIZE_BYTES }),
-        ],
+        validators: [new MaxFileSizeValidator({ maxSize: MAX_UPLOAD_SIZE_BYTES })],
         fileIsRequired: true,
       }),
     )
     file: Express.Multer.File,
-  ): Promise<UploadImageResultDto> {
-    return this.storageService.uploadImage(file);
+  ): Promise<UploadFileResultDto> {
+    return this.storageService.uploadFile(file);
   }
 
   @Post('media/:id')

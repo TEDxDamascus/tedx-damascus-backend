@@ -48,6 +48,7 @@ import {
   throwIfFormNotAcceptingSubmission,
   throwIfSubmissionCapReached,
 } from './utils/form-availability.util';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class FormsService {
@@ -57,6 +58,7 @@ export class FormsService {
     @InjectModel(FormSubmission.name)
     private formSubmissionModel: Model<FormSubmissionDocument>,
     private configService: ConfigService,
+    private storageService: StorageService,
   ) {}
 
   private getBaseUrl(): string {
@@ -395,6 +397,18 @@ export class FormsService {
       .sort({ publishedAt: -1 })
       .exec();
     return templates.map((t) => mapFormTemplateToSummary(t));
+  }
+
+  /**
+   * Stores a file under users/{userId}/forms/{formId}/... without creating Media.
+   * Call only when the form is accepting submissions (e.g. after FormAvailabilityGuard).
+   */
+  async uploadFormDocument(
+    formId: string,
+    userId: string,
+    file: Express.Multer.File,
+  ): Promise<{ url: string }> {
+    return this.storageService.uploadFormUserFile({ userId, formId, file });
   }
 
   async saveDraft(

@@ -14,7 +14,7 @@ import { ApiProperty } from '@nestjs/swagger';
  * - url: string (valid URL)
  * - rating: number (integer between config.min and config.max)
  * - date_range: { start: string; end: string } (ISO dates)
- * - file_upload: { mediaId: string; url: string } (from /storage/upload)
+ * - file_upload: string (public URL from POST /forms/:id/upload)
  */
 export class SubmitFormDto {
   @ApiProperty({
@@ -30,10 +30,8 @@ export class SubmitFormDto {
         start: '2025-01-01',
         end: '2025-01-31',
       },
-      fileUploadQuestionId: {
-        mediaId: '64f1c5f1e1b2c3d4e5f67890',
-        url: 'https://cdn.example.com/path/to/file.pdf',
-      },
+      fileUploadQuestionId:
+        'https://cdn.example.com/users/507f1f77bcf86cd799439011/forms/507f1f77bcf86cd799439012/uuid-document.pdf',
     },
   })
   @IsObject()

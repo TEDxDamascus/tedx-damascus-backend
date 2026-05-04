@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { StorageService } from './storage.service';
 import { Media } from './entities/media.entity';
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
@@ -56,17 +56,17 @@ describe('StorageService', () => {
     } as any;
 
     mockStorageProvider.upload_object.mockResolvedValue({
-      key: 'images/uuid-test-image.jpg',
+      key: 'uploads/uuid-test-image.jpg',
     });
 
     mockStorageProvider.get_public_url.mockReturnValue(
-      'https://public.url/images/uuid-test-image.jpg',
+      'https://public.url/uploads/uuid-test-image.jpg',
     );
 
     const mediaDoc = {
       id: 'media-id-123',
       basename: 'test-image',
-      url: 'https://public.url/images/uuid-test-image.jpg',
+      url: 'https://public.url/uploads/uuid-test-image.jpg',
       format: 'image/jpeg',
       size: file.size,
       createdAt: new Date('2024-01-01T00:00:00.000Z'),
@@ -74,13 +74,13 @@ describe('StorageService', () => {
 
     mockMediaModel.create.mockResolvedValue(mediaDoc);
 
-    const result = await service.uploadImage(file);
+    const result = await service.uploadFile(file);
 
     expect(mockStorageProvider.upload_object).toHaveBeenCalled();
     expect(mockStorageProvider.get_public_url).toHaveBeenCalled();
     expect(mockMediaModel.create).toHaveBeenCalledWith({
       basename: 'test-image',
-      url: 'https://public.url/images/uuid-test-image.jpg',
+      url: 'https://public.url/uploads/uuid-test-image.jpg',
       format: 'image/jpeg',
       size: file.size,
       is_active: true,
@@ -97,11 +97,61 @@ describe('StorageService', () => {
     expect(typeof result.sizeInMb).toBe('number');
   });
 
+  it('uploadFormUserFile uploads under users/{userId}/forms/{formId}/ and does not create Media', async () => {
+    const userId = '507f1f77bcf86cd799439011';
+    const formId = '507f1f77bcf86cd799439012';
+    const file = {
+      originalname: 'document.pdf',
+      mimetype: 'application/pdf',
+      size: 512,
+      buffer: Buffer.from('pdf-bytes'),
+    } as Express.Multer.File;
+
+    mockStorageProvider.upload_object.mockResolvedValue({ key: 'stub' });
+    mockStorageProvider.get_public_url.mockReturnValue(
+      'https://cdn.example.com/users/507f1f77bcf86cd799439011/forms/507f1f77bcf86cd799439012/uuid-document.pdf',
+    );
+
+    const result = await service.uploadFormUserFile({ userId, formId, file });
+
+    expect(mockStorageProvider.upload_object).toHaveBeenCalledTimes(1);
+    const uploadArg = mockStorageProvider.upload_object.mock.calls[0][0];
+    expect(uploadArg.key).toMatch(
+      new RegExp(
+        `^users/${userId}/forms/${formId}/[0-9a-f-]{36}-document\\.pdf$`,
+        'i',
+      ),
+    );
+    expect(uploadArg.body).toEqual(file.buffer);
+    expect(uploadArg.content_type).toBe('application/pdf');
+    expect(mockMediaModel.create).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      url: 'https://cdn.example.com/users/507f1f77bcf86cd799439011/forms/507f1f77bcf86cd799439012/uuid-document.pdf',
+    });
+  });
+
+  it('uploadFormUserFile throws BadRequestException for invalid userId', async () => {
+    const file = {
+      originalname: 'a.txt',
+      mimetype: 'text/plain',
+      buffer: Buffer.from('x'),
+    } as Express.Multer.File;
+
+    await expect(
+      service.uploadFormUserFile({
+        userId: 'not-an-objectid',
+        formId: '507f1f77bcf86cd799439012',
+        file,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(mockStorageProvider.upload_object).not.toHaveBeenCalled();
+  });
+
   it('updates media basename and returns updated document', async () => {
     const mediaDoc = {
       id: 'media-id-123',
       basename: 'old-name',
-      url: 'https://public.url/images/uuid-test-image.jpg',
+      url: 'https://public.url/uploads/uuid-test-image.jpg',
       format: 'image/jpeg',
       size: 1024,
       createdAt: new Date('2024-01-01T00:00:00.000Z'),
@@ -138,7 +188,7 @@ describe('StorageService', () => {
     const mediaDoc = {
       id: 'media-id-123',
       basename: 'name',
-      url: 'https://public.url/images/uuid-test-image.jpg',
+      url: 'https://public.url/uploads/uuid-test-image.jpg',
       format: 'image/jpeg',
       size: 1024,
       is_active: true,
@@ -175,7 +225,7 @@ describe('StorageService', () => {
     const mediaDoc = {
       id: 'media-id-1',
       basename: 'name',
-      url: 'https://public.url/images/uuid-test-image.jpg',
+      url: 'https://public.url/uploads/uuid-test-image.jpg',
       format: 'image/jpeg',
       size: 1024,
       createdAt: new Date('2024-01-01T00:00:00.000Z'),

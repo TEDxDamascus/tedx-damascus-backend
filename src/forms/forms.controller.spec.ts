@@ -5,10 +5,12 @@ import { FormsController } from './forms.controller';
 import { FormsService } from './forms.service';
 import { FormTemplate } from './entities/form-template.schema';
 import { FormSubmission } from './entities/form-submission.schema';
+import { StorageService } from '../storage/storage.service';
 
 const mockFormTemplateModel = {};
 const mockFormSubmissionModel = {};
 const mockConfigService = { get: jest.fn(() => 'https://example.com') };
+const mockStorageService = { uploadFormUserFile: jest.fn() };
 
 describe('FormsController', () => {
   let controller: FormsController;
@@ -29,6 +31,10 @@ describe('FormsController', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: StorageService,
+          useValue: mockStorageService,
         },
       ],
     }).compile();

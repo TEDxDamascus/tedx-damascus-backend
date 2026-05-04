@@ -10,11 +10,17 @@ import {
   Query,
   Headers,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
 } from '@nestjs/common';
+import { MaxFileSizeValidator } from '@nestjs/common/pipes';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiHeader,
@@ -39,6 +45,9 @@ import {
 } from './dto/form-responses.dto';
 import { FormAvailabilityGuard } from './guards/form-availability.guard';
 import { MOCK_FORMS_USER_OBJECT_ID, resolveFormsUserId } from './constants/forms-dev-user.constant';
+import { FormUploadResultDto } from './dto/form-upload-result.dto';
+
+const MAX_FORM_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 @ApiTags('forms')
 @ApiBearerAuth('bearer')
@@ -271,6 +280,57 @@ export class FormsController {
     @Body() dto: SubmitFormDto,
   ) {
     return this.formsService.submitForm(formId, resolveFormsUserId(userId), dto);
+  }
+
+  @Post(':id/upload')
+  @UseGuards(FormAvailabilityGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'User: Upload file for file_upload questions',
+    description:
+      'Uploads a file under users/{userId}/forms/{formId}/... in object storage. Returns a URL to use as the answer string for a file_upload question. Does not create a Media record.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiHeader({
+    name: 'x-user-id',
+    required: false,
+    description:
+      `MongoDB ObjectId (24 hex chars). If omitted or invalid, mock user ${MOCK_FORMS_USER_OBJECT_ID} is used until auth is wired.`,
+  })
+  @ApiOkResponse({ type: FormUploadResultDto })
+  @ApiBadRequestResponse({ description: 'Invalid or missing file, userId, or formId.' })
+  @ApiForbiddenResponse({
+    description:
+      'Form not published, not yet open, submission window closed, or submission limit reached.',
+  })
+  @ApiResponse({
+    status: 410,
+    description: 'Form has expired (expires_at).',
+  })
+  uploadFormFile(
+    @Param('id') formId: string,
+    @Headers('x-user-id') userId: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: MAX_FORM_UPLOAD_SIZE_BYTES }),
+        ],
+        fileIsRequired: true,
+      }),
+    )
+    file: Express.Multer.File,
+  ): Promise<FormUploadResultDto> {
+    return this.formsService.uploadFormDocument(
+      formId,
+      resolveFormsUserId(userId),
+      file,
+    );
   }
 
   @Get(':id/submissions')

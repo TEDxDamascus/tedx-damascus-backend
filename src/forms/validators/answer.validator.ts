@@ -17,7 +17,6 @@ type AnswerValue =
   | {
       start?: string | Date;
       end?: string | Date;
-      mediaId?: string | Types.ObjectId;
       url?: string;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       [key: string]: any;
@@ -239,20 +238,7 @@ function validateDateRange(
 }
 
 function validateFileUpload(value: unknown): void {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Expected object with mediaId and url');
-  }
-  const { mediaId, url } = value as {
-    mediaId?: unknown;
-    url?: unknown;
-  };
-  if (typeof mediaId !== 'string' || !mediaId.trim()) {
-    throw new Error('mediaId is required');
-  }
-  if (typeof url !== 'string' || !url.trim()) {
-    throw new Error('url is required');
-  }
-  validateUrl(url);
+  validateUrl(value);
 }
 
 /**
@@ -396,10 +382,6 @@ export function normalizeAnswerValue(
   | {
       start: Date;
       end: Date;
-    }
-  | {
-      mediaId: Types.ObjectId;
-      url: string;
     } {
   switch (question.type as QuestionType) {
     case 'date':
@@ -426,15 +408,10 @@ export function normalizeAnswerValue(
       return { start, end };
     }
     case 'file_upload': {
-      const obj = value as {
-        mediaId?: string | Types.ObjectId;
-        url?: string;
-      };
-      const mediaId =
-        obj.mediaId instanceof Types.ObjectId
-          ? obj.mediaId
-          : new Types.ObjectId(obj.mediaId as string);
-      return { mediaId, url: obj.url as string };
+      if (typeof value !== 'string') {
+        throw new Error('Expected URL string');
+      }
+      return value.trim();
     }
     default:
       return value as string | number | boolean;

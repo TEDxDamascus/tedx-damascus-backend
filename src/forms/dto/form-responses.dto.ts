@@ -150,16 +150,14 @@ export class FormSubmissionAnswerResponseDto {
 
   @ApiProperty({
     description:
-      'Answer value. Shape depends on question type: string, string[], boolean, number, { start, end } for date_range, { mediaId, url } for file_upload.',
+      'Answer value. Shape depends on question type: string, string[], boolean, number, { start, end } for date_range, URL string for file_upload (from POST /forms/:id/upload).',
     examples: {
       short_text: 'Short text answer',
       checkbox_group: ['optionId1', 'optionId2'],
       rating: 4,
       date_range: { start: '2025-01-01', end: '2025-01-31' },
-      file_upload: {
-        mediaId: '64f1c5f1e1b2c3d4e5f67890',
-        url: 'https://cdn.example.com/path/to/file.pdf',
-      },
+      file_upload:
+        'https://cdn.example.com/users/507f1f77bcf86cd799439011/forms/507f1f77bcf86cd799439012/uuid-document.pdf',
     },
   })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
