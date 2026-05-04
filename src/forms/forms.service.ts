@@ -7,7 +7,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { MongoServerError } from 'mongodb';
 import {
   FormTemplate,
   FormTemplateDocument,
@@ -674,8 +673,14 @@ export class FormsService {
     }
   }
 
+  private isMongoDuplicateKeyError(err: unknown): boolean {
+    if (!err || typeof err !== 'object') return false;
+    const code = (err as { code?: unknown }).code;
+    return typeof code === 'number' && code === 11000;
+  }
+
   private handleSlugConflict(err: unknown): never {
-    if (err instanceof MongoServerError && err.code === 11000) {
+    if (this.isMongoDuplicateKeyError(err)) {
       throw new ConflictException(
         'A form with this slug already exists. Please use a different slug.',
       );
