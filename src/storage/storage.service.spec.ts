@@ -1,32 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { NotFoundException } from '@nestjs/common';
-import { appConfig } from '../common/config/app.config';
 import { StorageService } from './storage.service';
 import { Media } from './entities/media.entity';
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
+import { STORAGE_PROVIDER } from './providers/storage-provider.token';
 
 describe('StorageService', () => {
   let service: StorageService;
 
-  const mockAppConfig = {
-    mongodbUri: 'mongodb://localhost:27017/test',
-    supabaseProjectUrl: 'https://test.supabase.co',
-    supabaseAnonKey: 'test-anon-key',
-    supabaseStorageName: 'test-bucket',
-    port: 3000,
+  const mockStorageProvider = {
+    driver: 'supabase',
+    upload_object: jest.fn(),
+    ensure_prefix: jest.fn(),
+    get_public_url: jest.fn(),
   };
-
-  const mockSupabaseStorage = {
-    upload: jest.fn(),
-    getPublicUrl: jest.fn(),
-  };
-
-  const mockSupabaseClient = {
-    storage: {
-      from: jest.fn(() => mockSupabaseStorage),
-    },
-  } as any;
 
   const mockMediaModel = {
     create: jest.fn(),
@@ -35,13 +23,10 @@ describe('StorageService', () => {
     countDocuments: jest.fn(),
   };
 
-  jest.mock('@supabase/supabase-js', () => ({
-    createClient: () => mockSupabaseClient,
-  }));
-
   beforeEach(async () => {
-    mockSupabaseStorage.upload.mockReset();
-    mockSupabaseStorage.getPublicUrl.mockReset();
+    mockStorageProvider.upload_object.mockReset();
+    mockStorageProvider.ensure_prefix.mockReset();
+    mockStorageProvider.get_public_url.mockReset();
     mockMediaModel.create.mockReset();
     mockMediaModel.findOneAndUpdate.mockReset();
     mockMediaModel.find.mockReset();
@@ -50,7 +35,7 @@ describe('StorageService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StorageService,
-        { provide: appConfig.KEY, useValue: mockAppConfig },
+        { provide: STORAGE_PROVIDER, useValue: mockStorageProvider },
         { provide: getModelToken(Media.name), useValue: mockMediaModel },
       ],
     }).compile();
@@ -70,14 +55,13 @@ describe('StorageService', () => {
       buffer: Buffer.from('test'),
     } as any;
 
-    mockSupabaseStorage.upload.mockResolvedValue({
-      data: { path: 'images/uuid-test-image.jpg' },
-      error: null,
+    mockStorageProvider.upload_object.mockResolvedValue({
+      key: 'images/uuid-test-image.jpg',
     });
 
-    mockSupabaseStorage.getPublicUrl.mockReturnValue({
-      data: { publicUrl: 'https://public.url/images/uuid-test-image.jpg' },
-    });
+    mockStorageProvider.get_public_url.mockReturnValue(
+      'https://public.url/images/uuid-test-image.jpg',
+    );
 
     const mediaDoc = {
       id: 'media-id-123',
@@ -92,8 +76,8 @@ describe('StorageService', () => {
 
     const result = await service.uploadImage(file);
 
-    expect(mockSupabaseStorage.upload).toHaveBeenCalled();
-    expect(mockSupabaseStorage.getPublicUrl).toHaveBeenCalled();
+    expect(mockStorageProvider.upload_object).toHaveBeenCalled();
+    expect(mockStorageProvider.get_public_url).toHaveBeenCalled();
     expect(mockMediaModel.create).toHaveBeenCalledWith({
       basename: 'test-image',
       url: 'https://public.url/images/uuid-test-image.jpg',
