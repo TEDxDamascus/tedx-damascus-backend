@@ -8,7 +8,6 @@ import { Organizer, OrganizerSchema } from './schema/organizer.schema';
   imports: [
     MongooseModule.forFeature([
       { name: Organizer.name, schema: OrganizerSchema },
-      // { name: Media.name, schema: MediaSchema },
     ]),
   ],
   controllers: [OrganizerController],

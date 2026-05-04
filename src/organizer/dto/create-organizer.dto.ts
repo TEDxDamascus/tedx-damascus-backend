@@ -1,18 +1,26 @@
-import { IsDefined, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDefined,
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { TranslationDto } from 'src/common/dto/translation.dto';
 
 export class CreateOrganizerDto {
   @IsDefined()
-  @IsString()
-  @IsNotEmpty()
-  name!: string;
-  
+  @ValidateNested({ message: 'name must contain both en and ar translations' })
+  @Type(() => TranslationDto)
+  name!: TranslationDto;
+
   @IsDefined()
   image!: string;
 
   @IsDefined()
-  @IsString()
-  @IsNotEmpty()
-  bio!: string;
+  @ValidateNested({ message: 'bio must contain both en and ar translations' })
+  @Type(() => TranslationDto)
+  bio!: TranslationDto;
 
   @IsDefined()
   social_links!: string[]; //TODO make it object
@@ -21,5 +29,5 @@ export class CreateOrganizerDto {
   role!: string;
 
   @IsDefined()
-  gallery!: string[]; // this was called Memories in the old TEDx
+  gallery!: string[];
 }

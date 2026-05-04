@@ -7,7 +7,6 @@ import {
   IsUrl,
   ValidateNested,
 } from 'class-validator';
-import { string } from 'joi';
 import { TranslationDto } from '../../common/dto/translation.dto';
 import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
 

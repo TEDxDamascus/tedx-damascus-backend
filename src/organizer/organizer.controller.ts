@@ -10,6 +10,7 @@ import {
 import { OrganizerService } from './organizer.service';
 import { CreateOrganizerDto } from './dto/create-organizer.dto';
 import { UpdateOrganizerDto } from './dto/update-organizer.dto';
+import { I18n, I18nContext } from 'nestjs-i18n';
 
 @Controller('organizer')
 export class OrganizerController {
@@ -21,13 +22,13 @@ export class OrganizerController {
   }
 
   @Get()
-  findAll() {
-    return this.organizerService.findAll();
+  findAll(@I18n() i18n: I18nContext) {
+    return this.organizerService.findAll(i18n.lang);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.organizerService.findOne(id);
+  findOne(@Param('id') id: string, @I18n() i18n: I18nContext) {
+    return this.organizerService.findOne(id, i18n.lang);
   }
 
   @Patch(':id')
