@@ -1,11 +1,14 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
   IsDefined,
   IsEnum,
   IsNotEmpty,
   IsString,
+  IsUrl,
   ValidateNested,
 } from 'class-validator';
+import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
 import { TranslationDto } from 'src/common/dto/translation.dto';
 
 export class CreateOrganizerDto {
@@ -15,6 +18,9 @@ export class CreateOrganizerDto {
   name!: TranslationDto;
 
   @IsDefined()
+  @IsUrl()
+  @IsNotEmpty()
+  @IsExistingMedia()
   image!: string;
 
   @IsDefined()
@@ -23,11 +29,19 @@ export class CreateOrganizerDto {
   bio!: TranslationDto;
 
   @IsDefined()
-  social_links!: string[]; //TODO make it object
+  social_links!: string[];
 
   @IsDefined()
+  @IsNotEmpty()
+  @IsString() 
   role!: string;
 
   @IsDefined()
+  @IsUrl({}, { each: true })
+  @ArrayNotEmpty()
+  @IsExistingMedia({
+    each: true,
+    message: 'One or more gallery images do not exist in storage',
+  })
   gallery!: string[];
 }

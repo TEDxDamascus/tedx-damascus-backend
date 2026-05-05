@@ -32,7 +32,7 @@ export class StorageService {
     private readonly mediaModel: Model<MediaDocument>,
   ) {
     const url = this.config.supabaseProjectUrl;
-    const key = this.config.supabaseAnonKey;
+    const key = this.config.supabaseServiceRoleKey;
     const bucket = this.config.supabaseStorageName;
 
     if (!url || !key || !bucket) {

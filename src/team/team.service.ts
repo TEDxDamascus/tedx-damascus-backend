@@ -57,6 +57,7 @@ export class TeamService {
       .lean()
       .skip(offset ?? 0)
       .limit(limit ?? 10)
+      
       .exec();
     return team.map((teamMember) => ({
       ...teamMember,
