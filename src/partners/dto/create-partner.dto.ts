@@ -38,6 +38,7 @@ export class CreatePartnerDto {
   //! partnership Type
   @IsDefined()
   @IsString()
+  @IsNotEmpty()
   partnership_type!: string;
 
   //! description

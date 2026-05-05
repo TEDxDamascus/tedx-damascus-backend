@@ -21,9 +21,10 @@ export class PartnersService {
     const partnerImage = await this.storageservice.findOneByURL(
       createPartnerDto.image,
     );
+
     const newPartner = new this.partnerModel({
       ...createPartnerDto,
-      image: partnerImage.id,
+      image: partnerImage._id,
     });
     return newPartner.save();
   }
