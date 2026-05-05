@@ -38,10 +38,7 @@ export class BlogsController {
 
   @ApiOperation({ summary: 'Update Existing Blog By Id' })
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateBlogDto: UpdateBlogDto,
-  ) {
+  update(@Param('id') id: string, @Body() updateBlogDto: UpdateBlogDto) {
     return this.blogsService.update(id, updateBlogDto);
   }
 

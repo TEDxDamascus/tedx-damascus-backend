@@ -22,4 +22,3 @@ export class TeamQueryDto {
   @Max(2060)
   year?: number;
 }
-

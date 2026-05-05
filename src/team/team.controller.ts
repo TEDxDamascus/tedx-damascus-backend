@@ -32,7 +32,7 @@ export class TeamController {
     @Query() paginationQuery: PaginationQueryDto,
     @Query() teamQueryDto: TeamQueryDto,
   ) {
-    return this.teamService.findAll(i18n.lang, paginationQuery,teamQueryDto);
+    return this.teamService.findAll(i18n.lang, paginationQuery, teamQueryDto);
   }
 
   //! Get Team Member By Id  With Translations

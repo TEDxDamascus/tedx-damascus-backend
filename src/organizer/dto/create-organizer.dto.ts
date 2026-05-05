@@ -1,44 +1,40 @@
 import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
-  IsArray,
   IsDefined,
+  IsEnum,
   IsNotEmpty,
+  IsString,
   IsUrl,
   ValidateNested,
 } from 'class-validator';
-import { TranslationDto } from '../../common/dto/translation.dto';
 import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
+import { TranslationDto } from 'src/common/dto/translation.dto';
 
-export class CreateSpeakerDto {
+export class CreateOrganizerDto {
   @IsDefined()
   @ValidateNested({ message: 'name must contain both en and ar translations' })
   @Type(() => TranslationDto)
   name!: TranslationDto;
 
   @IsDefined()
-  @ValidateNested({ message: 'bio must contain both en and ar translations' })
-  @Type(() => TranslationDto)
-  bio!: string;
-
-  @IsDefined()
-  @ValidateNested({
-    message: 'description must contain both en and ar translations',
-  })
-  @Type(() => TranslationDto)
-  description!: string;
-
-  @IsDefined()
   @IsUrl()
   @IsNotEmpty()
   @IsExistingMedia()
-  speaker_image!: string;
+  image!: string;
 
   @IsDefined()
-  @IsArray()
-  @ArrayNotEmpty()
-  @IsUrl({}, { each: true })
-  social_links!: string[]; //$ until i make the Link Schema (hol up )
+  @ValidateNested({ message: 'bio must contain both en and ar translations' })
+  @Type(() => TranslationDto)
+  bio!: TranslationDto;
+
+  @IsDefined()
+  social_links!: string[];
+
+  @IsDefined()
+  @IsNotEmpty()
+  @IsString() 
+  role!: string;
 
   @IsDefined()
   @IsUrl({}, { each: true })
@@ -48,9 +44,4 @@ export class CreateSpeakerDto {
     message: 'One or more gallery images do not exist in storage',
   })
   gallery!: string[];
-
-  @IsDefined()
-  @IsNotEmpty()
-  @IsUrl()
-  video_link!: string;
 }

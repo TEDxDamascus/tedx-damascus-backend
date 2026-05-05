@@ -16,4 +16,5 @@ export class QuestionOption {
   label: { en: string; ar: string };
 }
 
-export const QuestionOptionSchema = SchemaFactory.createForClass(QuestionOption);
+export const QuestionOptionSchema =
+  SchemaFactory.createForClass(QuestionOption);

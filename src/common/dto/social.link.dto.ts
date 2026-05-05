@@ -1,4 +1,4 @@
-export class SocialLinkDto{
-name!:string
-link!:string
-}   
+export class SocialLinkDto {
+  name!: string;
+  link!: string;
+}

@@ -19,7 +19,12 @@ export class FormSubmission {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   userId: Types.ObjectId;
 
-  @Prop({ type: String, required: true, enum: SUBMISSION_STATUSES, default: 'submitted' })
+  @Prop({
+    type: String,
+    required: true,
+    enum: SUBMISSION_STATUSES,
+    default: 'submitted',
+  })
   status: SubmissionStatus;
 
   @Prop({ required: true })
@@ -29,6 +34,7 @@ export class FormSubmission {
   answers: SubmissionAnswer[];
 }
 
-export const FormSubmissionSchema = SchemaFactory.createForClass(FormSubmission);
+export const FormSubmissionSchema =
+  SchemaFactory.createForClass(FormSubmission);
 
 FormSubmissionSchema.index({ formTemplateId: 1, userId: 1 }, { unique: true });

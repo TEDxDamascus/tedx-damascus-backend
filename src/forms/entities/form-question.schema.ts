@@ -1,8 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import {
-  QuestionOption,
-  QuestionOptionSchema,
-} from './question-option.schema';
+import { QuestionOption, QuestionOptionSchema } from './question-option.schema';
 
 export const QUESTION_TYPES = [
   'short_text',

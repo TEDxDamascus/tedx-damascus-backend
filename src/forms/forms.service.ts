@@ -20,7 +20,10 @@ import { CreateFormTemplateDto } from './dto/create-form-template.dto';
 import { UpdateFormTemplateDto } from './dto/update-form-template.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { SubmitFormDto } from './dto/submit-form.dto';
-import { validateAnswers, normalizeAnswerValue } from './validators/answer.validator';
+import {
+  validateAnswers,
+  normalizeAnswerValue,
+} from './validators/answer.validator';
 import { buildPaginatedResult } from '../common/pagination/utils/pagination.util';
 import { PaginatedResult } from '../common/pagination/interfaces/paginated-result.interface';
 import { FormQuestion } from './entities/form-question.schema';
@@ -45,7 +48,9 @@ export class FormsService {
     private formSubmissionModel: Model<FormSubmissionDocument>,
   ) {}
 
-  async create(dto: CreateFormTemplateDto): Promise<FormTemplateSummaryResponse> {
+  async create(
+    dto: CreateFormTemplateDto,
+  ): Promise<FormTemplateSummaryResponse> {
     const created = new this.formTemplateModel({
       ...dto,
       status: 'Draft' as FormStatus,
@@ -55,7 +60,10 @@ export class FormsService {
   }
 
   async findAll(): Promise<FormTemplateSummaryResponse[]> {
-    const docs = await this.formTemplateModel.find().sort({ createdAt: -1 }).exec();
+    const docs = await this.formTemplateModel
+      .find()
+      .sort({ createdAt: -1 })
+      .exec();
     return docs.map((d) => mapFormTemplateToSummary(d));
   }
 
@@ -100,10 +108,13 @@ export class FormsService {
       helpText: dto.helpText,
       isRequired: dto.isRequired ?? false,
       config: dto.config ?? {},
-      options: (dto.options ?? []).map((o) => ({
-        orderIndex: o.orderIndex,
-        label: o.label,
-      } as QuestionOption)),
+      options: (dto.options ?? []).map(
+        (o) =>
+          ({
+            orderIndex: o.orderIndex,
+            label: o.label,
+          }) as QuestionOption,
+      ),
     };
     template.questions.push(question as FormQuestion);
     const saved = await template.save();
@@ -118,16 +129,20 @@ export class FormsService {
     const template = await this.findOne(formId);
     this.ensureDraft(template);
     const idx = template.questions.findIndex(
-      (q) => (q as { _id?: { toString(): string } })._id?.toString() === questionId,
+      (q) =>
+        (q as { _id?: { toString(): string } })._id?.toString() === questionId,
     );
     if (idx === -1) {
       throw new NotFoundException('Question not found');
     }
-    if (dto.orderIndex !== undefined) template.questions[idx].orderIndex = dto.orderIndex;
+    if (dto.orderIndex !== undefined)
+      template.questions[idx].orderIndex = dto.orderIndex;
     if (dto.type !== undefined) template.questions[idx].type = dto.type;
     if (dto.title !== undefined) template.questions[idx].title = dto.title;
-    if (dto.helpText !== undefined) template.questions[idx].helpText = dto.helpText;
-    if (dto.isRequired !== undefined) template.questions[idx].isRequired = dto.isRequired;
+    if (dto.helpText !== undefined)
+      template.questions[idx].helpText = dto.helpText;
+    if (dto.isRequired !== undefined)
+      template.questions[idx].isRequired = dto.isRequired;
     if (dto.config !== undefined) template.questions[idx].config = dto.config;
     if (dto.options !== undefined) {
       template.questions[idx].options = dto.options.map((o) => ({
@@ -146,7 +161,8 @@ export class FormsService {
     const template = await this.findOne(formId);
     this.ensureDraft(template);
     const idx = template.questions.findIndex(
-      (q) => (q as { _id?: { toString(): string } })._id?.toString() === questionId,
+      (q) =>
+        (q as { _id?: { toString(): string } })._id?.toString() === questionId,
     );
     if (idx === -1) {
       throw new NotFoundException('Question not found');
@@ -300,7 +316,10 @@ export class FormsService {
   async getSubmission(
     formId: string,
     submissionId: string,
-  ): Promise<{ schema: FormTemplateSchemaResponse; submission: FormSubmissionResponse }> {
+  ): Promise<{
+    schema: FormTemplateSchemaResponse;
+    submission: FormSubmissionResponse;
+  }> {
     const template = await this.findOne(formId);
     if (!Types.ObjectId.isValid(submissionId)) {
       throw new BadRequestException('Invalid submission ID');
@@ -326,5 +345,4 @@ export class FormsService {
       );
     }
   }
-
 }
