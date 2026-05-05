@@ -55,6 +55,7 @@ export class TeamService {
     const team = await this.teamModel
       .find(filters)
       .lean()
+      .populate('image', 'url -_id')
       .skip(offset ?? 0)
       .limit(limit ?? 10)
       
@@ -68,7 +69,11 @@ export class TeamService {
 
   //! Get Team Member Detail
   async findOne(id: string, lang: string) {
-    const teamMember = await this.teamModel.findById(id).lean().exec();
+    const teamMember = await this.teamModel
+      .findById(id)
+      .populate('image', 'url -_id')
+      .lean()
+      .exec();
     if (!teamMember)
       throw new NotFoundException(`Team Member with id ${id} was not found`);
     return {
