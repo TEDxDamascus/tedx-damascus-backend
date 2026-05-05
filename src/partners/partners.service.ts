@@ -7,16 +7,25 @@ import { translateFieldHelper } from 'src/common/utils/translate.helper';
 import { PaginationQueryDto } from 'src/events/dto/pagination.dto';
 import { PartnerQueryDto } from './dto/partner-pagination.dto';
 import { Model } from 'mongoose';
+import { StorageService } from 'src/storage/storage.service';
 
 @Injectable()
 export class PartnersService {
   constructor(
     @InjectModel(Partner.name) private readonly partnerModel: Model<Partner>,
+    private readonly storageservice: StorageService,
   ) {}
 
   //! Create new partners
-  create(createPartnerDto: CreatePartnerDto) {
-    const newPartner = new this.partnerModel(createPartnerDto);
+  async create(createPartnerDto: CreatePartnerDto) {
+    const partnerImage = await this.storageservice.findOneByURL(
+      createPartnerDto.image,
+    );
+
+    const newPartner = new this.partnerModel({
+      ...createPartnerDto,
+      image: partnerImage._id,
+    });
     return newPartner.save();
   }
 
