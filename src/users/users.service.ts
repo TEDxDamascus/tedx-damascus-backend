@@ -33,7 +33,10 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
     const role = createUserDto.role ?? UserRole.USER;
-    const permissions = this.resolvePermissions(role, createUserDto.permissions);
+    const permissions = this.resolvePermissions(
+      role,
+      createUserDto.permissions,
+    );
 
     const createdUser = await this.userModel.create({
       ...createUserDto,
@@ -45,7 +48,9 @@ export class UsersService {
 
     return {
       message: 'User created successfully',
-      data: this.toPublicUser(createdUser.toObject() as unknown as Record<string, unknown>),
+      data: this.toPublicUser(
+        createdUser.toObject() as unknown as Record<string, unknown>,
+      ),
     };
   }
 
@@ -84,7 +89,10 @@ export class UsersService {
     let currentRole: UserRole | undefined;
 
     if (payload.role || payload.permissions) {
-      const existingUser = await this.userModel.findById(id).select('role').lean();
+      const existingUser = await this.userModel
+        .findById(id)
+        .select('role')
+        .lean();
       if (!existingUser) {
         throw new NotFoundException('User not found');
       }
@@ -109,7 +117,10 @@ export class UsersService {
 
     if (payload.role || payload.permissions) {
       const targetRole = payload.role ?? currentRole ?? UserRole.USER;
-      payload.permissions = this.resolvePermissions(targetRole, payload.permissions);
+      payload.permissions = this.resolvePermissions(
+        targetRole,
+        payload.permissions,
+      );
     }
 
     const user = await this.userModel
@@ -171,4 +182,3 @@ export class UsersService {
     return [];
   }
 }
-

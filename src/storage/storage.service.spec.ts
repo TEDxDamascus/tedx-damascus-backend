@@ -161,10 +161,7 @@ describe('StorageService', () => {
       exec: jest.fn().mockResolvedValue({ ...mediaDoc, basename: 'new-name' }),
     });
 
-    const result = await service.updateMediaBasename(
-      mediaDoc.id,
-      'new-name',
-    );
+    const result = await service.updateMediaBasename(mediaDoc.id, 'new-name');
 
     expect(mockMediaModel.findOneAndUpdate).toHaveBeenCalledWith(
       { _id: mediaDoc.id, is_active: true },
@@ -246,7 +243,9 @@ describe('StorageService', () => {
     const result = await service.listMedia(pagination);
 
     expect(mockMediaModel.find).toHaveBeenCalledWith({ is_active: true });
-    expect(mockMediaModel.countDocuments).toHaveBeenCalledWith({ is_active: true });
+    expect(mockMediaModel.countDocuments).toHaveBeenCalledWith({
+      is_active: true,
+    });
     expect(findChain.sort).toHaveBeenCalledWith({ createdAt: -1 });
     expect(findChain.skip).toHaveBeenCalledWith(pagination.skip);
     expect(findChain.limit).toHaveBeenCalledWith(pagination.limit);

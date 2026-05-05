@@ -22,7 +22,7 @@ export function docsCdnRewriteMiddleware(
   },
   next: () => void,
 ): void {
-  const path = req.path ?? (req.url?.split('?')[0] ?? '');
+  const path = req.path ?? req.url?.split('?')[0] ?? '';
   if (!DOCS_PATHS.some((p) => path === p || path.endsWith(p))) {
     return next();
   }
@@ -94,10 +94,7 @@ export function setupDocs(app: INestApplication) {
   // Resolve from require so it works regardless of process.cwd() (e.g. when running from dist/).
   const swaggerUiPath = (() => {
     try {
-      return resolve(
-        require.resolve('swagger-ui-dist/package.json'),
-        '..',
-      );
+      return resolve(require.resolve('swagger-ui-dist/package.json'), '..');
     } catch {
       return resolve(process.cwd(), 'node_modules', 'swagger-ui-dist');
     }

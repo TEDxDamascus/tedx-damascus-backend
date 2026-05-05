@@ -1,9 +1,6 @@
 import { Types } from 'mongoose';
 import { FormTemplateDocument } from '../entities/form-template.schema';
-import {
-  FormQuestion,
-  QuestionType,
-} from '../entities/form-question.schema';
+import { FormQuestion, QuestionType } from '../entities/form-question.schema';
 
 interface QuestionWithId extends FormQuestion {
   _id?: Types.ObjectId;
@@ -32,7 +29,10 @@ export class AnswerValidationError extends Error {
   }
 }
 
-function validateShortText(value: unknown, config: Record<string, unknown>): void {
+function validateShortText(
+  value: unknown,
+  config: Record<string, unknown>,
+): void {
   if (typeof value !== 'string') {
     throw new Error('Expected string');
   }
@@ -46,14 +46,14 @@ function validateShortText(value: unknown, config: Record<string, unknown>): voi
   }
 }
 
-function validateLongText(value: unknown, config: Record<string, unknown>): void {
+function validateLongText(
+  value: unknown,
+  config: Record<string, unknown>,
+): void {
   validateShortText(value, config);
 }
 
-function validateSingleChoice(
-  value: unknown,
-  question: QuestionWithId,
-): void {
+function validateSingleChoice(value: unknown, question: QuestionWithId): void {
   if (typeof value !== 'string') {
     throw new Error('Expected option ID string');
   }

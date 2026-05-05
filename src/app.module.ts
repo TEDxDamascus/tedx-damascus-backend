@@ -13,7 +13,10 @@ import { UsersModule } from './users/users.module';
 import { appConfig } from './common/config/app.config';
 import { FormsModule } from './forms/forms.module';
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
+import { PartnersModule } from './partners/partners.module';
 import * as path from 'path';
+import { TeamModule } from './team/team.module';
+import { OrganizerModule } from './organizer/organizer.module';
 
 @Module({
   imports: [
@@ -46,6 +49,9 @@ import * as path from 'path';
     BlogsModule,
     StorageModule,
     FormsModule,
+    PartnersModule,
+    TeamModule,
+    OrganizerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

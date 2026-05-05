@@ -46,6 +46,7 @@ function validateEnv(config: NodeJS.ProcessEnv) {
     STORAGE_DRIVER: 'supabase' | 'minio';
     SUPABASE_PROJECT_URL: string;
     SUPABASE_ANON_KEY: string;
+    SUPABASE_SERVICE_ROLE_KEY: string;
     SUPABASE_STORAGE_NAME: string;
     MINIO_ENDPOINT: string;
     MINIO_USERNAME: string;
@@ -66,6 +67,7 @@ export const appConfig = registerAs('app', () => {
     storageDriver: env.STORAGE_DRIVER,
     supabaseProjectUrl: env.SUPABASE_PROJECT_URL,
     supabaseAnonKey: env.SUPABASE_ANON_KEY,
+    supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     supabaseStorageName: env.SUPABASE_STORAGE_NAME,
     minioEndpoint: env.MINIO_ENDPOINT,
     minioUsername: env.MINIO_USERNAME,

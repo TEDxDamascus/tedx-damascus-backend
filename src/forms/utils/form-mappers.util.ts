@@ -17,13 +17,11 @@ function toId(value: Types.ObjectId | undefined | null): string {
   return value ? value.toString() : '';
 }
 
-export function mapQuestionOption(
-  option: {
-    _id?: Types.ObjectId;
-    orderIndex: number;
-    label: { en: string; ar: string };
-  },
-): QuestionOptionResponse {
+export function mapQuestionOption(option: {
+  _id?: Types.ObjectId;
+  orderIndex: number;
+  label: { en: string; ar: string };
+}): QuestionOptionResponse {
   return {
     id: toId(option._id),
     orderIndex: option.orderIndex,
@@ -34,22 +32,20 @@ export function mapQuestionOption(
   };
 }
 
-export function mapFormQuestion(
-  question: {
+export function mapFormQuestion(question: {
+  _id?: Types.ObjectId;
+  orderIndex: number;
+  type: string;
+  title: { en: string; ar: string };
+  helpText?: { en: string; ar: string };
+  isRequired: boolean;
+  config: Record<string, unknown>;
+  options?: Array<{
     _id?: Types.ObjectId;
     orderIndex: number;
-    type: string;
-    title: { en: string; ar: string };
-    helpText?: { en: string; ar: string };
-    isRequired: boolean;
-    config: Record<string, unknown>;
-    options?: Array<{
-      _id?: Types.ObjectId;
-      orderIndex: number;
-      label: { en: string; ar: string };
-    }>;
-  },
-): FormQuestionResponse {
+    label: { en: string; ar: string };
+  }>;
+}): FormQuestionResponse {
   const options = (question.options ?? [])
     .slice()
     .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -99,7 +95,9 @@ export function mapFormTemplateToSchema(
     questions: (t.questions ?? [])
       .slice()
       .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((q) => mapFormQuestion(q as unknown as Parameters<typeof mapFormQuestion>[0])),
+      .map((q) =>
+        mapFormQuestion(q as unknown as Parameters<typeof mapFormQuestion>[0]),
+      ),
   };
 }
 
@@ -139,12 +137,10 @@ export function mapFormTemplateToSummary(
   };
 }
 
-export function mapSubmissionAnswer(
-  answer: {
-    questionId?: Types.ObjectId;
-    value: unknown;
-  },
-): FormSubmissionAnswerResponse {
+export function mapSubmissionAnswer(answer: {
+  questionId?: Types.ObjectId;
+  value: unknown;
+}): FormSubmissionAnswerResponse {
   return {
     questionId: toId(answer.questionId as Types.ObjectId),
     value: answer.value,
@@ -164,4 +160,3 @@ export function mapFormSubmission(
     answers: (s.answers ?? []).map((a: any) => mapSubmissionAnswer(a)),
   };
 }
-

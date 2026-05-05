@@ -12,14 +12,8 @@ import { IsExistingMediaConstrain } from '../common/decorators/is-existing-media
 @Module({
   imports: [
     MongooseModule.forFeature([
-      {
-        name: Event.name,
-        schema: EventSchema,
-      },
-      {
-        name: Media.name,
-        schema: MediaSchema,
-      },
+      { name: Event.name, schema: EventSchema },
+      { name: Media.name, schema: MediaSchema },
     ]),
     SpeakersModule,
     StorageModule,
@@ -28,7 +22,7 @@ import { IsExistingMediaConstrain } from '../common/decorators/is-existing-media
   providers: [
     EventsService,
     IsExistingSpeakerConstrain,
-    IsExistingMediaConstrain,
+    // IsExistingMediaConstrain,
   ],
 })
 export class EventsModule {}

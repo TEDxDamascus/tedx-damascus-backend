@@ -30,4 +30,3 @@ export class Media {
 export type MediaDocument = Media & Document;
 
 export const MediaSchema = SchemaFactory.createForClass(Media);
-

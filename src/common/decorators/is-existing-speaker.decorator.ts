@@ -15,7 +15,6 @@ export class IsExistingSpeakerConstrain implements ValidatorConstraintInterface 
   constructor(private readonly speakerService: SpeakersService) {}
 
   async validate(id: string) {
-    // 👇 Guard: skip DB call if not a valid ObjectId
     if (!Types.ObjectId.isValid(id)) return false;
 
     const speaker = await this.speakerService.findOne(id, 'en');

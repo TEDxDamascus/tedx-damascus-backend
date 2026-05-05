@@ -152,7 +152,10 @@ export class BlogsService {
       existingBlog?.description,
       payload.description,
     );
-    const content = this.mergeLocalizedField(existingBlog?.content, payload.content);
+    const content = this.mergeLocalizedField(
+      existingBlog?.content,
+      payload.content,
+    );
 
     return {
       ...payload,
@@ -161,7 +164,10 @@ export class BlogsService {
       content,
       publishedAt: this.resolvePublishedAt(payload, existingBlog),
       slug: this.resolveSlugPayload(existingBlog, payload, title),
-      meta_title: this.mergeLocalizedField(existingBlog?.meta_title, payload.meta_title),
+      meta_title: this.mergeLocalizedField(
+        existingBlog?.meta_title,
+        payload.meta_title,
+      ),
       meta_description: this.mergeLocalizedField(
         existingBlog?.meta_description,
         payload.meta_description,
@@ -170,7 +176,10 @@ export class BlogsService {
         existingBlog?.meta_keywords,
         payload.meta_keywords,
       ),
-      og_title: this.mergeLocalizedField(existingBlog?.og_title, payload.og_title),
+      og_title: this.mergeLocalizedField(
+        existingBlog?.og_title,
+        payload.og_title,
+      ),
       og_description: this.mergeLocalizedField(
         existingBlog?.og_description,
         payload.og_description,
@@ -273,7 +282,8 @@ export class BlogsService {
       blog.og_description,
       resolvedMetaDescription,
     );
-    const canonicalUrl = blog.canonical_url || this.buildCanonicalUrl(blog.slug.en);
+    const canonicalUrl =
+      blog.canonical_url || this.buildCanonicalUrl(blog.slug.en);
     const blogImage = this.resolveMedia(blog.blog_image);
     const ogImage = this.resolveMedia(blog.og_image || blog.blog_image || null);
 
@@ -318,16 +328,13 @@ export class BlogsService {
     return `${websiteUrl.replace(/\/$/, '')}/blogs/${slug}`;
   }
 
-  private buildJsonLd(
-    blog: BlogDocument,
-    locale: Locale,
-    image: unknown,
-  ) {
+  private buildJsonLd(blog: BlogDocument, locale: Locale, image: unknown) {
     return {
       '@context': 'https://schema.org',
       '@type': 'Article',
       inLanguage: locale,
-      mainEntityOfPage: blog.canonical_url || this.buildCanonicalUrl(blog.slug[locale]),
+      mainEntityOfPage:
+        blog.canonical_url || this.buildCanonicalUrl(blog.slug[locale]),
       url: blog.canonical_url || this.buildCanonicalUrl(blog.slug[locale]),
       headline: blog.title?.[locale] || '',
       description: this.resolveLocalizedFallback(
@@ -337,7 +344,8 @@ export class BlogsService {
       image: this.extractImageUrl(image),
       author: {
         '@type': 'Organization',
-        name: this.configService.get<string>('BLOG_AUTHOR_NAME') || 'TEDx Damascus',
+        name:
+          this.configService.get<string>('BLOG_AUTHOR_NAME') || 'TEDx Damascus',
       },
       datePublished: blog.publishedAt || blog.createdAt,
       dateModified: blog.updatedAt,
@@ -376,7 +384,9 @@ export class BlogsService {
 
     const orderedBlogs = [...publishedBlogs].sort((left, right) => {
       const leftDate = new Date(left.publishedAt || left.createdAt).getTime();
-      const rightDate = new Date(right.publishedAt || right.createdAt).getTime();
+      const rightDate = new Date(
+        right.publishedAt || right.createdAt,
+      ).getTime();
 
       if (leftDate !== rightDate) {
         return leftDate - rightDate;
@@ -447,7 +457,10 @@ export class BlogsService {
       }
     }
 
-    if (typeof mediaObject.url === 'string' && !this.isAbsoluteUrl(mediaObject.url)) {
+    if (
+      typeof mediaObject.url === 'string' &&
+      !this.isAbsoluteUrl(mediaObject.url)
+    ) {
       return mediaObject.url.replace(/^\/+/, '');
     }
 
@@ -481,7 +494,9 @@ export class BlogsService {
       'code' in error &&
       error.code === 11000
     ) {
-      throw new ConflictException('Slug must be unique for both Arabic and English locales');
+      throw new ConflictException(
+        'Slug must be unique for both Arabic and English locales',
+      );
     }
 
     throw error;

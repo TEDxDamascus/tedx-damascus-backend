@@ -11,7 +11,9 @@ export class UploadFileResultDto {
   @ApiProperty({ description: 'Basename only (no extension)' })
   basename: string;
 
-  @ApiProperty({ description: 'Display filename: basename + extension from format' })
+  @ApiProperty({
+    description: 'Display filename: basename + extension from format',
+  })
   name: string;
 
   @ApiProperty({ description: 'Public URL of the uploaded file' })

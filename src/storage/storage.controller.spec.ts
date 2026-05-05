@@ -12,9 +12,7 @@ describe('StorageController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [StorageController],
-      providers: [
-        { provide: StorageService, useValue: mockStorageService },
-      ],
+      providers: [{ provide: StorageService, useValue: mockStorageService }],
     }).compile();
 
     controller = module.get<StorageController>(StorageController);

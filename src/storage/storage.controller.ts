@@ -65,7 +65,10 @@ export class StorageController {
     @Param('id') id: string,
     @Body() dto: UpdateMediaBasenameDto,
   ): Promise<MediaDto> {
-    const media = await this.storageService.updateMediaBasename(id, dto.basename);
+    const media = await this.storageService.updateMediaBasename(
+      id,
+      dto.basename,
+    );
     return MediaDto.fromEntity(media);
   }
 

@@ -35,6 +35,7 @@ export class FormSubmission {
   answers: SubmissionAnswer[];
 }
 
-export const FormSubmissionSchema = SchemaFactory.createForClass(FormSubmission);
+export const FormSubmissionSchema =
+  SchemaFactory.createForClass(FormSubmission);
 
 FormSubmissionSchema.index({ formTemplateId: 1, userId: 1 }, { unique: true });

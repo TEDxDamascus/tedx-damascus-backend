@@ -35,7 +35,7 @@ export class SpeakersController {
     @I18n() i18n: I18nContext,
     @Query() paginationQuery: PaginationQueryDto,
   ) {
-    return this.speakersService.findAll(i18n.lang,paginationQuery);
+    return this.speakersService.findAll(i18n.lang, paginationQuery);
   }
 
   //! Get Speaker By Id

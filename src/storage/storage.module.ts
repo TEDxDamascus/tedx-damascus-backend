@@ -9,6 +9,7 @@ import { STORAGE_PROVIDER } from './providers/storage-provider.token';
 import { StorageProvider } from './providers/storage-provider.interface';
 import { SupabaseStorageProvider } from './providers/supabase-storage.provider';
 import { MinioStorageProvider } from './providers/minio-storage.provider';
+import { IsExistingMediaConstrain } from 'src/common/decorators/is-existing-media.decorator';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { MinioStorageProvider } from './providers/minio-storage.provider';
   ],
   controllers: [StorageController],
   providers: [
-    StorageService,
+    StorageService, IsExistingMediaConstrain,
     SupabaseStorageProvider,
     MinioStorageProvider,
     {
@@ -31,6 +32,6 @@ import { MinioStorageProvider } from './providers/minio-storage.provider';
       },
     },
   ],
-  exports: [StorageService],
+  exports: [StorageService, IsExistingMediaConstrain],
 })
 export class StorageModule {}
