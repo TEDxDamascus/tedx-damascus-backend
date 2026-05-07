@@ -2,7 +2,7 @@
   "info": {
     "name": "TEDx Damascus Backend API v2",
     "_postman_id": "9a38d0cf-843d-4f12-b82c-8cfe37d9cb02",
-    "description": "Fresh Postman collection for the current TEDx Damascus backend API. Includes dynamic home settings, localized blog tags, localized meta keywords arrays, optional blog user_id, related_blogs_ids, and user_name in blog responses.",
+    "description": "Fresh Postman collection for the current TEDx Damascus backend API. Includes dynamic home settings, localized blog tags, localized meta keywords arrays, optional blog user_id, related_blogs_ids, blog references, language filtering, and user_name in blog responses.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -17,6 +17,10 @@
     {
       "key": "blog_id",
       "value": "PUT_BLOG_ID_HERE"
+    },
+    {
+      "key": "blog_reference_id",
+      "value": "PUT_BLOG_REFERENCE_ID_HERE"
     },
     {
       "key": "related_blog_id",
@@ -322,7 +326,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/blogs?page=1&limit=10&status=published&sort=createdAt&order=desc",
+              "raw": "{{base_url}}/blogs?page=1&limit=10&status=published&language=en&sort=createdAt&order=desc",
               "host": ["{{base_url}}"],
               "path": ["blogs"],
               "query": [
@@ -339,6 +343,10 @@
                   "value": "published"
                 },
                 {
+                  "key": "language",
+                  "value": "en"
+                },
+                {
                   "key": "sort",
                   "value": "createdAt"
                 },
@@ -348,7 +356,7 @@
                 }
               ]
             },
-            "description": "Blog items include user_name when user_id can be resolved from the users collection."
+            "description": "Blog items include user_name and references. Use language=ar/en or lang=ar/en to filter by article language."
           },
           "response": []
         },
@@ -417,7 +425,7 @@
               "host": ["{{base_url}}"],
               "path": ["blogs", "{{blog_id}}"]
             },
-            "description": "Response includes user_name, seo, json_ld, prev_blog, and next_blog."
+            "description": "Response includes user_name, references, seo, json_ld, prev_blog, and next_blog."
           },
           "response": []
         },
@@ -452,6 +460,114 @@
               "raw": "{{base_url}}/blogs/{{blog_id}}",
               "host": ["{{base_url}}"],
               "path": ["blogs", "{{blog_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Blog References",
+      "item": [
+        {
+          "name": "Create Blog Reference",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blog_id\": \"{{blog_id}}\",\n  \"name\": \"TED Talk source\",\n  \"desc\": \"Reference used in the blog article.\",\n  \"url\": \"https://www.ted.com/\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/blog-references",
+              "host": ["{{base_url}}"],
+              "path": ["blog-references"]
+            },
+            "description": "Creates a reference attached to a blog. Copy the returned _id into blog_reference_id."
+          },
+          "response": []
+        },
+        {
+          "name": "List Blog References",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blog-references",
+              "host": ["{{base_url}}"],
+              "path": ["blog-references"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Blog References By Blog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blog-references?blog_id={{blog_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["blog-references"],
+              "query": [
+                {
+                  "key": "blog_id",
+                  "value": "{{blog_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Blog Reference By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blog-references/{{blog_reference_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["blog-references", "{{blog_reference_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Blog Reference",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated source name\",\n  \"desc\": \"Updated reference description.\",\n  \"url\": \"https://www.ted.com/talks\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/blog-references/{{blog_reference_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["blog-references", "{{blog_reference_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Blog Reference",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/blog-references/{{blog_reference_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["blog-references", "{{blog_reference_id}}"]
             }
           },
           "response": []

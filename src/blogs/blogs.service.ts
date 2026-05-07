@@ -14,6 +14,10 @@ import {
   Category,
   CategoryDocument,
 } from '../categories/entities/category.entity';
+import {
+  BlogReference,
+  BlogReferenceDocument,
+} from '../blog-references/entities/blog-reference.entity';
 
 type Locale = 'ar' | 'en';
 
@@ -34,6 +38,7 @@ type LocalizedTextListInput = {
 
 type BlogResponse = BlogDocument & {
   user_name?: string | null;
+  references?: BlogReferenceDocument[];
   prev_blog?: {
     id: string;
     title: LocalizedText;
@@ -61,6 +66,8 @@ export class BlogsService {
     private blogModel: Model<BlogDocument>,
     @InjectModel(Category.name)
     private readonly categoryModel: Model<CategoryDocument>,
+    @InjectModel(BlogReference.name)
+    private readonly blogReferenceModel: Model<BlogReferenceDocument>,
     private readonly configService: ConfigService,
   ) {}
 
@@ -86,6 +93,8 @@ export class BlogsService {
       status,
       category_id,
       category,
+      language,
+      lang,
       sort = 'createdAt',
       order = 'desc',
     } = query;
@@ -94,6 +103,11 @@ export class BlogsService {
 
     if (status) filter.status = status;
     if (category_id || category) filter.category_id = category_id || category;
+    const locale = this.resolveLocaleFilter(language || lang);
+
+    if (locale) {
+      filter[`content.${locale}`] = { $exists: true, $type: 'string', $ne: '' };
+    }
 
     if (search) {
       filter.$or = [
@@ -123,6 +137,9 @@ export class BlogsService {
     const userNamesById = await this.getUserNamesById(
       blogs.map((blog) => blog.user_id),
     );
+    const referencesByBlogId = await this.getReferencesByBlogId(
+      blogs.map((blog) => blog._id),
+    );
 
     return {
       data: blogs.map((blog) =>
@@ -131,6 +148,7 @@ export class BlogsService {
           undefined,
           undefined,
           userNamesById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
+          referencesByBlogId.get(String(blog._id)) || [],
         ),
       ),
       total,
@@ -151,12 +169,14 @@ export class BlogsService {
 
     const [prevBlog, nextBlog] = await this.findSiblingBlogs(blog);
     const userNamesById = await this.getUserNamesById([blog.user_id]);
+    const referencesByBlogId = await this.getReferencesByBlogId([blog._id]);
 
     return this.serializeBlog(
       blog,
       prevBlog,
       nextBlog,
       userNamesById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
+      referencesByBlogId.get(String(blog._id)) || [],
     );
   }
 
@@ -364,6 +384,7 @@ export class BlogsService {
     prevBlog?: BlogDocument | null,
     nextBlog?: BlogDocument | null,
     userName?: string | null,
+    references: BlogReferenceDocument[] = [],
   ): BlogResponse {
     const resolvedMetaTitle = this.resolveLocalizedFallback(
       blog.meta_title,
@@ -389,6 +410,7 @@ export class BlogsService {
     return {
       ...blog.toObject(),
       user_name: userName ?? null,
+      references,
       blog_image: blogImage,
       og_image: this.resolveMedia(blog.og_image),
       prev_blog: this.serializeSiblingBlog(prevBlog),
@@ -407,6 +429,44 @@ export class BlogsService {
         en: this.buildJsonLd(blog, 'en', ogImage),
       },
     } as BlogResponse;
+  }
+
+  private resolveLocaleFilter(language?: unknown): Locale | null {
+    if (language !== 'ar' && language !== 'en') {
+      return null;
+    }
+
+    return language;
+  }
+
+  private async getReferencesByBlogId(blogIds: unknown[]) {
+    const uniqueBlogIds = [
+      ...new Set(
+        blogIds.map((blogId) => this.getObjectIdString(blogId)).filter(Boolean),
+      ),
+    ] as string[];
+
+    if (!uniqueBlogIds.length) {
+      return new Map<string, BlogReferenceDocument[]>();
+    }
+
+    const references = await this.blogReferenceModel
+      .find({
+        blog_id: {
+          $in: uniqueBlogIds.map((blogId) => new Types.ObjectId(blogId)),
+        },
+      })
+      .sort({ createdAt: -1 });
+
+    return references.reduce((referencesByBlogId, reference) => {
+      const blogId = String(reference.blog_id);
+      const blogReferences = referencesByBlogId.get(blogId) || [];
+
+      blogReferences.push(reference);
+      referencesByBlogId.set(blogId, blogReferences);
+
+      return referencesByBlogId;
+    }, new Map<string, BlogReferenceDocument[]>());
   }
 
   private async getUserNamesById(userIds: unknown[]) {

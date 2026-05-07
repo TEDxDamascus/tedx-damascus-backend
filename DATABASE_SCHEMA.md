@@ -138,14 +138,39 @@ Defined in `src/blogs/entities/blog.entity.ts`.
 Blog API responses also include response-only computed fields:
 
 - `user_name`: resolved from `user_id` using the external `users` collection when available
+- `references`: list of records from the `blogreferences` collection for the blog
 - `prev_blog` / `next_blog`: sibling blog summaries on `GET /blogs/:id`
 - `seo`: resolved SEO fallback values
 - `json_ld`: localized Article structured data
+
+`GET /blogs` supports language filtering with `language=ar`, `language=en`,
+`lang=ar`, or `lang=en`. The filter returns blogs that have non-empty content
+for that locale.
+
+### `blogreferences`
+
+Defined in `src/blog-references/entities/blog-reference.entity.ts`.
+
+```js
+{
+  _id: ObjectId,
+
+  blog_id: ObjectId, // ref: Blog, required
+
+  name: String, // required
+  desc: String, // default: ''
+  url: String,  // required
+
+  createdAt: Date,
+  updatedAt: Date
+}
+```
 
 ## Indexes
 
 - Unique index on `slug.en` when it exists and is not empty
 - Unique index on `slug.ar` when it exists and is not empty
+- Index on `blogreferences.blog_id`
 
 ## Referenced External Collections
 
