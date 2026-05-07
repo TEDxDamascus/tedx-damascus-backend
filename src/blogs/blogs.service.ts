@@ -5,12 +5,15 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Blog, BlogDocument } from './entities/blog.entity';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { buildLocalizedSlug, generateLocaleSlug } from './utils/blog-slug.util';
-import { Category, CategoryDocument } from '../categories/entities/category.entity';
+import {
+  Category,
+  CategoryDocument,
+} from '../categories/entities/category.entity';
 
 type Locale = 'ar' | 'en';
 
@@ -19,7 +22,18 @@ type LocalizedText = {
   en: string;
 };
 
+type LocalizedTextList = {
+  ar: string[];
+  en: string[];
+};
+
+type LocalizedTextListInput = {
+  ar?: string | string[];
+  en?: string | string[];
+};
+
 type BlogResponse = BlogDocument & {
+  user_name?: string | null;
   prev_blog?: {
     id: string;
     title: LocalizedText;
@@ -31,7 +45,7 @@ type BlogResponse = BlogDocument & {
   seo: {
     meta_title: LocalizedText;
     meta_description: LocalizedText;
-    meta_keywords: LocalizedText;
+    meta_keywords: LocalizedTextList;
     canonical_url: string;
     og_image: unknown;
     og_title: LocalizedText;
@@ -52,6 +66,7 @@ export class BlogsService {
 
   async create(createBlogDto: CreateBlogDto) {
     await this.assertCategoryExists(createBlogDto.category_id);
+    await this.assertRelatedBlogsExist(createBlogDto.related_blogs_ids);
 
     try {
       const blog = new this.blogModel(this.prepareBlogPayload(createBlogDto));
@@ -88,6 +103,8 @@ export class BlogsService {
         { 'description.ar': { $regex: search, $options: 'i' } },
         { 'slug.en': { $regex: search, $options: 'i' } },
         { 'slug.ar': { $regex: search, $options: 'i' } },
+        { 'tags.en': { $regex: search, $options: 'i' } },
+        { 'tags.ar': { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -103,8 +120,19 @@ export class BlogsService {
 
     const total = await this.blogModel.countDocuments(filter);
 
+    const userNamesById = await this.getUserNamesById(
+      blogs.map((blog) => blog.user_id),
+    );
+
     return {
-      data: blogs.map((blog) => this.serializeBlog(blog)),
+      data: blogs.map((blog) =>
+        this.serializeBlog(
+          blog,
+          undefined,
+          undefined,
+          userNamesById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
+        ),
+      ),
       total,
       page: Number(page),
       lastPage: Math.ceil(total / Number(limit)),
@@ -122,8 +150,14 @@ export class BlogsService {
     if (!blog) throw new NotFoundException('Blog not found');
 
     const [prevBlog, nextBlog] = await this.findSiblingBlogs(blog);
+    const userNamesById = await this.getUserNamesById([blog.user_id]);
 
-    return this.serializeBlog(blog, prevBlog, nextBlog);
+    return this.serializeBlog(
+      blog,
+      prevBlog,
+      nextBlog,
+      userNamesById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
+    );
   }
 
   async update(id: string, updateBlogDto: UpdateBlogDto) {
@@ -134,6 +168,7 @@ export class BlogsService {
     }
 
     await this.assertCategoryExists(updateBlogDto.category_id);
+    await this.assertRelatedBlogsExist(updateBlogDto.related_blogs_ids);
 
     try {
       existingBlog.set(this.prepareBlogPayload(updateBlogDto, existingBlog));
@@ -162,25 +197,35 @@ export class BlogsService {
       existingBlog?.description,
       payload.description,
     );
-    const content = this.mergeLocalizedField(existingBlog?.content, payload.content);
+    const content = this.mergeLocalizedField(
+      existingBlog?.content,
+      payload.content,
+    );
 
     return {
       ...payload,
       title,
       description,
       content,
+      tags: this.mergeLocalizedStringArray(existingBlog?.tags, payload.tags),
       publishedAt: this.resolvePublishedAt(payload, existingBlog),
       slug: this.resolveSlugPayload(existingBlog, payload, title),
-      meta_title: this.mergeLocalizedField(existingBlog?.meta_title, payload.meta_title),
+      meta_title: this.mergeLocalizedField(
+        existingBlog?.meta_title,
+        payload.meta_title,
+      ),
       meta_description: this.mergeLocalizedField(
         existingBlog?.meta_description,
         payload.meta_description,
       ),
-      meta_keywords: this.mergeLocalizedField(
+      meta_keywords: this.mergeLocalizedStringArray(
         existingBlog?.meta_keywords,
         payload.meta_keywords,
       ),
-      og_title: this.mergeLocalizedField(existingBlog?.og_title, payload.og_title),
+      og_title: this.mergeLocalizedField(
+        existingBlog?.og_title,
+        payload.og_title,
+      ),
       og_description: this.mergeLocalizedField(
         existingBlog?.og_description,
         payload.og_description,
@@ -197,6 +242,21 @@ export class BlogsService {
 
     if (!categoryExists) {
       throw new NotFoundException('Category not found');
+    }
+  }
+
+  private async assertRelatedBlogsExist(relatedBlogIds?: string[]) {
+    if (!relatedBlogIds?.length) {
+      return;
+    }
+
+    const uniqueIds = [...new Set(relatedBlogIds)];
+    const existingCount = await this.blogModel.countDocuments({
+      _id: { $in: uniqueIds },
+    });
+
+    if (existingCount !== uniqueIds.length) {
+      throw new NotFoundException('One or more related blogs were not found');
     }
   }
 
@@ -274,10 +334,36 @@ export class BlogsService {
     };
   }
 
+  private mergeLocalizedStringArray(
+    currentValue?: Partial<LocalizedTextListInput>,
+    nextValue?: Partial<LocalizedTextListInput>,
+  ): LocalizedTextList {
+    return {
+      ar: this.normalizeStringArray(nextValue?.ar ?? currentValue?.ar),
+      en: this.normalizeStringArray(nextValue?.en ?? currentValue?.en),
+    };
+  }
+
+  private normalizeStringArray(value?: string | string[]): string[] {
+    if (Array.isArray(value)) {
+      return value.map((item) => item.trim()).filter(Boolean);
+    }
+
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    return [];
+  }
+
   private serializeBlog(
     blog: BlogDocument,
     prevBlog?: BlogDocument | null,
     nextBlog?: BlogDocument | null,
+    userName?: string | null,
   ): BlogResponse {
     const resolvedMetaTitle = this.resolveLocalizedFallback(
       blog.meta_title,
@@ -295,12 +381,14 @@ export class BlogsService {
       blog.og_description,
       resolvedMetaDescription,
     );
-    const canonicalUrl = blog.canonical_url || this.buildCanonicalUrl(blog.slug.en);
+    const canonicalUrl =
+      blog.canonical_url || this.buildCanonicalUrl(blog.slug.en);
     const blogImage = this.resolveMedia(blog.blog_image);
     const ogImage = this.resolveMedia(blog.og_image || blog.blog_image || null);
 
     return {
       ...blog.toObject(),
+      user_name: userName ?? null,
       blog_image: blogImage,
       og_image: this.resolveMedia(blog.og_image),
       prev_blog: this.serializeSiblingBlog(prevBlog),
@@ -308,7 +396,7 @@ export class BlogsService {
       seo: {
         meta_title: resolvedMetaTitle,
         meta_description: resolvedMetaDescription,
-        meta_keywords: this.mergeLocalizedField(blog.meta_keywords),
+        meta_keywords: this.mergeLocalizedStringArray(blog.meta_keywords),
         canonical_url: canonicalUrl,
         og_image: ogImage,
         og_title: resolvedOgTitle,
@@ -319,6 +407,108 @@ export class BlogsService {
         en: this.buildJsonLd(blog, 'en', ogImage),
       },
     } as BlogResponse;
+  }
+
+  private async getUserNamesById(userIds: unknown[]) {
+    const uniqueUserIds = [
+      ...new Set(
+        userIds.map((userId) => this.getObjectIdString(userId)).filter(Boolean),
+      ),
+    ] as string[];
+
+    if (!uniqueUserIds.length) {
+      return new Map<string, string>();
+    }
+
+    const users = await this.blogModel.db
+      .collection('users')
+      .find({
+        _id: { $in: uniqueUserIds.map((userId) => new Types.ObjectId(userId)) },
+      })
+      .project({
+        name: 1,
+        full_name: 1,
+        first_name: 1,
+        last_name: 1,
+        username: 1,
+        email: 1,
+      })
+      .toArray();
+
+    return new Map(
+      users.map((user) => [String(user._id), this.resolveUserName(user)]),
+    );
+  }
+
+  private getObjectIdString(value: unknown): string | null {
+    if (!value) {
+      return null;
+    }
+
+    if (typeof value === 'string') {
+      return Types.ObjectId.isValid(value) ? value : null;
+    }
+
+    if (value instanceof Types.ObjectId) {
+      return String(value);
+    }
+
+    if (typeof value === 'object' && '_id' in value) {
+      return this.getObjectIdString((value as { _id?: unknown })._id);
+    }
+
+    const stringValue = String(value);
+
+    return Types.ObjectId.isValid(stringValue) ? stringValue : null;
+  }
+
+  private resolveUserName(user: Record<string, unknown>): string | null {
+    const name = user.name;
+
+    if (typeof name === 'string' && name.trim()) {
+      return name.trim();
+    }
+
+    if (name && typeof name === 'object') {
+      const localizedName = name as Record<string, unknown>;
+      const englishName = localizedName.en;
+      const arabicName = localizedName.ar;
+
+      if (typeof englishName === 'string' && englishName.trim()) {
+        return englishName.trim();
+      }
+
+      if (typeof arabicName === 'string' && arabicName.trim()) {
+        return arabicName.trim();
+      }
+    }
+
+    const fullName = user.full_name;
+
+    if (typeof fullName === 'string' && fullName.trim()) {
+      return fullName.trim();
+    }
+
+    const nameParts = [user.first_name, user.last_name]
+      .filter(
+        (part): part is string =>
+          typeof part === 'string' && Boolean(part.trim()),
+      )
+      .map((part) => part.trim());
+
+    if (nameParts.length) {
+      return nameParts.join(' ');
+    }
+
+    const username = user.username;
+
+    if (typeof username === 'string' && username.trim()) {
+      return username.trim();
+    }
+
+    const email = user.email;
+
+    return typeof email === 'string' && email.trim() ? email.trim() : null;
   }
 
   private resolveLocalizedFallback(
@@ -340,16 +530,13 @@ export class BlogsService {
     return `${websiteUrl.replace(/\/$/, '')}/blogs/${slug}`;
   }
 
-  private buildJsonLd(
-    blog: BlogDocument,
-    locale: Locale,
-    image: unknown,
-  ) {
+  private buildJsonLd(blog: BlogDocument, locale: Locale, image: unknown) {
     return {
       '@context': 'https://schema.org',
       '@type': 'Article',
       inLanguage: locale,
-      mainEntityOfPage: blog.canonical_url || this.buildCanonicalUrl(blog.slug[locale]),
+      mainEntityOfPage:
+        blog.canonical_url || this.buildCanonicalUrl(blog.slug[locale]),
       url: blog.canonical_url || this.buildCanonicalUrl(blog.slug[locale]),
       headline: blog.title?.[locale] || '',
       description: this.resolveLocalizedFallback(
@@ -359,7 +546,8 @@ export class BlogsService {
       image: this.extractImageUrl(image),
       author: {
         '@type': 'Organization',
-        name: this.configService.get<string>('BLOG_AUTHOR_NAME') || 'TEDx Damascus',
+        name:
+          this.configService.get<string>('BLOG_AUTHOR_NAME') || 'TEDx Damascus',
       },
       datePublished: blog.publishedAt || blog.createdAt,
       dateModified: blog.updatedAt,
@@ -398,7 +586,9 @@ export class BlogsService {
 
     const orderedBlogs = [...publishedBlogs].sort((left, right) => {
       const leftDate = new Date(left.publishedAt || left.createdAt).getTime();
-      const rightDate = new Date(right.publishedAt || right.createdAt).getTime();
+      const rightDate = new Date(
+        right.publishedAt || right.createdAt,
+      ).getTime();
 
       if (leftDate !== rightDate) {
         return leftDate - rightDate;
@@ -469,7 +659,10 @@ export class BlogsService {
       }
     }
 
-    if (typeof mediaObject.url === 'string' && !this.isAbsoluteUrl(mediaObject.url)) {
+    if (
+      typeof mediaObject.url === 'string' &&
+      !this.isAbsoluteUrl(mediaObject.url)
+    ) {
       return mediaObject.url.replace(/^\/+/, '');
     }
 
@@ -503,7 +696,9 @@ export class BlogsService {
       'code' in error &&
       error.code === 11000
     ) {
-      throw new ConflictException('Slug must be unique for both Arabic and English locales');
+      throw new ConflictException(
+        'Slug must be unique for both Arabic and English locales',
+      );
     }
 
     throw error;

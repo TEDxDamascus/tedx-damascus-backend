@@ -1,6 +1,3 @@
-import { IsBoolean } from 'class-validator';
+import { HomeSectionSettingsDto } from './home-section-settings.dto';
 
-export class HeroSettingsDto {
-  @IsBoolean()
-  isVisible: boolean;
-}
+export class HeroSettingsDto extends HomeSectionSettingsDto {}

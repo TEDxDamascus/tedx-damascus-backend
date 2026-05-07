@@ -16,7 +16,17 @@ Defined in `src/home-settings/entities/home-settings.entity.ts`.
   _id: ObjectId,
 
   hero: {
-    isVisible: Boolean // default: true
+    isVisible: Boolean, // default: true
+    order: Number,
+    settings: Object
+  },
+
+  sections: {
+    [sectionKey]: {
+      isVisible: Boolean, // default: true
+      order: Number,
+      settings: Object
+    }
   },
 
   createdAt: Date,
@@ -78,9 +88,15 @@ Defined in `src/blogs/entities/blog.entity.ts`.
     en: String    // required
   },
 
+  tags: {
+    ar: [String],
+    en: [String]
+  },
+
   status: String,        // default: 'draft'
   publishedAt: Date,     // optional
   category_id: ObjectId, // ref: Category, optional
+  user_id: ObjectId,     // ref: User, optional
   views_count: Number,   // default: 0
   read_time: Number,     // default: 0
 
@@ -95,8 +111,8 @@ Defined in `src/blogs/entities/blog.entity.ts`.
   },
 
   meta_keywords: {
-    ar: String,
-    en: String
+    ar: [String],
+    en: [String]
   },
 
   canonical_url: String, // optional
@@ -112,16 +128,32 @@ Defined in `src/blogs/entities/blog.entity.ts`.
   },
 
   gallery: [ObjectId],   // ref: Image[]
+  related_blogs_ids: [ObjectId], // ref: Blog[]
 
   createdAt: Date,
   updatedAt: Date
 }
 ```
 
+Blog API responses also include response-only computed fields:
+
+- `user_name`: resolved from `user_id` using the external `users` collection when available
+- `prev_blog` / `next_blog`: sibling blog summaries on `GET /blogs/:id`
+- `seo`: resolved SEO fallback values
+- `json_ld`: localized Article structured data
+
 ## Indexes
 
 - Unique index on `slug.en` when it exists and is not empty
 - Unique index on `slug.ar` when it exists and is not empty
+
+## Referenced External Collections
+
+These collections are referenced by ObjectId fields but do not currently have
+local Mongoose entity definitions in this codebase:
+
+- `images`: referenced by `blog_image`, `og_image`, and `gallery`
+- `users`: referenced by optional blog `user_id`
 
 ## Placeholder Entities
 

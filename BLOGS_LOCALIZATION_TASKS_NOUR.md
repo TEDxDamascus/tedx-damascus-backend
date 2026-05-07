@@ -3,6 +3,9 @@
 ## What was implemented
 
 - Added full bilingual `{ ar, en }` support for blog `title`, `description`, `content`, `slug`, `meta_title`, `meta_description`, `meta_keywords`, `og_title`, and `og_description`.
+- Updated `meta_keywords` to use localized keyword arrays: `{ ar: string[], en: string[] }`.
+- Added localized blog `tags` as keyword arrays: `{ ar: string[], en: string[] }`.
+- Added `related_blogs_ids` as a list of related blog ids.
 - Added locale-aware slug generation.
 - Added unique MongoDB indexes for `slug.en` and `slug.ar`.
 - Added SEO fields:

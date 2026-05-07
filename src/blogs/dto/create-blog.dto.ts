@@ -9,7 +9,10 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { LocalizedStringDto } from './localized-string.dto';
+import {
+  LocalizedStringArrayDto,
+  LocalizedStringDto,
+} from './localized-string.dto';
 
 export class CreateBlogDto {
   @IsObject()
@@ -43,6 +46,12 @@ export class CreateBlogDto {
   content: LocalizedStringDto;
 
   @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringArrayDto)
+  tags?: LocalizedStringArrayDto;
+
+  @IsOptional()
   @IsString()
   status?: string;
 
@@ -53,6 +62,10 @@ export class CreateBlogDto {
   @IsOptional()
   @IsMongoId()
   category_id?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  user_id?: string;
 
   @IsOptional()
   @IsNumber()
@@ -73,8 +86,8 @@ export class CreateBlogDto {
   @IsOptional()
   @IsObject()
   @ValidateNested()
-  @Type(() => LocalizedStringDto)
-  meta_keywords?: LocalizedStringDto;
+  @Type(() => LocalizedStringArrayDto)
+  meta_keywords?: LocalizedStringArrayDto;
 
   @IsOptional()
   @IsString()
@@ -96,4 +109,9 @@ export class CreateBlogDto {
   @IsArray()
   @IsMongoId({ each: true })
   gallery?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsMongoId({ each: true })
+  related_blogs_ids?: string[];
 }
