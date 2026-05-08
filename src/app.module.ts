@@ -18,6 +18,9 @@ import { PartnersModule } from './partners/partners.module';
 import * as path from 'path';
 import { TeamModule } from './team/team.module';
 import { OrganizerModule } from './organizer/organizer.module';
+import { BlogReferencesModule } from './blog-references/blog-references.module';
+import { CategoriesModule } from './categories/categories.module';
+import { HomeSettingsModule } from './home-settings/home-settings.module';
 
 @Module({
   imports: [
@@ -53,7 +56,10 @@ import { OrganizerModule } from './organizer/organizer.module';
     PartnersModule,
     TeamModule,
     OrganizerModule,
-    EmailsModule,
+    BlogReferencesModule,
+    CategoriesModule,
+    HomeSettingsModule,
+    EmailsModule
   ],
   controllers: [AppController],
   providers: [AppService],

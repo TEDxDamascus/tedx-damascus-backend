@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBoolean,
   IsEmail,
   IsEnum,
@@ -6,7 +7,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '../entities/user.entity';
+import { UserPermission, UserRole } from '../entities/user.entity';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -25,6 +26,11 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(UserPermission, { each: true })
+  permissions?: UserPermission[];
 
   @IsOptional()
   @IsBoolean()

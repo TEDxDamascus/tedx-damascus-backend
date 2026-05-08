@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -87,12 +86,6 @@ export class AuthService {
     const isValid = await bcrypt.compare(loginDto.password, user.password);
     if (!isValid) {
       throw new UnauthorizedException('Invalid email or password');
-    }
-
-    if (!user.is_active) {
-      throw new ForbiddenException(
-        'Account is disabled. Contact administrator.',
-      );
     }
 
     const tokens = await this.generateTokens({

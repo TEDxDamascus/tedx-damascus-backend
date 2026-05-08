@@ -1,4 +1,4 @@
-import { IsString } from 'class-validator';
+import { IsArray, IsString } from 'class-validator';
 
 export class LocalizedStringDto {
   @IsString()
@@ -6,4 +6,14 @@ export class LocalizedStringDto {
 
   @IsString()
   en: string;
+}
+
+export class LocalizedStringArrayDto {
+  @IsArray()
+  @IsString({ each: true })
+  ar: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  en: string[];
 }
