@@ -69,6 +69,10 @@ export class StorageController {
       id,
       dto.basename,
     );
+    const media = await this.storageService.updateMediaBasename(
+      id,
+      dto.basename,
+    );
     return MediaDto.fromEntity(media);
   }
 

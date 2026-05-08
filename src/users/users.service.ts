@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -7,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model, Types } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserPermissionsDto } from './dto/update-user-permissions.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
   ADMIN_DEFAULT_PERMISSIONS,
@@ -84,19 +86,24 @@ export class UsersService {
     };
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+    actor?: { id: string; role: string },
+  ) {
     const payload: UpdateUserDto = { ...updateUserDto };
-    let currentRole: UserRole | undefined;
+    const isSuperadminSelfAction = this.isSuperadminSelfAction(actor, id);
 
-    if (payload.role || payload.permissions) {
-      const existingUser = await this.userModel
-        .findById(id)
-        .select('role')
-        .lean();
-      if (!existingUser) {
-        throw new NotFoundException('User not found');
-      }
-      currentRole = existingUser.role as UserRole;
+    if (isSuperadminSelfAction && payload.role !== undefined) {
+      throw new BadRequestException(
+        'Superadmin cannot change their own role',
+      );
+    }
+
+    if (isSuperadminSelfAction && payload.is_active === false) {
+      throw new BadRequestException(
+        'Superadmin cannot disable themselves',
+      );
     }
 
     if (payload.email) {
@@ -115,12 +122,26 @@ export class UsersService {
       payload.password = await bcrypt.hash(payload.password, 10);
     }
 
-    if (payload.role || payload.permissions) {
-      const targetRole = payload.role ?? currentRole ?? UserRole.USER;
-      payload.permissions = this.resolvePermissions(
-        targetRole,
-        payload.permissions,
-      );
+    if (payload.role) {
+      const normalizedRole = payload.role;
+      const nextPermissions = this.resolvePermissions(normalizedRole);
+      const user = await this.userModel
+        .findByIdAndUpdate(
+          id,
+          { ...payload, permissions: nextPermissions },
+          { new: true, runValidators: true },
+        )
+        .select('name email role permissions is_active createdAt updatedAt')
+        .lean();
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      return {
+        message: 'User updated successfully',
+        data: this.toPublicUser(user as unknown as Record<string, unknown>),
+      };
     }
 
     const user = await this.userModel
@@ -135,6 +156,51 @@ export class UsersService {
     return {
       message: 'User updated successfully',
       data: this.toPublicUser(user as unknown as Record<string, unknown>),
+    };
+  }
+
+  async updatePermissions(
+    id: string,
+    updateUserPermissionsDto: UpdateUserPermissionsDto,
+  ) {
+    const user = await this.userModel.findById(id).select('role').lean();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const role = user.role;
+    if (role === UserRole.USER) {
+      throw new BadRequestException(
+        'Regular users do not support custom permissions',
+      );
+    }
+
+    if (role === UserRole.SUPERADMIN) {
+      throw new BadRequestException(
+        'Superadmin permissions are fixed and cannot be edited',
+      );
+    }
+
+    const permissions = this.permissionsFromModules(updateUserPermissionsDto);
+
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(
+        id,
+        { permissions },
+        { new: true, runValidators: true },
+      )
+      .select('name email role permissions is_active createdAt updatedAt')
+      .lean();
+
+    if (!updatedUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      message: 'User permissions updated successfully',
+      data: this.toPublicUser(
+        updatedUser as unknown as Record<string, unknown>,
+      ),
     };
   }
 
@@ -154,13 +220,49 @@ export class UsersService {
     };
   }
 
+  async setActive(
+    id: string,
+    isActive: boolean,
+    actor?: { id: string; role: string },
+  ) {
+    if (!isActive && this.isSuperadminSelfAction(actor, id)) {
+      throw new BadRequestException(
+        'Superadmin cannot disable themselves',
+      );
+    }
+
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        id,
+        { is_active: isActive },
+        { new: true, runValidators: true },
+      )
+      .select('name email role permissions is_active createdAt updatedAt')
+      .lean();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      message: isActive
+        ? 'User enabled successfully'
+        : 'User disabled successfully',
+      data: this.toPublicUser(user as unknown as Record<string, unknown>),
+    };
+  }
+
   private toPublicUser(user: Record<string, unknown>) {
     const { _id, __v, password, refresh_token, ...rest } = user;
     void __v;
     void password;
     void refresh_token;
     const id =
-      _id instanceof Types.ObjectId ? _id.toHexString() : String(_id ?? '');
+      _id instanceof Types.ObjectId
+        ? _id.toHexString()
+        : typeof _id === 'string'
+          ? _id
+          : '';
     return { id, ...rest };
   }
 
@@ -180,5 +282,37 @@ export class UsersService {
     }
 
     return [];
+  }
+
+  private permissionsFromModules(
+    payload: UpdateUserPermissionsDto,
+  ): UserPermission[] {
+    const users = payload.users ?? {};
+    const permissions: UserPermission[] = [];
+
+    if (users.create) {
+      permissions.push(UserPermission.USERS_CREATE);
+    }
+    if (users.read) {
+      permissions.push(UserPermission.USERS_READ);
+    }
+    if (users.update) {
+      permissions.push(UserPermission.USERS_UPDATE);
+    }
+    if (users.delete) {
+      permissions.push(UserPermission.USERS_DELETE);
+    }
+
+    return permissions;
+  }
+
+  private isSuperadminSelfAction(
+    actor: { id: string; role: string } | undefined,
+    targetUserId: string,
+  ): boolean {
+    return (
+      actor?.role === UserRole.SUPERADMIN &&
+      actor.id === targetUserId
+    );
   }
 }
