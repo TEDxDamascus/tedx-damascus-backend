@@ -6,10 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-<<<<<<< HEAD
-=======
-  Query,
->>>>>>> origin/main
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -19,6 +15,7 @@ import { I18n, I18nContext } from 'nestjs-i18n';
 import { ParseIdPipe } from '../common/pipes/parse-id.pipe';
 import { PaginationQueryDto } from './dto/pagination.dto';
 import { EventQueryDto } from './dto/search.events.dto';
+import { Query } from '@nestjs/common/decorators';
 
 @ApiTags('Events')
 @Controller('events')

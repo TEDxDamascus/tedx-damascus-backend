@@ -6,16 +6,12 @@ import {
   Patch,
   Param,
   Delete,
-<<<<<<< HEAD
-=======
-  Query,
->>>>>>> origin/main
 } from '@nestjs/common';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-
+import { Query } from '@nestjs/common/decorators';
 @ApiTags('Blogs')
 @Controller('blogs')
 export class BlogsController {
