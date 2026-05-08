@@ -29,6 +29,13 @@ const envSchema = Joi.object({
   JWT_EXPIRES_IN: Joi.string().min(2).default('7d'),
   PORT: Joi.number().port().default(3000),
   PUBLIC_SITE_URL: Joi.string().uri().default('http://localhost:3000'),
+  SMTP_HOST: Joi.string().min(1).optional(),
+  SMTP_PORT: Joi.number().port().optional(),
+  SMTP_SECURE: Joi.boolean().optional(),
+  SMTP_USER: Joi.string().min(1).optional(),
+  SMTP_PASS: Joi.string().min(1).optional(),
+  SMTP_FROM_EMAIL: Joi.string().min(1).optional(),
+  SMTP_FROM_NAME: Joi.string().min(1).optional(),
 })
   .prefs({ abortEarly: false, convert: true })
   .unknown(true);
@@ -56,6 +63,13 @@ function validateEnv(config: NodeJS.ProcessEnv) {
     JWT_EXPIRES_IN: string;
     PORT: number;
     PUBLIC_SITE_URL: string;
+    SMTP_HOST?: string;
+    SMTP_PORT?: number;
+    SMTP_SECURE?: boolean;
+    SMTP_USER?: string;
+    SMTP_PASS?: string;
+    SMTP_FROM_EMAIL?: string;
+    SMTP_FROM_NAME?: string;
   };
 }
 
@@ -77,5 +91,12 @@ export const appConfig = registerAs('app', () => {
     jwtExpiresIn: env.JWT_EXPIRES_IN,
     port: env.PORT,
     publicSiteUrl: env.PUBLIC_SITE_URL.replace(/\/$/, ''),
+    smtpHost: env.SMTP_HOST,
+    smtpPort: env.SMTP_PORT,
+    smtpSecure: env.SMTP_SECURE,
+    smtpUser: env.SMTP_USER,
+    smtpPass: env.SMTP_PASS,
+    smtpFromEmail: env.SMTP_FROM_EMAIL,
+    smtpFromName: env.SMTP_FROM_NAME,
   };
 });

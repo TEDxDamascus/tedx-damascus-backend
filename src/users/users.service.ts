@@ -2,12 +2,14 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model, Types } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserPermissionsDto } from './dto/update-user-permissions.dto';
 import {
   ADMIN_DEFAULT_PERMISSIONS,
   User,
@@ -84,7 +86,11 @@ export class UsersService {
     };
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+    actor?: { id: string; role: string },
+  ) {
     const payload: UpdateUserDto = { ...updateUserDto };
     const isSuperadminSelfAction = this.isSuperadminSelfAction(actor, id);
 

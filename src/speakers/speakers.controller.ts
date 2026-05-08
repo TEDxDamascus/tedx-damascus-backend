@@ -15,7 +15,6 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ParseIdPipe } from '../common/pipes/parse-id.pipe';
 import { I18n, I18nContext } from 'nestjs-i18n';
 import { PaginationQueryDto } from '../events/dto/pagination.dto';
-import { Query } from '@nestjs/common/decorators';
 @ApiTags('Speakers')
 @Controller('speakers')
 export class SpeakersController {

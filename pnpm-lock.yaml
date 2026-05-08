@@ -38,9 +38,6 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.47.0
         version: 2.98.0
-      '@types/nodemailer':
-        specifier: ^8.0.0
-        version: 8.0.0
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -69,7 +66,7 @@ importers:
         specifier: ^10.6.0
         version: 10.6.0(@nestjs/common@11.1.12(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.12)(class-validator@0.14.3)(rxjs@7.8.2)
       nodemailer:
-        specifier: ^8.0.5
+        specifier: ^8.0.7
         version: 8.0.7
       passport:
         specifier: ^0.7.0
@@ -1042,9 +1039,6 @@ packages:
 
   '@types/node@22.19.7':
     resolution: {integrity: sha512-MciR4AKGHWl7xwxkBa6xUGxQJ4VBOmPTF7sL+iGzuahOFaO0jHCsuEfS80pan1ef4gWId1oWOweIhrDEYLuaOw==}
-
-  '@types/nodemailer@8.0.0':
-    resolution: {integrity: sha512-fyf8jWULsCo0d0BuoQ75i6IeoHs47qcqxWc7yUdUcV0pOZGjUTTOvwdG1PRXUDqN/8A64yQdQdnA2pZgcdi+cA==}
 
   '@types/passport-jwt@4.0.1':
     resolution: {integrity: sha512-Y0Ykz6nWP4jpxgEUYq8NoVZeCQPo1ZndJLfapI249g1jHChvRfZRO/LS3tqu26YgAS/laI1qx98sYGz0IalRXQ==}
@@ -4584,10 +4578,6 @@ snapshots:
   '@types/node@22.19.7':
     dependencies:
       undici-types: 6.21.0
-
-  '@types/nodemailer@8.0.0':
-    dependencies:
-      '@types/node': 22.19.7
 
   '@types/passport-jwt@4.0.1':
     dependencies:
