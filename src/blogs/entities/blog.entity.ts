@@ -25,10 +25,10 @@ export class Blog {
   @Prop({ type: localizedStringSchema, required: true })
   slug: { ar: string; en: string };
 
-  @Prop({ type: Types.ObjectId, ref: 'Image' })
+  @Prop({ type: Types.ObjectId, ref: 'Media' })
   blog_image?: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Image' })
+  @Prop({ type: Types.ObjectId, ref: 'Media' })
   og_image?: Types.ObjectId;
 
   @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
@@ -82,7 +82,7 @@ export class Blog {
   @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
   og_description: { ar: string; en: string };
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Image' }] })
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Media' }] })
   gallery: Types.ObjectId[];
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Blog' }], default: [] })

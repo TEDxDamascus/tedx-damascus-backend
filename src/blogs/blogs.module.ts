@@ -11,6 +11,7 @@ import {
   BlogReference,
   BlogReferenceSchema,
 } from '../blog-references/entities/blog-reference.entity';
+import { Media, MediaSchema } from '../storage/entities/media.entity';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import {
       { name: Blog.name, schema: BlogSchema },
       { name: Category.name, schema: CategorySchema },
       { name: BlogReference.name, schema: BlogReferenceSchema },
+      { name: Media.name, schema: MediaSchema },
     ]),
   ],
   controllers: [BlogsController],
