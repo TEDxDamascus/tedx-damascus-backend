@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 import type { StringValue } from 'ms';
 import { User, UserSchema } from '../users/entities/user.entity';
+import { AdminAuthController } from './admin-auth.controller';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { RolesGuard } from './guards/roles.guard';
@@ -26,7 +27,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AdminAuthController],
   providers: [AuthService, JwtStrategy, RolesGuard],
   exports: [AuthService],
 })

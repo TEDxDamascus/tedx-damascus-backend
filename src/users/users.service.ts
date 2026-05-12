@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model, Types } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
 import { UpdateUserPermissionsDto } from './dto/update-user-permissions.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
@@ -20,6 +21,9 @@ import {
 
 @Injectable()
 export class UsersService {
+  private readonly publicUserSelection =
+    'name email role permissions is_active createdAt updatedAt';
+
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
@@ -59,7 +63,7 @@ export class UsersService {
   async findAll() {
     const users = await this.userModel
       .find()
-      .select('name email role permissions is_active createdAt updatedAt')
+      .select(this.publicUserSelection)
       .lean();
 
     return {
@@ -71,18 +75,16 @@ export class UsersService {
   }
 
   async findOne(id: string) {
-    const user = await this.userModel
-      .findById(id)
-      .select('name email role permissions is_active createdAt updatedAt')
-      .lean();
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
     return {
       message: 'User fetched successfully',
-      data: this.toPublicUser(user as unknown as Record<string, unknown>),
+      data: await this.findPublicUserByIdOrFail(id),
+    };
+  }
+
+  async findCurrentUser(id: string) {
+    return {
+      message: 'Current user fetched successfully',
+      data: await this.findPublicUserByIdOrFail(id),
     };
   }
 
@@ -95,32 +97,14 @@ export class UsersService {
     const isSuperadminSelfAction = this.isSuperadminSelfAction(actor, id);
 
     if (isSuperadminSelfAction && payload.role !== undefined) {
-      throw new BadRequestException(
-        'Superadmin cannot change their own role',
-      );
+      throw new BadRequestException('Superadmin cannot change their own role');
     }
 
     if (isSuperadminSelfAction && payload.is_active === false) {
-      throw new BadRequestException(
-        'Superadmin cannot disable themselves',
-      );
+      throw new BadRequestException('Superadmin cannot disable themselves');
     }
 
-    if (payload.email) {
-      payload.email = payload.email.toLowerCase();
-      const emailOwner = await this.userModel
-        .findOne({ email: payload.email })
-        .select('_id')
-        .lean();
-
-      if (emailOwner && String(emailOwner._id) !== id) {
-        throw new ConflictException('Email already in use');
-      }
-    }
-
-    if (payload.password) {
-      payload.password = await bcrypt.hash(payload.password, 10);
-    }
+    await this.prepareMutableCredentials(payload, id);
 
     if (payload.role) {
       const normalizedRole = payload.role;
@@ -131,7 +115,7 @@ export class UsersService {
           { ...payload, permissions: nextPermissions },
           { new: true, runValidators: true },
         )
-        .select('name email role permissions is_active createdAt updatedAt')
+        .select(this.publicUserSelection)
         .lean();
 
       if (!user) {
@@ -146,7 +130,7 @@ export class UsersService {
 
     const user = await this.userModel
       .findByIdAndUpdate(id, payload, { new: true, runValidators: true })
-      .select('name email role permissions is_active createdAt updatedAt')
+      .select(this.publicUserSelection)
       .lean();
 
     if (!user) {
@@ -155,6 +139,29 @@ export class UsersService {
 
     return {
       message: 'User updated successfully',
+      data: this.toPublicUser(user as unknown as Record<string, unknown>),
+    };
+  }
+
+  async updateCurrentUser(
+    id: string,
+    updateCurrentUserDto: UpdateCurrentUserDto,
+  ) {
+    const payload: UpdateCurrentUserDto = { ...updateCurrentUserDto };
+
+    await this.prepareMutableCredentials(payload, id);
+
+    const user = await this.userModel
+      .findByIdAndUpdate(id, payload, { new: true, runValidators: true })
+      .select(this.publicUserSelection)
+      .lean();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      message: 'Current user updated successfully',
       data: this.toPublicUser(user as unknown as Record<string, unknown>),
     };
   }
@@ -189,7 +196,7 @@ export class UsersService {
         { permissions },
         { new: true, runValidators: true },
       )
-      .select('name email role permissions is_active createdAt updatedAt')
+      .select(this.publicUserSelection)
       .lean();
 
     if (!updatedUser) {
@@ -207,7 +214,7 @@ export class UsersService {
   async remove(id: string) {
     const user = await this.userModel
       .findByIdAndDelete(id)
-      .select('name email role permissions is_active createdAt updatedAt')
+      .select(this.publicUserSelection)
       .lean();
 
     if (!user) {
@@ -226,9 +233,7 @@ export class UsersService {
     actor?: { id: string; role: string },
   ) {
     if (!isActive && this.isSuperadminSelfAction(actor, id)) {
-      throw new BadRequestException(
-        'Superadmin cannot disable themselves',
-      );
+      throw new BadRequestException('Superadmin cannot disable themselves');
     }
 
     const user = await this.userModel
@@ -237,7 +242,7 @@ export class UsersService {
         { is_active: isActive },
         { new: true, runValidators: true },
       )
-      .select('name email role permissions is_active createdAt updatedAt')
+      .select(this.publicUserSelection)
       .lean();
 
     if (!user) {
@@ -310,9 +315,42 @@ export class UsersService {
     actor: { id: string; role: string } | undefined,
     targetUserId: string,
   ): boolean {
-    return (
-      actor?.role === UserRole.SUPERADMIN &&
-      actor.id === targetUserId
-    );
+    return actor?.role === UserRole.SUPERADMIN && actor.id === targetUserId;
+  }
+
+  private async findPublicUserByIdOrFail(id: string) {
+    const user = await this.userModel
+      .findById(id)
+      .select(this.publicUserSelection)
+      .lean();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.toPublicUser(user as unknown as Record<string, unknown>);
+  }
+
+  private async prepareMutableCredentials<
+    T extends { email?: string; password?: string },
+  >(payload: T, targetUserId: string) {
+    if (payload.email) {
+      payload.email = payload.email.toLowerCase();
+      const emailOwner = await this.userModel
+        .findOne({ email: payload.email })
+        .select('_id')
+        .lean();
+
+      if (emailOwner && String(emailOwner._id) !== targetUserId) {
+        throw new ConflictException('Email already in use');
+      }
+    }
+
+    if (payload.password) {
+      payload.password = (await bcrypt.hash(
+        payload.password,
+        10,
+      )) as T['password'];
+    }
   }
 }

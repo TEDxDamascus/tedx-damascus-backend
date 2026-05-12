@@ -73,55 +73,20 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const email = loginDto.email.toLowerCase();
+    const user = await this.validateUserCredentials(loginDto);
+    return this.buildLoginResponse(user, 'Login successful');
+  }
 
-    const user = await this.userModel
-      .findOne({ email })
-      .select('+password')
-      .lean();
+  async loginAdmin(loginDto: LoginDto) {
+    const user = await this.validateUserCredentials(loginDto);
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    const isValid = await bcrypt.compare(loginDto.password, user.password);
-    if (!isValid) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    if (!user.is_active) {
+    if (![UserRole.ADMIN, UserRole.SUPERADMIN].includes(user.role)) {
       throw new ForbiddenException(
-        'Account is disabled. Contact administrator.',
+        'Admin login is restricted to admin and superadmin accounts',
       );
     }
 
-    const tokens = await this.generateTokens({
-      sub: String(user._id),
-      email: user.email,
-      role: user.role,
-      permissions: user.permissions ?? [],
-    });
-
-    if (user.role !== UserRole.SUPERADMIN) {
-      await this.persistRefreshToken(String(user._id), tokens.refreshToken);
-    }
-
-    return {
-      message: 'Login successful',
-      data: {
-        access_token: tokens.accessToken,
-        ...(user.role !== UserRole.SUPERADMIN
-          ? { refresh_token: tokens.refreshToken }
-          : {}),
-        user: {
-          id: String(user._id),
-          email: user.email,
-          role: user.role,
-          permissions: user.permissions ?? [],
-          is_active: user.is_active,
-        },
-      },
-    };
+    return this.buildLoginResponse(user, 'Admin login successful');
   }
 
   private async generateTokens(payload: {
@@ -151,5 +116,67 @@ export class AuthService {
     await this.userModel.findByIdAndUpdate(userId, {
       refresh_token: hashedRefreshToken,
     });
+  }
+
+  private async validateUserCredentials(loginDto: LoginDto) {
+    const email = loginDto.email.toLowerCase();
+
+    const user = await this.userModel
+      .findOne({ email })
+      .select('+password')
+      .lean();
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const isValid = await bcrypt.compare(loginDto.password, user.password);
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user.is_active) {
+      throw new ForbiddenException(
+        'Account is disabled. Contact administrator.',
+      );
+    }
+
+    return user;
+  }
+
+  private async buildLoginResponse(
+    user: Pick<
+      UserDocument,
+      '_id' | 'email' | 'role' | 'permissions' | 'is_active'
+    >,
+    message: string,
+  ) {
+    const tokens = await this.generateTokens({
+      sub: String(user._id),
+      email: user.email,
+      role: user.role,
+      permissions: user.permissions ?? [],
+    });
+
+    if (user.role !== UserRole.SUPERADMIN) {
+      await this.persistRefreshToken(String(user._id), tokens.refreshToken);
+    }
+
+    return {
+      message,
+      data: {
+        access_token: tokens.accessToken,
+        ...(user.role !== UserRole.SUPERADMIN
+          ? { refresh_token: tokens.refreshToken }
+          : {}),
+        user: {
+          id: String(user._id),
+          email: user.email,
+          role: user.role,
+          permissions: user.permissions ?? [],
+          is_active: user.is_active,
+        },
+      },
+    };
   }
 }
