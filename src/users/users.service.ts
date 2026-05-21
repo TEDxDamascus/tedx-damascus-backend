@@ -17,6 +17,8 @@ import {
   UserPermission,
   UserRole,
 } from './entities/user.entity';
+import { UpdateUserDto } from './dto/update-user.dto';
+
 
 @Injectable()
 export class UsersService {

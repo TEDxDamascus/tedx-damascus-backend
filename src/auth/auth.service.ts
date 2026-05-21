@@ -17,7 +17,7 @@ import {
 } from '../users/entities/user.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-
+import { ForbiddenException } from '@nestjs/common';
 @Injectable()
 export class AuthService {
   constructor(
