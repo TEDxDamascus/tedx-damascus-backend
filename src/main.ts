@@ -72,7 +72,7 @@ async function createApp(): Promise<INestApplication> {
   setupDocs(app);
 
   app.useGlobalInterceptors(new ResponseInterceptor());
-  // app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   return app;
 }

@@ -1,0 +1,19 @@
+{
+  "errors": {
+    "NO_ACTIVE_QUESTION": "No active question is available.",
+    "QUESTION_NOT_FOUND": "Question not found.",
+    "QUESTION_EXPIRED": "This question has expired.",
+    "QUESTION_NOT_ACCEPTING_ANSWERS": "This question is not accepting answers.",
+    "QUESTION_ARCHIVED": "This question has been archived.",
+    "INVALID_CATEGORY": "The selected category does not exist.",
+    "ANSWER_NOT_FOUND": "Answer not found.",
+    "ANSWER_NOT_PENDING": "Only pending answers can be approved.",
+    "ANSWER_NOT_APPROVABLE": "This answer cannot be approved.",
+    "EXPIRES_AT_MUST_BE_FUTURE": "Expiry date must be in the future."
+  },
+  "success": {
+    "PUBLISHED": "Question published successfully.",
+    "ANSWER_SUBMITTED": "Answer submitted successfully.",
+    "ANSWER_APPROVED": "Answer approved successfully."
+  }
+}
