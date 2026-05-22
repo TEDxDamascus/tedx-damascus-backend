@@ -79,7 +79,7 @@ async function createApp(): Promise<INestApplication> {
 
 async function bootstrap() {
   const app = await createApp();
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 
 /** Vercel sets VERCEL=1 for builds and serverless runtime. */
