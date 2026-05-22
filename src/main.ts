@@ -6,10 +6,8 @@ import {
 } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { useContainer, ValidationError } from 'class-validator';
-import serverless from 'serverless-http';
 import { AppModule } from './app.module';
-import { docsCdnRewriteMiddleware, setupDocs } from './doc/scala.doc';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { setupDocs } from './doc/scala.doc';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 type ValidationErrorDetail = {
@@ -67,8 +65,6 @@ async function createApp(): Promise<INestApplication> {
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-  // Rewrite docs HTML to load Swagger UI static assets from CDN (fixes 404 on Vercel/serverless).
-  app.use(docsCdnRewriteMiddleware);
   setupDocs(app);
 
   app.useGlobalInterceptors(new ResponseInterceptor());
@@ -82,23 +78,4 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 
-/** Vercel sets VERCEL=1 for builds and serverless runtime. */
-function isVercelServerless(): boolean {
-  return process.env.VERCEL === '1';
-}
-
-let cachedHandler: ReturnType<typeof serverless> | undefined;
-
-export default async function handler(req: unknown, res: unknown) {
-  if (!cachedHandler) {
-    const app = await createApp();
-    await app.init();
-    const expressApp = app.getHttpAdapter().getInstance();
-    cachedHandler = serverless(expressApp);
-  }
-  return cachedHandler(req as never, res as never);
-}
-
-if (!isVercelServerless()) {
-  void bootstrap();
-}
+void bootstrap();
