@@ -116,6 +116,35 @@ export class FormsService {
     };
   }
 
+  private slugConflictMessage =
+    'A form with this slug already exists. Please use a different slug.';
+
+  private async assertSlugEnAvailable(
+    slug: string,
+    excludeId?: Types.ObjectId,
+  ): Promise<void> {
+    if (!slug?.trim()) return;
+    const query: Record<string, unknown> = { 'slug.en': slug.trim() };
+    if (excludeId) query['_id'] = { $ne: excludeId };
+    const exists = await this.formTemplateModel.findOne(query).exec();
+    if (exists) {
+      throw new ConflictException(this.slugConflictMessage);
+    }
+  }
+
+  private async assertSlugArAvailable(
+    slug: string,
+    excludeId?: Types.ObjectId,
+  ): Promise<void> {
+    if (!slug?.trim()) return;
+    const query: Record<string, unknown> = { 'slug.ar': slug.trim() };
+    if (excludeId) query['_id'] = { $ne: excludeId };
+    const exists = await this.formTemplateModel.findOne(query).exec();
+    if (exists) {
+      throw new ConflictException(this.slugConflictMessage);
+    }
+  }
+
   private async ensureUniqueSlugEn(
     base: string,
     excludeId?: Types.ObjectId,
@@ -152,10 +181,10 @@ export class FormsService {
     let slugEn = dto.slug?.en?.trim() ?? '';
     let slugAr = dto.slug?.ar?.trim() ?? '';
     if (slugEn) {
-      slugEn = await this.ensureUniqueSlugEn(slugEn);
+      await this.assertSlugEnAvailable(slugEn);
     }
     if (slugAr) {
-      slugAr = await this.ensureUniqueSlugAr(slugAr);
+      await this.assertSlugArAvailable(slugAr);
     }
     const slug =
       slugEn || slugAr ? { en: slugEn, ar: slugAr } : undefined;
@@ -245,7 +274,8 @@ export class FormsService {
     let finalSlugEn = currentSlugEn;
     let finalSlugAr = currentSlugAr;
     if (slugEnChanged && incomingSlugEn) {
-      finalSlugEn = await this.ensureUniqueSlugEn(incomingSlugEn, excludeId);
+      await this.assertSlugEnAvailable(incomingSlugEn, excludeId);
+      finalSlugEn = incomingSlugEn;
       template.slug = template.slug ?? { en: '', ar: '' };
       template.slug.en = finalSlugEn;
     } else if (dto.slug?.en !== undefined) {
@@ -254,7 +284,8 @@ export class FormsService {
       finalSlugEn = incomingSlugEn;
     }
     if (slugArChanged && incomingSlugAr) {
-      finalSlugAr = await this.ensureUniqueSlugAr(incomingSlugAr, excludeId);
+      await this.assertSlugArAvailable(incomingSlugAr, excludeId);
+      finalSlugAr = incomingSlugAr;
       template.slug = template.slug ?? { en: '', ar: '' };
       template.slug.ar = finalSlugAr;
     } else if (dto.slug?.ar !== undefined) {
@@ -444,6 +475,25 @@ export class FormsService {
     const template = await this.findOne(formId);
     if (template.status !== 'Published') {
       throw new BadRequestException('Form is not published');
+    }
+    return mapFormTemplateToSchema(template);
+  }
+
+  async getFormSchemaBySlug(slug: string): Promise<FormTemplateSchemaResponse> {
+    const normalized = slug.trim();
+    if (!normalized) {
+      throw new BadRequestException('Slug is required');
+    }
+    let template = await this.formTemplateModel
+      .findOne({ 'slug.en': normalized, status: 'Published' })
+      .exec();
+    if (!template) {
+      template = await this.formTemplateModel
+        .findOne({ 'slug.ar': normalized, status: 'Published' })
+        .exec();
+    }
+    if (!template) {
+      throw new NotFoundException('Form not found');
     }
     return mapFormTemplateToSchema(template);
   }
@@ -744,9 +794,7 @@ export class FormsService {
 
   private handleSlugConflict(err: unknown): never {
     if (this.isMongoDuplicateKeyError(err)) {
-      throw new ConflictException(
-        'A form with this slug already exists. Please use a different slug.',
-      );
+      throw new ConflictException(this.slugConflictMessage);
     }
     throw err;
   }
