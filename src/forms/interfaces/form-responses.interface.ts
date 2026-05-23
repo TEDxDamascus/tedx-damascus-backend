@@ -13,6 +13,7 @@ export interface FormQuestionResponse {
   id: string;
   orderIndex: number;
   type: string;
+  parentId: string | null;
   title: LocalizedText;
   helpText?: LocalizedText;
   isRequired: boolean;
@@ -35,6 +36,12 @@ export interface FormTemplateSummaryResponse {
   shareable_url?: LocalizedText;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+/** Admin GET /forms/:id — summary metadata plus all questions for pre-publish review. */
+export interface FormTemplateAdminDetailResponse
+  extends FormTemplateSummaryResponse {
+  questions: FormQuestionResponse[];
 }
 
 export interface FormTemplateSchemaResponse {

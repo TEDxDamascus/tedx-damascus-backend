@@ -35,14 +35,26 @@ import { FormQuestion } from './entities/form-question.schema';
 import { QuestionOption } from './entities/question-option.schema';
 import {
   FormSubmissionResponse,
+  FormTemplateAdminDetailResponse,
   FormTemplateSchemaResponse,
   FormTemplateSummaryResponse,
 } from './interfaces/form-responses.interface';
 import {
   mapFormSubmission,
+  mapFormTemplateToAdminDetail,
   mapFormTemplateToSchema,
   mapFormTemplateToSummary,
 } from './utils/form-mappers.util';
+import {
+  assertCannotDemoteSectionWithChildren,
+  assertSectionConstraints,
+  assertValidParent,
+  getQuestionId,
+  QuestionWithId,
+  rerootChildrenOnSectionDelete,
+  resolveParentId,
+  validateQuestionTree,
+} from './utils/form-question-tree.util';
 import {
   throwIfFormNotAcceptingSubmission,
   throwIfSubmissionCapReached,
@@ -195,9 +207,9 @@ export class FormsService {
     return doc;
   }
 
-  async findOneForAdmin(id: string): Promise<FormTemplateSummaryResponse> {
+  async findOneForAdmin(id: string): Promise<FormTemplateAdminDetailResponse> {
     const doc = await this.findOne(id);
-    return mapFormTemplateToSummary(doc);
+    return mapFormTemplateToAdminDetail(doc);
   }
 
   async update(
@@ -281,20 +293,28 @@ export class FormsService {
   ): Promise<FormTemplateSchemaResponse> {
     const template = await this.findOne(formId);
     this.ensureDraft(template);
+    const questions = template.questions as QuestionWithId[];
+    assertSectionConstraints(dto.type, dto.isRequired, dto.options);
+    assertValidParent(questions, dto.parentId);
     const question: Partial<FormQuestion> = {
       orderIndex: dto.orderIndex,
       type: dto.type,
+      parentId: resolveParentId(dto.parentId),
       title: dto.title,
       helpText: dto.helpText,
-      isRequired: dto.isRequired ?? false,
+      isRequired:
+        dto.type === 'section' ? false : (dto.isRequired ?? false),
       config: dto.config ?? {},
-      options: (dto.options ?? []).map(
-        (o) =>
-          ({
-            orderIndex: o.orderIndex,
-            label: o.label,
-          }) as QuestionOption,
-      ),
+      options:
+        dto.type === 'section'
+          ? []
+          : (dto.options ?? []).map(
+              (o) =>
+                ({
+                  orderIndex: o.orderIndex,
+                  label: o.label,
+                }) as QuestionOption,
+            ),
     };
     template.questions.push(question as FormQuestion);
     const saved = await template.save();
@@ -315,6 +335,12 @@ export class FormsService {
     if (idx === -1) {
       throw new NotFoundException('Question not found');
     }
+    const questions = template.questions as QuestionWithId[];
+    const current = questions[idx];
+    const nextType = dto.type ?? current.type;
+    if (dto.type !== undefined) {
+      assertCannotDemoteSectionWithChildren(questions, questionId, nextType);
+    }
     if (dto.orderIndex !== undefined)
       template.questions[idx].orderIndex = dto.orderIndex;
     if (dto.type !== undefined) template.questions[idx].type = dto.type;
@@ -329,6 +355,18 @@ export class FormsService {
         orderIndex: o.orderIndex,
         label: o.label,
       })) as unknown as QuestionOption[];
+    }
+    if ('parentId' in dto) {
+      assertValidParent(questions, dto.parentId, questionId);
+      template.questions[idx].parentId = resolveParentId(dto.parentId);
+    }
+    const mergedType = template.questions[idx].type;
+    const mergedRequired = template.questions[idx].isRequired;
+    const mergedOptions = template.questions[idx].options;
+    assertSectionConstraints(mergedType, mergedRequired, mergedOptions);
+    if (mergedType === 'section') {
+      template.questions[idx].isRequired = false;
+      template.questions[idx].options = [];
     }
     const saved = await template.save();
     return mapFormTemplateToSchema(saved);
@@ -347,6 +385,16 @@ export class FormsService {
     if (idx === -1) {
       throw new NotFoundException('Question not found');
     }
+    const questions = template.questions as QuestionWithId[];
+    const removed = questions[idx];
+    const removedId = getQuestionId(removed);
+    if (removed.type === 'section' && removedId) {
+      rerootChildrenOnSectionDelete(
+        questions,
+        removedId,
+        removed.parentId ?? null,
+      );
+    }
     template.questions.splice(idx, 1);
     const saved = await template.save();
     return mapFormTemplateToSchema(saved);
@@ -355,6 +403,7 @@ export class FormsService {
   async publish(id: string): Promise<FormTemplateSummaryResponse> {
     const template = await this.findOne(id);
     this.ensureDraft(template);
+    validateQuestionTree(template.questions as QuestionWithId[]);
     const excludeId = new Types.ObjectId(id);
     let slugEn = template.slug?.en?.trim() ?? '';
     let slugAr = template.slug?.ar?.trim() ?? '';

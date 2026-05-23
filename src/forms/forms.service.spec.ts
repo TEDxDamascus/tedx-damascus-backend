@@ -73,7 +73,8 @@ describe('FormsService', () => {
   });
 
   describe('findOneForAdmin', () => {
-    it('should return mapped summary with slug and shareable_url', async () => {
+    it('should return mapped admin detail with slug, shareable_url, and questions', async () => {
+      const questionId = new Types.ObjectId();
       const doc = {
         _id: new Types.ObjectId(),
         name: { en: 'Test', ar: 'اختبار' },
@@ -84,6 +85,17 @@ describe('FormsService', () => {
           en: 'https://tedx.example.com/apply/test-form',
           ar: '',
         },
+        questions: [
+          {
+            _id: questionId,
+            orderIndex: 0,
+            type: 'short_text',
+            title: { en: 'Name', ar: '' },
+            isRequired: true,
+            config: {},
+            options: [],
+          },
+        ],
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -97,6 +109,9 @@ describe('FormsService', () => {
         en: 'https://tedx.example.com/apply/test-form',
         ar: '',
       });
+      expect(result.questions).toHaveLength(1);
+      expect(result.questions[0].id).toBe(questionId.toString());
+      expect(result.questions[0].parentId).toBeNull();
     });
   });
 });

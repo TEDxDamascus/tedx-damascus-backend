@@ -15,6 +15,8 @@ import { ApiProperty } from '@nestjs/swagger';
  * - rating: number (integer between config.min and config.max)
  * - date_range: { start: string; end: string } (ISO dates)
  * - file_upload: string (public URL from POST /forms/:id/upload)
+ *
+ * Do not include keys for type "section" — sections are structural only.
  */
 export class SubmitFormDto {
   @ApiProperty({

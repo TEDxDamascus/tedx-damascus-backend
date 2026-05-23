@@ -252,6 +252,16 @@ export function validateDraftAnswers(
   for (const question of template.questions) {
     const qId = (question as { _id?: { toString(): string } })._id?.toString();
     if (!qId) continue;
+    if (question.type === 'section') {
+      const value = answers[qId];
+      if (value !== undefined && value !== null && value !== '') {
+        throw new AnswerValidationError(
+          'Section questions cannot have answers',
+          qId,
+        );
+      }
+      continue;
+    }
     const value = answers[qId];
     if (value === undefined || value === null || value === '') {
       continue;
@@ -310,13 +320,21 @@ export function validateAnswers(
   for (const question of template.questions) {
     const qId = (question as { _id?: { toString(): string } })._id?.toString();
     if (!qId) continue;
+    if (question.type === 'section') {
       const value = answers[qId];
-      if (
-        question.isRequired &&
-        (value === undefined ||
-          value === null ||
-          value === '')
-      ) {
+      if (value !== undefined && value !== null && value !== '') {
+        throw new AnswerValidationError(
+          'Section questions cannot have answers',
+          qId,
+        );
+      }
+      continue;
+    }
+    const value = answers[qId];
+    if (
+      question.isRequired &&
+      (value === undefined || value === null || value === '')
+    ) {
       throw new AnswerValidationError('This question is required', qId);
     }
     if (value === undefined || value === null || value === '') {
@@ -355,6 +373,8 @@ export function validateAnswers(
         case 'file_upload':
           validateFileUpload(value);
           break;
+        case 'section':
+          throw new Error('Section questions cannot have answers');
         default:
           throw new Error(`Unknown question type: ${question.type}`);
       }
@@ -413,6 +433,8 @@ export function normalizeAnswerValue(
       }
       return value.trim();
     }
+    case 'section':
+      throw new Error('Section questions cannot have answers');
     default:
       return value as string | number | boolean;
   }
