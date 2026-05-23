@@ -47,6 +47,15 @@ function flattenValidationErrors(
 async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule);
 
+  // Testing only — allow any origin, method, and header on all routes
+  app.enableCors({
+    origin: '*',
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: '*',
+    exposedHeaders: '*',
+    credentials: false,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
