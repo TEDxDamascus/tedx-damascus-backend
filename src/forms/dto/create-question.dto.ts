@@ -1,17 +1,22 @@
 import {
   IsArray,
   IsBoolean,
-  IsEnum,
+  IsIn,
   IsInt,
+  IsMongoId,
   IsObject,
   IsOptional,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { I18nDto } from './i18n.dto';
-import { QUESTION_TYPES } from '../entities/form-question.schema';
+import {
+  QUESTION_TYPES,
+  QUESTION_TYPE_VALUES,
+} from '../entities/form-question.schema';
 import { CreateOptionDto } from './create-option.dto';
 
 export class CreateQuestionDto {
@@ -27,10 +32,19 @@ export class CreateQuestionDto {
     enum: QUESTION_TYPES,
     enumName: 'QuestionTypesEnum',
     description:
-      'Question type. Supported: short_text, long_text, single_choice, checkbox_group, date, phone_number, url, rating, date_range, file_upload.',
+      'Question type. Supported: short_text, long_text, single_choice, checkbox_group, date, phone_number, url, rating, date_range, file_upload, section.',
   })
-  @IsEnum(QUESTION_TYPES)
+  @IsIn(QUESTION_TYPE_VALUES)
   type: (typeof QUESTION_TYPES)[number];
+
+  @ApiPropertyOptional({
+    description:
+      'Parent section question id. Sibling orderIndex is scoped under the same parentId (null = root).',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value != null)
+  @IsMongoId()
+  parentId?: string | null;
 
   @ApiProperty({
     type: I18nDto,

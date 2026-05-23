@@ -8,10 +8,15 @@ import {
   FormQuestionResponse,
   FormSubmissionAnswerResponse,
   FormSubmissionResponse,
+  FormTemplateAdminDetailResponse,
   FormTemplateSchemaResponse,
   FormTemplateSummaryResponse,
   QuestionOptionResponse,
 } from '../interfaces/form-responses.interface';
+import {
+  QuestionWithId,
+  sortQuestionsSiblingOrder,
+} from './form-question-tree.util';
 
 function toId(value: Types.ObjectId | undefined | null): string {
   return value ? value.toString() : '';
@@ -36,6 +41,7 @@ export function mapFormQuestion(question: {
   _id?: Types.ObjectId;
   orderIndex: number;
   type: string;
+  parentId?: Types.ObjectId;
   title: { en: string; ar: string };
   helpText?: { en: string; ar: string };
   isRequired: boolean;
@@ -55,6 +61,7 @@ export function mapFormQuestion(question: {
     id: toId(question._id),
     orderIndex: question.orderIndex,
     type: question.type,
+    parentId: question.parentId ? toId(question.parentId) : null,
     title: {
       en: question.title.en ?? '',
       ar: question.title.ar ?? '',
@@ -69,6 +76,14 @@ export function mapFormQuestion(question: {
     config: question.config ?? {},
     options,
   };
+}
+
+export function mapTemplateQuestions(
+  questions: QuestionWithId[] | undefined,
+): FormQuestionResponse[] {
+  return sortQuestionsSiblingOrder(questions ?? []).map((q) =>
+    mapFormQuestion(q as Parameters<typeof mapFormQuestion>[0]),
+  );
 }
 
 export function mapFormTemplateToSchema(
@@ -92,12 +107,7 @@ export function mapFormTemplateToSchema(
     ends_at: t.ends_at,
     expires_at: t.expires_at,
     max_submissions: t.max_submissions,
-    questions: (t.questions ?? [])
-      .slice()
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((q) =>
-        mapFormQuestion(q as unknown as Parameters<typeof mapFormQuestion>[0]),
-      ),
+    questions: mapTemplateQuestions(t.questions as QuestionWithId[]),
   };
 }
 
@@ -134,6 +144,17 @@ export function mapFormTemplateToSummary(
         : undefined,
     createdAt: (t as any).createdAt,
     updatedAt: (t as any).updatedAt,
+  };
+}
+
+export function mapFormTemplateToAdminDetail(
+  template: FormTemplateDocument,
+): FormTemplateAdminDetailResponse {
+  return {
+    ...mapFormTemplateToSummary(template),
+    questions: mapTemplateQuestions(
+      (template as FormTemplate).questions as QuestionWithId[],
+    ),
   };
 }
 

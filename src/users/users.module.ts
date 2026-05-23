@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { AdminUsersController } from './admin-users.controller';
 import { CreateUserGuard } from './guards/create-user.guard';
 import { User, UserSchema } from './entities/user.entity';
 import { UsersController } from './users.controller';
@@ -14,7 +15,7 @@ import { UsersService } from './users.service';
     JwtModule,
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
-  controllers: [UsersController],
+  controllers: [UsersController, AdminUsersController],
   providers: [UsersService, CreateUserGuard, PermissionsGuard],
   exports: [UsersService],
 })

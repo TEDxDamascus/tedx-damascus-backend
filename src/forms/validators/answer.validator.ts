@@ -155,6 +155,48 @@ function validatePhoneNumber(value: unknown): void {
   }
 }
 
+/** Optional sign, digits, optional single decimal point; no spaces or letters. */
+const STRICT_NUMERIC_STRING = /^-?\d+(\.\d+)?$/;
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseFiniteNumber(value: unknown): number {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      throw new Error('Expected a valid number');
+    }
+    return value;
+  }
+  if (typeof value === 'string') {
+    if (!STRICT_NUMERIC_STRING.test(value)) {
+      throw new Error('Expected a valid number with no extra characters');
+    }
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      throw new Error('Expected a valid number');
+    }
+    return num;
+  }
+  throw new Error('Expected a valid number');
+}
+
+function validateEmail(value: unknown): void {
+  if (typeof value !== 'string') {
+    throw new Error('Expected string');
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error('Email cannot be empty');
+  }
+  if (!EMAIL_PATTERN.test(trimmed)) {
+    throw new Error('Invalid email address');
+  }
+}
+
+function validateNumber(value: unknown): void {
+  parseFiniteNumber(value);
+}
+
 function validateUrl(value: unknown): void {
   if (typeof value !== 'string') {
     throw new Error('Expected string');
@@ -252,6 +294,16 @@ export function validateDraftAnswers(
   for (const question of template.questions) {
     const qId = (question as { _id?: { toString(): string } })._id?.toString();
     if (!qId) continue;
+    if (question.type === 'section') {
+      const value = answers[qId];
+      if (value !== undefined && value !== null && value !== '') {
+        throw new AnswerValidationError(
+          'Section questions cannot have answers',
+          qId,
+        );
+      }
+      continue;
+    }
     const value = answers[qId];
     if (value === undefined || value === null || value === '') {
       continue;
@@ -276,6 +328,12 @@ export function validateDraftAnswers(
           break;
         case 'phone_number':
           validatePhoneNumber(value);
+          break;
+        case 'email':
+          validateEmail(value);
+          break;
+        case 'number':
+          validateNumber(value);
           break;
         case 'url':
           validateUrl(value);
@@ -310,13 +368,21 @@ export function validateAnswers(
   for (const question of template.questions) {
     const qId = (question as { _id?: { toString(): string } })._id?.toString();
     if (!qId) continue;
+    if (question.type === 'section') {
       const value = answers[qId];
-      if (
-        question.isRequired &&
-        (value === undefined ||
-          value === null ||
-          value === '')
-      ) {
+      if (value !== undefined && value !== null && value !== '') {
+        throw new AnswerValidationError(
+          'Section questions cannot have answers',
+          qId,
+        );
+      }
+      continue;
+    }
+    const value = answers[qId];
+    if (
+      question.isRequired &&
+      (value === undefined || value === null || value === '')
+    ) {
       throw new AnswerValidationError('This question is required', qId);
     }
     if (value === undefined || value === null || value === '') {
@@ -343,6 +409,12 @@ export function validateAnswers(
         case 'phone_number':
           validatePhoneNumber(value);
           break;
+        case 'email':
+          validateEmail(value);
+          break;
+        case 'number':
+          validateNumber(value);
+          break;
         case 'url':
           validateUrl(value);
           break;
@@ -355,6 +427,8 @@ export function validateAnswers(
         case 'file_upload':
           validateFileUpload(value);
           break;
+        case 'section':
+          throw new Error('Section questions cannot have answers');
         default:
           throw new Error(`Unknown question type: ${question.type}`);
       }
@@ -399,6 +473,14 @@ export function normalizeAnswerValue(
           : NaN;
       return num as number;
     }
+    case 'number':
+      return parseFiniteNumber(value);
+    case 'email': {
+      if (typeof value !== 'string') {
+        throw new Error('Expected string');
+      }
+      return value.trim();
+    }
     case 'date_range': {
       const obj = value as { start?: string | Date; end?: string | Date };
       const start =
@@ -413,6 +495,8 @@ export function normalizeAnswerValue(
       }
       return value.trim();
     }
+    case 'section':
+      throw new Error('Section questions cannot have answers');
     default:
       return value as string | number | boolean;
   }

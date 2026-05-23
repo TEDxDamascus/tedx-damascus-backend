@@ -31,10 +31,16 @@ export class FormQuestionResponseDto {
     enum: QUESTION_TYPES,
     enumName: 'QuestionTypesEnum',
     description:
-      'Question type. Supported values: short_text, long_text, single_choice, checkbox_group, date, phone_number, url, rating, date_range, file_upload.',
+      'Question type. Supported values: short_text, long_text, single_choice, checkbox_group, date, phone_number, url, rating, date_range, file_upload, section.',
     example: 'short_text',
   })
   type: string;
+
+  @ApiPropertyOptional({
+    description: 'Parent section question id; null for root-level items.',
+    nullable: true,
+  })
+  parentId?: string | null;
 
   @ApiProperty({ type: LocalizedTextDto })
   title: LocalizedTextDto;
@@ -110,6 +116,12 @@ export class FormTemplateSummaryResponseDto {
     description: 'Full shareable URLs for copying and sharing.',
   })
   shareable_url?: LocalizedTextDto;
+
+  @ApiPropertyOptional({
+    type: [FormQuestionResponseDto],
+    description: 'All form questions (admin GET /forms/:id only).',
+  })
+  questions?: FormQuestionResponseDto[];
 }
 
 export class FormTemplateSchemaResponseDto {

@@ -29,6 +29,7 @@ import {
   ApiQuery,
   ApiResponse,
   ApiTags,
+  ApiConflictResponse,
 } from '@nestjs/swagger';
 import { FormsService } from './forms.service';
 import { CreateFormTemplateDto } from './dto/create-form-template.dto';
@@ -46,6 +47,7 @@ import {
 import { FormAvailabilityGuard } from './guards/form-availability.guard';
 import { MOCK_FORMS_USER_OBJECT_ID, resolveFormsUserId } from './constants/forms-dev-user.constant';
 import { FormUploadResultDto } from './dto/form-upload-result.dto';
+import { GetFormBySlugQueryDto } from './dto/get-form-by-slug-query.dto';
 
 const MAX_FORM_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -63,6 +65,7 @@ export class FormsController {
   })
   @ApiCreatedResponse({ type: FormTemplateSummaryResponseDto })
   @ApiBadRequestResponse({ description: 'Validation error' })
+  @ApiConflictResponse({ description: 'A form with this slug already exists' })
   create(@Body() dto: CreateFormTemplateDto) {
     return this.formsService.create(dto);
   }
@@ -89,6 +92,23 @@ export class FormsController {
   @ApiOkResponse({ type: [FormTemplateSummaryResponseDto] })
   findAll() {
     return this.formsService.findAll();
+  }
+
+  @Get('by-slug')
+  @ApiOperation({
+    summary: 'Get published form schema by slug',
+    description:
+      'Returns the structure of a published form by slug.en or slug.ar, including questions, types, configs, and options.',
+  })
+  @ApiQuery({
+    name: 'slug',
+    required: true,
+    description: 'Form slug (matches slug.en or slug.ar)',
+  })
+  @ApiOkResponse({ type: FormTemplateSchemaResponseDto })
+  @ApiBadRequestResponse({ description: 'Missing or empty slug' })
+  findBySlug(@Query() query: GetFormBySlugQueryDto) {
+    return this.formsService.getFormSchemaBySlug(query.slug);
   }
 
   @Get(':id')
@@ -122,6 +142,7 @@ export class FormsController {
     description:
       'Cannot modify a published form or invalid form template ID.',
   })
+  @ApiConflictResponse({ description: 'A form with this slug already exists' })
   update(@Param('id') id: string, @Body() dto: UpdateFormTemplateDto) {
     return this.formsService.update(id, dto);
   }
