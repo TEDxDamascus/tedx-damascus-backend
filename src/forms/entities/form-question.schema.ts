@@ -9,6 +9,8 @@ export const QUESTION_TYPES = [
   'checkbox_group',
   'date',
   'phone_number',
+  'email',
+  'number',
   'url',
   'rating',
   'date_range',

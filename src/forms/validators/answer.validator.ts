@@ -155,6 +155,48 @@ function validatePhoneNumber(value: unknown): void {
   }
 }
 
+/** Optional sign, digits, optional single decimal point; no spaces or letters. */
+const STRICT_NUMERIC_STRING = /^-?\d+(\.\d+)?$/;
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseFiniteNumber(value: unknown): number {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      throw new Error('Expected a valid number');
+    }
+    return value;
+  }
+  if (typeof value === 'string') {
+    if (!STRICT_NUMERIC_STRING.test(value)) {
+      throw new Error('Expected a valid number with no extra characters');
+    }
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      throw new Error('Expected a valid number');
+    }
+    return num;
+  }
+  throw new Error('Expected a valid number');
+}
+
+function validateEmail(value: unknown): void {
+  if (typeof value !== 'string') {
+    throw new Error('Expected string');
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error('Email cannot be empty');
+  }
+  if (!EMAIL_PATTERN.test(trimmed)) {
+    throw new Error('Invalid email address');
+  }
+}
+
+function validateNumber(value: unknown): void {
+  parseFiniteNumber(value);
+}
+
 function validateUrl(value: unknown): void {
   if (typeof value !== 'string') {
     throw new Error('Expected string');
@@ -287,6 +329,12 @@ export function validateDraftAnswers(
         case 'phone_number':
           validatePhoneNumber(value);
           break;
+        case 'email':
+          validateEmail(value);
+          break;
+        case 'number':
+          validateNumber(value);
+          break;
         case 'url':
           validateUrl(value);
           break;
@@ -361,6 +409,12 @@ export function validateAnswers(
         case 'phone_number':
           validatePhoneNumber(value);
           break;
+        case 'email':
+          validateEmail(value);
+          break;
+        case 'number':
+          validateNumber(value);
+          break;
         case 'url':
           validateUrl(value);
           break;
@@ -418,6 +472,14 @@ export function normalizeAnswerValue(
           ? Number(value)
           : NaN;
       return num as number;
+    }
+    case 'number':
+      return parseFiniteNumber(value);
+    case 'email': {
+      if (typeof value !== 'string') {
+        throw new Error('Expected string');
+      }
+      return value.trim();
     }
     case 'date_range': {
       const obj = value as { start?: string | Date; end?: string | Date };
