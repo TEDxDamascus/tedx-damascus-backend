@@ -9,11 +9,15 @@
     "ANSWER_NOT_FOUND": "Answer not found.",
     "ANSWER_NOT_PENDING": "Only pending answers can be approved.",
     "ANSWER_NOT_APPROVABLE": "This answer cannot be approved.",
-    "EXPIRES_AT_MUST_BE_FUTURE": "Expiry date must be in the future."
+    "EXPIRES_AT_MUST_BE_FUTURE": "Expiry date must be in the future.",
+    "BLOCKED_WORD_DETECTED": "Your answer contains language that is not allowed.",
+    "INVALID_FEATURED_ANSWERS": "One or more selected answers are invalid for this question.",
+    "TOO_MANY_FEATURED_ANSWERS": "You can select at most 3 featured answers."
   },
   "success": {
     "PUBLISHED": "Question published successfully.",
     "ANSWER_SUBMITTED": "Answer submitted successfully.",
-    "ANSWER_APPROVED": "Answer approved successfully."
+    "ANSWER_APPROVED": "Answer approved successfully.",
+    "FEATURED_ANSWERS_UPDATED": "Featured answers updated successfully."
   }
 }

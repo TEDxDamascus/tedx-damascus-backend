@@ -1,17 +1,20 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Connection, FilterQuery, Model, Types } from 'mongoose';
+import { Connection, Model, Types } from 'mongoose';
 import { I18nService } from 'nestjs-i18n';
 import { buildPaginatedResult } from '../common/pagination/utils/pagination.util';
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
 import { PaginatedResult } from '../common/pagination/interfaces/paginated-result.interface';
 import { Category, CategoryDocument } from '../categories/entities/category.entity';
 import { CreateWallAnswerDto } from './dto/create-wall-answer.dto';
+import { CreateBlockedWordDto } from './dto/create-blocked-word.dto';
 import { PublishWallQuestionDto } from './dto/publish-wall-question.dto';
+import { SetFeaturedAnswersDto } from './dto/set-featured-answers.dto';
 import { WallAnswerQueryDto } from './dto/wall-answer-query.dto';
 import { WallQuestionQueryDto } from './dto/wall-question-query.dto';
 import {
@@ -20,11 +23,20 @@ import {
   WallAnswerStatus,
 } from './entities/wall-answer.entity';
 import {
+  WallBlockedWord,
+  WallBlockedWordDocument,
+} from './entities/wall-blocked-word.entity';
+import {
   WallQuestion,
   WallQuestionDocument,
   WallQuestionStatus,
 } from './entities/wall-question.entity';
 import { normalizeTags } from './utils/normalize-tags.util';
+import {
+  blockedWordsMatch,
+  containsBlockedWord,
+  normalizeBlockedWordInput,
+} from './utils/check-blocked-words.util';
 import {
   mapWallAnswer,
   mapWallQuestion,
@@ -45,6 +57,8 @@ export class WallCardsService {
     private readonly answerModel: Model<WallAnswerDocument>,
     @InjectModel(Category.name)
     private readonly categoryModel: Model<CategoryDocument>,
+    @InjectModel(WallBlockedWord.name)
+    private readonly blockedWordModel: Model<WallBlockedWordDocument>,
     @InjectConnection()
     private readonly connection: Connection,
     private readonly i18n: I18nService,
@@ -132,22 +146,118 @@ export class WallCardsService {
     }
   }
 
-  async getCurrent(
-    lang: string,
-    pagination: OffsetPaginationDto,
-  ): Promise<{
+  async getCurrent(lang: string): Promise<{
     question: WallQuestionResponse;
-    answers: PaginatedResult<WallAnswerResponse>;
+    answers: WallAnswerResponse[];
   }> {
     const questionDoc = await this.findActiveQuestionDocument(lang);
     const question = mapWallQuestion(questionDoc, lang);
-    const answers = await this.listAnswersForQuestion(
-      question.id,
-      pagination,
-      'public',
-    );
+    const answers = await this.resolveFeaturedAnswers(questionDoc);
 
     return { question, answers };
+  }
+
+  async setFeaturedAnswers(
+    dto: SetFeaturedAnswersDto,
+    lang: string,
+  ): Promise<{
+    message: string;
+    data: { question: WallQuestionResponse; featuredAnswerIds: string[] };
+  }> {
+    const questionDoc = await this.findActiveQuestionDocument(lang);
+    const answerIds = this.dedupePreserveOrder(dto.answerIds);
+
+    if (answerIds.length > 3) {
+      throw new BadRequestException(
+        await this.t(lang, 'errors.TOO_MANY_FEATURED_ANSWERS'),
+      );
+    }
+
+    if (answerIds.length > 0) {
+      const objectIds = answerIds.map((id) => new Types.ObjectId(id));
+      const count = await this.answerModel
+        .countDocuments({
+          _id: { $in: objectIds },
+          questionId: questionDoc._id,
+          status: 'public',
+        })
+        .exec();
+
+      if (count !== answerIds.length) {
+        throw new BadRequestException(
+          await this.t(lang, 'errors.INVALID_FEATURED_ANSWERS'),
+        );
+      }
+
+      questionDoc.featuredAnswerIds = objectIds;
+    } else {
+      questionDoc.featuredAnswerIds = [];
+    }
+
+    await questionDoc.save();
+
+    const message = await this.t(lang, 'success.FEATURED_ANSWERS_UPDATED');
+    const question = mapWallQuestion(questionDoc, lang);
+
+    return {
+      message,
+      data: {
+        question,
+        featuredAnswerIds: question.featuredAnswerIds ?? [],
+      },
+    };
+  }
+
+  async listBlockedWords(): Promise<
+    Array<{ id: string; word: string; createdAt: string }>
+  > {
+    const words = await this.blockedWordModel
+      .find()
+      .sort({ word: 1 })
+      .exec();
+
+    return words.map((entry) => ({
+      id: entry.id,
+      word: entry.word,
+      createdAt: entry.createdAt.toISOString(),
+    }));
+  }
+
+  async addBlockedWord(
+    dto: CreateBlockedWordDto,
+  ): Promise<{ id: string; word: string; createdAt: string }> {
+    const word = normalizeBlockedWordInput(dto.word);
+
+    if (!word) {
+      throw new BadRequestException('Blocked word cannot be empty');
+    }
+
+    const existing = await this.blockedWordModel.find().select('word').lean().exec();
+    const duplicate = existing.some((entry) =>
+      blockedWordsMatch(entry.word, word),
+    );
+
+    if (duplicate) {
+      throw new ConflictException('Blocked word already exists');
+    }
+
+    const created = await this.blockedWordModel.create({ word });
+
+    return {
+      id: created.id,
+      word: created.word,
+      createdAt: created.createdAt.toISOString(),
+    };
+  }
+
+  async removeBlockedWord(id: string): Promise<{ message: string }> {
+    const deleted = await this.blockedWordModel.findByIdAndDelete(id).exec();
+
+    if (!deleted) {
+      throw new NotFoundException('Blocked word not found');
+    }
+
+    return { message: 'Blocked word removed successfully' };
   }
 
   async submitAnswer(
@@ -161,6 +271,25 @@ export class WallCardsService {
       await this.t(lang, 'errors.QUESTION_EXPIRED'),
       await this.t(lang, 'errors.QUESTION_NOT_ACCEPTING_ANSWERS'),
     );
+
+    const blockedWords = await this.blockedWordModel
+      .find()
+      .select('word')
+      .lean()
+      .exec();
+    const wordList = blockedWords.map((entry) => entry.word);
+
+    if (
+      containsBlockedWord(
+        dto.text.trim(),
+        dto.displayName?.trim(),
+        wordList,
+      )
+    ) {
+      throw new BadRequestException(
+        await this.t(lang, 'errors.BLOCKED_WORD_DETECTED'),
+      );
+    }
 
     const answer = await this.answerModel.create({
       questionId: questionDoc._id,
@@ -232,8 +361,8 @@ export class WallCardsService {
 
     const ids = moderatableQuestionIds.map((q) => q._id);
 
-    const filter: FilterQuery<WallAnswerDocument> = {
-      status: 'pending',
+    const filter = {
+      status: 'pending' as const,
       questionId: { $in: ids },
     };
 
@@ -299,18 +428,70 @@ export class WallCardsService {
     };
   }
 
+  private dedupePreserveOrder(ids: string[]): string[] {
+    const seen = new Set<string>();
+    const result: string[] = [];
+
+    for (const id of ids) {
+      if (!seen.has(id)) {
+        seen.add(id);
+        result.push(id);
+      }
+    }
+
+    return result;
+  }
+
+  private async resolveFeaturedAnswers(
+    questionDoc: WallQuestionDocument,
+  ): Promise<WallAnswerResponse[]> {
+    const questionId = questionDoc._id;
+
+    if (questionDoc.featuredAnswerIds?.length > 0) {
+      const answers = await this.answerModel
+        .find({
+          _id: { $in: questionDoc.featuredAnswerIds },
+          questionId,
+          status: 'public',
+        })
+        .exec();
+
+      const answersById = new Map(
+        answers.map((answer) => [answer.id, answer]),
+      );
+
+      const ordered: WallAnswerDocument[] = [];
+      for (const id of questionDoc.featuredAnswerIds) {
+        const answer = answersById.get(id.toString());
+        if (answer) {
+          ordered.push(answer);
+        }
+      }
+
+      return ordered.slice(0, 3).map((answer) => mapWallAnswer(answer));
+    }
+
+    const fallback = await this.answerModel
+      .find({ questionId, status: 'public' })
+      .sort({ submittedAt: 1 })
+      .limit(3)
+      .exec();
+
+    return fallback.map((answer) => mapWallAnswer(answer));
+  }
+
   private async findActiveQuestionDocument(
     lang: string,
   ): Promise<WallQuestionDocument> {
-    let question = await this.questionModel.findOne({ status: 'active' }).exec();
+    const found = await this.questionModel.findOne({ status: 'active' }).exec();
 
-    if (!question) {
+    if (!found) {
       throw new NotFoundException(
         await this.t(lang, 'errors.NO_ACTIVE_QUESTION'),
       );
     }
 
-    question = await this.expireActiveIfNeeded(question);
+    const question = await this.expireActiveIfNeeded(found);
 
     if (question.status !== 'active') {
       throw new NotFoundException(
@@ -350,19 +531,20 @@ export class WallCardsService {
   private buildQuestionFilter(
     query: WallQuestionQueryDto,
     statuses: WallQuestionStatus[],
-  ): FilterQuery<WallQuestionDocument> {
-    const filter: FilterQuery<WallQuestionDocument> = {
+  ): Record<string, unknown> {
+    const filter: Record<string, unknown> = {
       status: query.status ?? { $in: statuses },
     };
 
     if (query.from || query.to) {
-      filter.publishedAt = {};
+      const publishedAt: Record<string, Date> = {};
       if (query.from) {
-        filter.publishedAt.$gte = new Date(query.from);
+        publishedAt.$gte = new Date(query.from);
       }
       if (query.to) {
-        filter.publishedAt.$lte = new Date(query.to);
+        publishedAt.$lte = new Date(query.to);
       }
+      filter.publishedAt = publishedAt;
     }
 
     if (query.categoryId) {
@@ -380,7 +562,7 @@ export class WallCardsService {
   }
 
   private async paginateQuestions(
-    filter: FilterQuery<WallQuestionDocument>,
+    filter: Record<string, unknown>,
     query: OffsetPaginationDto,
     lang: string,
   ): Promise<PaginatedResult<WallQuestionResponse>> {
@@ -413,7 +595,7 @@ export class WallCardsService {
     const page = pagination.page ?? 1;
     const limit = pagination.limit ?? 10;
 
-    const filter: FilterQuery<WallAnswerDocument> = {
+    const filter: Record<string, unknown> = {
       questionId: new Types.ObjectId(questionId),
     };
 

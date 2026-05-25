@@ -14,6 +14,7 @@ export type WallQuestionResponse = {
   publishedBy?: string;
   archivedAt?: string;
   replacedByQuestionId?: string;
+  featuredAnswerIds?: string[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -45,6 +46,7 @@ export function mapWallQuestion(
     publishedBy: doc.publishedBy?.toString(),
     archivedAt: doc.archivedAt?.toISOString(),
     replacedByQuestionId: doc.replacedByQuestionId?.toString(),
+    featuredAnswerIds: (doc.featuredAnswerIds ?? []).map((id) => id.toString()),
     createdAt: doc.createdAt?.toISOString(),
     updatedAt: doc.updatedAt?.toISOString(),
   };

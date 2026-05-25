@@ -9,7 +9,7 @@ import { useContainer, ValidationError } from 'class-validator';
 import { AppModule } from './app.module';
 import { setupDocs } from './doc/scala.doc';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
-
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 type ValidationErrorDetail = {
   field: string;
   message: string;

@@ -9,11 +9,15 @@
     "ANSWER_NOT_FOUND": "الإجابة غير موجودة.",
     "ANSWER_NOT_PENDING": "يمكن الموافقة على الإجابات المعلقة فقط.",
     "ANSWER_NOT_APPROVABLE": "لا يمكن الموافقة على هذه الإجابة.",
-    "EXPIRES_AT_MUST_BE_FUTURE": "يجب أن يكون تاريخ الانتهاء في المستقبل."
+    "EXPIRES_AT_MUST_BE_FUTURE": "يجب أن يكون تاريخ الانتهاء في المستقبل.",
+    "BLOCKED_WORD_DETECTED": "إجابتك تحتوي على لغة غير مسموح بها.",
+    "INVALID_FEATURED_ANSWERS": "إجابة أو أكثر من الإجابات المحددة غير صالحة لهذا السؤال.",
+    "TOO_MANY_FEATURED_ANSWERS": "يمكنك اختيار 3 إجابات مميزة كحد أقصى."
   },
   "success": {
     "PUBLISHED": "تم نشر السؤال بنجاح.",
     "ANSWER_SUBMITTED": "تم إرسال الإجابة بنجاح.",
-    "ANSWER_APPROVED": "تمت الموافقة على الإجابة بنجاح."
+    "ANSWER_APPROVED": "تمت الموافقة على الإجابة بنجاح.",
+    "FEATURED_ANSWERS_UPDATED": "تم تحديث الإجابات المميزة بنجاح."
   }
 }

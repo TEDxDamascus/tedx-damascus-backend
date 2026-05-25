@@ -5,7 +5,10 @@ export const WALL_ANSWER_STATUSES = ['pending', 'public', 'archived'] as const;
 
 export type WallAnswerStatus = (typeof WALL_ANSWER_STATUSES)[number];
 
-export type WallAnswerDocument = HydratedDocument<WallAnswer>;
+export type WallAnswerDocument = HydratedDocument<WallAnswer> & {
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 @Schema({ timestamps: true })
 export class WallAnswer {

@@ -6,6 +6,10 @@ import {
   WallAnswerSchema,
 } from './entities/wall-answer.entity';
 import {
+  WallBlockedWord,
+  WallBlockedWordSchema,
+} from './entities/wall-blocked-word.entity';
+import {
   WallQuestion,
   WallQuestionSchema,
 } from './entities/wall-question.entity';
@@ -17,6 +21,7 @@ import { WallCardsService } from './wall_cards.service';
     MongooseModule.forFeature([
       { name: WallQuestion.name, schema: WallQuestionSchema },
       { name: WallAnswer.name, schema: WallAnswerSchema },
+      { name: WallBlockedWord.name, schema: WallBlockedWordSchema },
       { name: Category.name, schema: CategorySchema },
     ]),
   ],

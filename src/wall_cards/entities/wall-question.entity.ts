@@ -6,7 +6,10 @@ export const WALL_QUESTION_STATUSES = ['active', 'archived', 'expired'] as const
 
 export type WallQuestionStatus = (typeof WALL_QUESTION_STATUSES)[number];
 
-export type WallQuestionDocument = HydratedDocument<WallQuestion>;
+export type WallQuestionDocument = HydratedDocument<WallQuestion> & {
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 @Schema({ timestamps: true })
 export class WallQuestion {
@@ -41,6 +44,9 @@ export class WallQuestion {
 
   @Prop({ type: Types.ObjectId, ref: 'WallQuestion', required: false })
   replacedByQuestionId?: Types.ObjectId;
+
+  @Prop({ type: [Types.ObjectId], ref: 'WallAnswer', default: [] })
+  featuredAnswerIds: Types.ObjectId[];
 }
 
 export const WallQuestionSchema = SchemaFactory.createForClass(WallQuestion);

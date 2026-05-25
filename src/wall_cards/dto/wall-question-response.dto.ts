@@ -31,35 +31,15 @@ export class WallQuestionResponseDto {
 
   @ApiPropertyOptional()
   replacedByQuestionId?: string;
-}
 
-export class PaginatedWallAnswersDto {
-  @ApiProperty({ type: [WallAnswerResponseDto] })
-  items: WallAnswerResponseDto[];
-
-  @ApiProperty()
-  total: number;
-
-  @ApiProperty()
-  page: number;
-
-  @ApiProperty()
-  limit: number;
-
-  @ApiProperty()
-  totalPages: number;
-
-  @ApiProperty()
-  hasNextPage: boolean;
-
-  @ApiProperty()
-  hasPreviousPage: boolean;
+  @ApiPropertyOptional({ type: [String] })
+  featuredAnswerIds?: string[];
 }
 
 export class WallCurrentResponseDto {
   @ApiProperty({ type: WallQuestionResponseDto })
   question: WallQuestionResponseDto;
 
-  @ApiProperty({ type: PaginatedWallAnswersDto })
-  answers: PaginatedWallAnswersDto;
+  @ApiProperty({ type: [WallAnswerResponseDto] })
+  answers: WallAnswerResponseDto[];
 }
