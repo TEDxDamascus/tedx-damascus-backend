@@ -4,7 +4,6 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -60,6 +59,10 @@ import {
   throwIfSubmissionCapReached,
 } from './utils/form-availability.util';
 import { StorageService } from '../storage/storage.service';
+import {
+  FORM_SHAREABLE_URL_BASE,
+  FORM_SHAREABLE_URL_YEAR,
+} from './constants/form-shareable-url.constant';
 
 @Injectable()
 export class FormsService {
@@ -68,16 +71,8 @@ export class FormsService {
     private formTemplateModel: Model<FormTemplateDocument>,
     @InjectModel(FormSubmission.name)
     private formSubmissionModel: Model<FormSubmissionDocument>,
-    private configService: ConfigService,
     private storageService: StorageService,
   ) {}
-
-  private getBaseUrl(): string {
-    return (
-      this.configService.get<string>('app.publicSiteUrl')?.replace(/\/$/, '') ||
-      'http://localhost:3000'
-    );
-  }
 
   private slugifyFromName(name: string): string {
     const slug = name
@@ -99,20 +94,22 @@ export class FormsService {
     return slug || 'form';
   }
 
-  private buildShareableUrlForLocale(slugSegment: string): string {
-    if (!slugSegment || !slugSegment.trim()) return '';
-    const base = this.getBaseUrl();
+  private buildShareableUrlForLocale(
+    targetRole: TargetRole,
+    slugSegment: string,
+  ): string {
+    if (!slugSegment?.trim()) return '';
     const encoded = encodeURIComponent(slugSegment.trim());
-    return `${base}/apply/${encoded}`;
+    return `${FORM_SHAREABLE_URL_BASE}/${targetRole}/${FORM_SHAREABLE_URL_YEAR}/${encoded}`;
   }
 
-  private buildShareableUrls(slug: {
-    en?: string;
-    ar?: string;
-  }): { en: string; ar: string } {
+  private buildShareableUrls(
+    targetRole: TargetRole,
+    slug: { en?: string; ar?: string },
+  ): { en: string; ar: string } {
     return {
-      en: this.buildShareableUrlForLocale(slug?.en ?? ''),
-      ar: this.buildShareableUrlForLocale(slug?.ar ?? ''),
+      en: this.buildShareableUrlForLocale(targetRole, slug?.en ?? ''),
+      ar: this.buildShareableUrlForLocale(targetRole, slug?.ar ?? ''),
     };
   }
 
@@ -190,7 +187,10 @@ export class FormsService {
       slugEn || slugAr ? { en: slugEn, ar: slugAr } : undefined;
     let shareable_url: { en: string; ar: string } | undefined;
     if (slug) {
-      shareable_url = this.buildShareableUrls({ en: slugEn, ar: slugAr });
+      shareable_url = this.buildShareableUrls(dto.targetRole, {
+        en: slugEn,
+        ar: slugAr,
+      });
     } else if (dto.shareable_url && (dto.shareable_url.en || dto.shareable_url.ar)) {
       shareable_url = {
         en: dto.shareable_url.en ?? '',
@@ -252,6 +252,8 @@ export class FormsService {
     if (dto.description !== undefined) {
       template.description = dto.description as FormTemplate['description'];
     }
+    const targetRoleChanged =
+      dto.targetRole !== undefined && dto.targetRole !== template.targetRole;
     if (dto.targetRole !== undefined) template.targetRole = dto.targetRole;
     if (dto.starts_at !== undefined) {
       template.starts_at = dto.starts_at ? new Date(dto.starts_at) : undefined;
@@ -294,13 +296,19 @@ export class FormsService {
       finalSlugAr = incomingSlugAr;
     }
     template.shareable_url = template.shareable_url ?? { en: '', ar: '' };
-    if (slugEnChanged && finalSlugEn) {
-      template.shareable_url.en = this.buildShareableUrlForLocale(finalSlugEn);
+    if ((slugEnChanged || targetRoleChanged) && finalSlugEn) {
+      template.shareable_url.en = this.buildShareableUrlForLocale(
+        template.targetRole,
+        finalSlugEn,
+      );
     } else if (dto.shareable_url?.en !== undefined && !slugEnChanged) {
       template.shareable_url.en = dto.shareable_url.en ?? '';
     }
-    if (slugArChanged && finalSlugAr) {
-      template.shareable_url.ar = this.buildShareableUrlForLocale(finalSlugAr);
+    if ((slugArChanged || targetRoleChanged) && finalSlugAr) {
+      template.shareable_url.ar = this.buildShareableUrlForLocale(
+        template.targetRole,
+        finalSlugAr,
+      );
     } else if (dto.shareable_url?.ar !== undefined && !slugArChanged) {
       template.shareable_url.ar = dto.shareable_url.ar ?? '';
     }
@@ -448,7 +456,10 @@ export class FormsService {
     }
     if (slugEn || slugAr) {
       template.slug = { en: slugEn, ar: slugAr };
-      template.shareable_url = this.buildShareableUrls({ en: slugEn, ar: slugAr });
+      template.shareable_url = this.buildShareableUrls(template.targetRole, {
+        en: slugEn,
+        ar: slugAr,
+      });
     }
     template.status = 'Published' as FormStatus;
     template.publishedAt = new Date();

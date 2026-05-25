@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { ConfigService } from '@nestjs/config';
 import {
   BadRequestException,
   ConflictException,
@@ -39,12 +38,6 @@ const mockFormSubmissionModel = {
   exec: jest.fn(),
 };
 
-const mockConfigService = {
-  get: jest.fn((key: string) =>
-    key === 'app.publicSiteUrl' ? 'https://tedx.example.com' : undefined,
-  ),
-};
-
 const mockStorageService = {
   uploadFormUserFile: jest.fn(),
 };
@@ -54,9 +47,6 @@ describe('FormsService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockConfigService.get.mockImplementation((key: string) =>
-      key === 'app.publicSiteUrl' ? 'https://tedx.example.com' : undefined,
-    );
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FormsService,
@@ -67,10 +57,6 @@ describe('FormsService', () => {
         {
           provide: getModelToken(FormSubmission.name),
           useValue: mockFormSubmissionModel,
-        },
-        {
-          provide: ConfigService,
-          useValue: mockConfigService,
         },
         {
           provide: StorageService,
@@ -86,10 +72,6 @@ describe('FormsService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should use ConfigService for public site URL', () => {
-    expect(mockConfigService.get).toBeDefined();
-  });
-
   describe('findOneForAdmin', () => {
     it('should return mapped admin detail with slug, shareable_url, and questions', async () => {
       const questionId = new Types.ObjectId();
@@ -100,7 +82,7 @@ describe('FormsService', () => {
         status: 'Draft',
         slug: { en: 'test-form', ar: '' },
         shareable_url: {
-          en: 'https://tedx.example.com/apply/test-form',
+          en: 'https://tedxdamascus.sy/forms/Speaker/2026/test-form',
           ar: '',
         },
         questions: [
@@ -124,7 +106,7 @@ describe('FormsService', () => {
       expect(result.id).toBe(doc._id.toString());
       expect(result.slug).toEqual({ en: 'test-form', ar: '' });
       expect(result.shareable_url).toEqual({
-        en: 'https://tedx.example.com/apply/test-form',
+        en: 'https://tedxdamascus.sy/forms/Speaker/2026/test-form',
         ar: '',
       });
       expect(result.questions).toHaveLength(1);

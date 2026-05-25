@@ -4,7 +4,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 export class ShareableUrlI18nDto {
   @ApiPropertyOptional({
     description: 'Full absolute URL for English shareable link.',
-    example: 'https://tedxdamascus.com/apply/speaker-2025',
+    example: 'https://tedxdamascus.sy/forms/Speaker/2026/speaker-application',
   })
   @IsOptional()
   @ValidateIf((_o, v) => v != null && v !== '')
@@ -14,7 +14,7 @@ export class ShareableUrlI18nDto {
 
   @ApiPropertyOptional({
     description: 'Full absolute URL for Arabic shareable link.',
-    example: 'https://tedxdamascus.com/ar/apply/speaker-2025',
+    example: 'https://tedxdamascus.sy/forms/Speaker/2026/تقديم-المتحدث',
   })
   @IsOptional()
   @ValidateIf((_o, v) => v != null && v !== '')
