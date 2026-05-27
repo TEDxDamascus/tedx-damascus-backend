@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getModelToken, getConnectionToken } from '@nestjs/mongoose';
+import { getModelToken } from '@nestjs/mongoose';
 import {
   BadRequestException,
   ConflictException,
@@ -36,12 +36,14 @@ const mockQuestionModel = {
   findById: jest.fn(),
   find: jest.fn(),
   countDocuments: jest.fn(),
+  create: jest.fn(),
 };
 
 const mockAnswerModel = {
   find: jest.fn(),
   countDocuments: jest.fn(),
   create: jest.fn(),
+  updateMany: jest.fn(),
 };
 
 const mockBlockedWordModel = {
@@ -52,10 +54,6 @@ const mockBlockedWordModel = {
 
 const mockCategoryModel = {
   findById: jest.fn(),
-};
-
-const mockConnection = {
-  startSession: jest.fn(),
 };
 
 const mockI18n = {
@@ -85,7 +83,6 @@ describe('WallCardsService', () => {
           useValue: mockBlockedWordModel,
         },
         { provide: getModelToken(Category.name), useValue: mockCategoryModel },
-        { provide: getConnectionToken(), useValue: mockConnection },
         { provide: I18nService, useValue: mockI18n },
       ],
     }).compile();

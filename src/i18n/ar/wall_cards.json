@@ -18,6 +18,7 @@
     "PUBLISHED": "تم نشر السؤال بنجاح.",
     "ANSWER_SUBMITTED": "تم إرسال الإجابة بنجاح.",
     "ANSWER_APPROVED": "تمت الموافقة على الإجابة بنجاح.",
+    "ANSWER_DECLINED": "تم رفض الإجابة بنجاح.",
     "FEATURED_ANSWERS_UPDATED": "تم تحديث الإجابات المميزة بنجاح."
   }
 }

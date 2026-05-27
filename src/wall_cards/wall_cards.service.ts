@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Connection, Model, Types } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
 import { I18nService } from 'nestjs-i18n';
 import { buildPaginatedResult } from '../common/pagination/utils/pagination.util';
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
@@ -13,6 +13,7 @@ import { PaginatedResult } from '../common/pagination/interfaces/paginated-resul
 import { Category, CategoryDocument } from '../categories/entities/category.entity';
 import { CreateWallAnswerDto } from './dto/create-wall-answer.dto';
 import { CreateBlockedWordDto } from './dto/create-blocked-word.dto';
+import { ModerateWallAnswerDto } from './dto/moderate-wall-answer.dto';
 import { PublishWallQuestionDto } from './dto/publish-wall-question.dto';
 import { SetFeaturedAnswersDto } from './dto/set-featured-answers.dto';
 import { WallAnswerQueryDto } from './dto/wall-answer-query.dto';
@@ -59,8 +60,6 @@ export class WallCardsService {
     private readonly categoryModel: Model<CategoryDocument>,
     @InjectModel(WallBlockedWord.name)
     private readonly blockedWordModel: Model<WallBlockedWordDocument>,
-    @InjectConnection()
-    private readonly connection: Connection,
     private readonly i18n: I18nService,
   ) {}
 
@@ -92,58 +91,51 @@ export class WallCardsService {
     }
 
     const tags = normalizeTags(dto.tags);
-    const session = await this.connection.startSession();
+    const previousActive = await this.questionModel
+      .findOne({ status: 'active' })
+      .exec();
 
-    try {
-      let created: WallQuestionDocument;
+    // Archive the current active question first so the partial unique index
+    // on status:'active' allows inserting the new one (no replica-set transaction).
+    if (previousActive) {
+      await this.answerModel
+        .updateMany(
+          {
+            questionId: previousActive._id,
+            status: 'pending',
+          },
+          { $set: { status: 'archived' as WallAnswerStatus } },
+        )
+        .exec();
 
-      await session.withTransaction(async () => {
-        const previousActive = await this.questionModel
-          .findOne({ status: 'active' })
-          .session(session)
-          .exec();
-
-        const newQuestion = new this.questionModel({
-          text: dto.text,
-          expiresAt,
-          categoryId: dto.categoryId
-            ? new Types.ObjectId(dto.categoryId)
-            : undefined,
-          tags,
-          status: 'active',
-          publishedAt: now,
-          publishedBy: new Types.ObjectId(adminUserId),
-        });
-
-        created = await newQuestion.save({ session });
-
-        if (previousActive) {
-          previousActive.status = 'archived';
-          previousActive.archivedAt = now;
-          previousActive.replacedByQuestionId = created._id;
-          await previousActive.save({ session });
-
-          await this.answerModel
-            .updateMany(
-              {
-                questionId: previousActive._id,
-                status: 'pending',
-              },
-              { $set: { status: 'archived' as WallAnswerStatus } },
-            )
-            .session(session)
-            .exec();
-        }
-      });
-
-      const message = await this.t(lang, 'success.PUBLISHED');
-      return {
-        message,
-        data: mapWallQuestion(created!, lang),
-      };
-    } finally {
-      await session.endSession();
+      previousActive.status = 'archived';
+      previousActive.archivedAt = now;
+      await previousActive.save();
     }
+
+    const created = await this.questionModel.create({
+      text: dto.text,
+      expiresAt,
+      categoryId: dto.categoryId
+        ? new Types.ObjectId(dto.categoryId)
+        : undefined,
+      tags,
+      status: 'active',
+      publishedAt: now,
+      publishedBy: new Types.ObjectId(adminUserId),
+      featuredAnswerIds: [],
+    });
+
+    if (previousActive) {
+      previousActive.replacedByQuestionId = created._id;
+      await previousActive.save();
+    }
+
+    const message = await this.t(lang, 'success.PUBLISHED');
+    return {
+      message,
+      data: mapWallQuestion(created, lang),
+    };
   }
 
   async getCurrent(lang: string): Promise<{
@@ -424,6 +416,61 @@ export class WallCardsService {
     const message = await this.t(lang, 'success.ANSWER_APPROVED');
     return {
       message,
+      data: mapWallAnswer(answer),
+    };
+  }
+
+  async moderateAnswer(
+    answerId: string,
+    dto: ModerateWallAnswerDto,
+    adminUserId: string,
+    lang: string,
+  ): Promise<{ message: string; data: WallAnswerResponse }> {
+    const answer = await this.answerModel.findById(answerId).exec();
+
+    if (!answer) {
+      throw new NotFoundException(await this.t(lang, 'errors.ANSWER_NOT_FOUND'));
+    }
+
+    const questionDoc = await this.questionModel
+      .findById(answer.questionId)
+      .exec();
+
+    if (!questionDoc) {
+      throw new NotFoundException(
+        await this.t(lang, 'errors.QUESTION_NOT_FOUND'),
+      );
+    }
+
+    await this.expireActiveIfNeeded(questionDoc);
+
+    throwIfAnswerNotApprovable(
+      questionDoc.status,
+      answer.status,
+      await this.t(lang, 'errors.QUESTION_ARCHIVED'),
+      await this.t(lang, 'errors.ANSWER_NOT_PENDING'),
+    );
+
+    if (dto.action === 'approve') {
+      answer.status = 'public';
+      answer.approvedAt = new Date();
+      answer.approvedBy = new Types.ObjectId(adminUserId);
+      await answer.save();
+
+      return {
+        message: await this.t(lang, 'success.ANSWER_APPROVED'),
+        data: mapWallAnswer(answer),
+      };
+    }
+
+    // decline
+    answer.status = 'archived';
+    answer.approvedAt = undefined;
+    answer.approvedBy = undefined;
+    await answer.save();
+
+    return {
+      message: await this.t(lang, 'success.ANSWER_DECLINED'),
       data: mapWallAnswer(answer),
     };
   }

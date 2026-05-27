@@ -18,6 +18,7 @@ import { resolveWallCardsAdminUserId } from './constants/wall-cards-dev-admin.co
 import { BlockedWordResponseDto } from './dto/blocked-word-response.dto';
 import { CreateBlockedWordDto } from './dto/create-blocked-word.dto';
 import { CreateWallAnswerDto } from './dto/create-wall-answer.dto';
+import { ModerateWallAnswerDto } from './dto/moderate-wall-answer.dto';
 import { PublishWallQuestionDto } from './dto/publish-wall-question.dto';
 import { SetFeaturedAnswersDto } from './dto/set-featured-answers.dto';
 import { WallAnswerQueryDto } from './dto/wall-answer-query.dto';
@@ -147,16 +148,18 @@ export class WallCardsController {
     return this.wallCardsService.listPendingAnswers(pagination);
   }
 
-  @Patch('answers/:id/approve')
-  @ApiOperation({ summary: 'Approve a pending answer' })
+  @Patch('answers/:id/moderate')
+  @ApiOperation({ summary: 'Moderate a pending answer (approve/decline)' })
   @ApiOkResponse({ type: WallAnswerResponseDto })
-  approveAnswer(
+  moderateAnswer(
     @I18n() i18n: I18nContext,
     @Param('id', ParseIdPipe) id: string,
+    @Body() dto: ModerateWallAnswerDto,
     @Headers('x-admin-user-id') adminUserIdHeader?: string,
   ) {
-    return this.wallCardsService.approveAnswer(
+    return this.wallCardsService.moderateAnswer(
       id,
+      dto,
       resolveWallCardsAdminUserId(adminUserIdHeader),
       i18n.lang,
     );

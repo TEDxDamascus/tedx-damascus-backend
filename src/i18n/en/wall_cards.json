@@ -18,6 +18,7 @@
     "PUBLISHED": "Question published successfully.",
     "ANSWER_SUBMITTED": "Answer submitted successfully.",
     "ANSWER_APPROVED": "Answer approved successfully.",
+    "ANSWER_DECLINED": "Answer declined successfully.",
     "FEATURED_ANSWERS_UPDATED": "Featured answers updated successfully."
   }
 }

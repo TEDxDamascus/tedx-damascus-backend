@@ -24,7 +24,7 @@ describe('WallCardsController', () => {
             listQuestionsAdmin: jest.fn(),
             listAnswersAdmin: jest.fn(),
             listPendingAnswers: jest.fn(),
-            approveAnswer: jest.fn(),
+            moderateAnswer: jest.fn(),
           },
         },
       ],
