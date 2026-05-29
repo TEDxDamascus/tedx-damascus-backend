@@ -18,21 +18,23 @@ export class EventsService {
 
   //! Create New Event
   async create(createEventDto: CreateEventDto) {
-    const eventImage = await this.storageservice.findOneByURL(
-      createEventDto.event_image,
-    );
+    const { event_image, gallery, ...rest } = createEventDto;
+    const payload: Record<string, unknown> = { ...rest };
 
-    const gallery = await Promise.all(
-      createEventDto.gallery.map((url) =>
-        this.storageservice.findOneByURL(url),
-      ),
-    );
+    if (event_image) {
+      const eventImageDoc =
+        await this.storageservice.findOneByURL(event_image);
+      payload.event_image = eventImageDoc._id;
+    }
 
-    const newEvent = new this.eventModel({
-      ...createEventDto,
-      event_image: eventImage._id,
-      gallery: gallery.map((g) => g._id),
-    });
+    if (gallery?.length) {
+      const galleryDocs = await Promise.all(
+        gallery.map((url) => this.storageservice.findOneByURL(url)),
+      );
+      payload.gallery = galleryDocs.map((g) => g._id);
+    }
+
+    const newEvent = new this.eventModel(payload);
 
     return newEvent.save();
   }
@@ -101,8 +103,8 @@ export class EventsService {
       description: translateFieldHelper(event.description, lang),
       brief: translateFieldHelper(event.brief, lang),
       location: translateFieldHelper(event.location, lang),
-      event_image: event.event_image.url,
-      gallery: event.gallery.map((img) => img.url),
+      event_image: event.event_image?.url,
+      gallery: event.gallery?.map((img) => img.url),
       speakers: event.speakers.map((speaker) => ({
         name: translateFieldHelper(speaker.name, lang),
         bio: translateFieldHelper(speaker.bio, lang),
@@ -136,8 +138,8 @@ export class EventsService {
       description: translateFieldHelper(event.description, lang),
       brief: event.brief ? translateFieldHelper(event.brief, lang) : undefined,
       location: translateFieldHelper(event.location, lang),
-      event_image: event.event_image.url,
-      gallery: event.gallery.map((gall) => gall.url),
+      event_image: event.event_image?.url,
+      gallery: event.gallery?.map((gall) => gall.url),
       speakers: event.speakers.map((speaker) => ({
         name: translateFieldHelper(speaker.name, lang),
         bio: translateFieldHelper(speaker.bio, lang),

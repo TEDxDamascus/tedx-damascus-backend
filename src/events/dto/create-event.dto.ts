@@ -57,11 +57,10 @@ export class CreateEventDto {
   event_type!: string;
 
   //! Event Image
-  @IsDefined()
+  @IsOptional()
   @IsUrl() // url is the right pick if you see an conflict
-  @IsNotEmpty()
   @IsExistingMedia()
-  event_image!: string;
+  event_image?: string;
 
   //! Event Status
   @IsDefined()
@@ -93,14 +92,13 @@ export class CreateEventDto {
   is_deleted?: boolean;
 
   //! Gallery
-  @IsDefined()
+  @IsOptional()
   @IsUrl({}, { each: true })
-  @ArrayNotEmpty()
   @IsExistingMedia({
     each: true,
     message: 'One or more gallery images do not exist in storage',
   })
-  gallery!: string[];
+  gallery?: string[];
 }
 
 // i think we should add a photo module ?

@@ -21,9 +21,9 @@ export class Event {
   @Prop({ required: true, enum: EventType })
   event_type: EventType;
 
-  //! Event Image
-  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
-  event_image: Media;
+  //! Event Image (optional)
+  @Prop({ required: false, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
+  event_image?: Media;
 
   //! Event_Status
   @Prop({ required: true, enum: EventStatus })
@@ -57,12 +57,12 @@ export class Event {
   @Prop({ required: true })
   date: Date;
 
-  //! Gallery
+  //! Gallery (optional)
   @Prop({
-    required: true,
+    required: false,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Media' }],
   })
-  gallery: Media[];
+  gallery?: Media[];
 
   //! Speakers
   @Prop({
