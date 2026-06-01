@@ -63,6 +63,10 @@ import {
   FORM_SHAREABLE_URL_BASE,
   FORM_SHAREABLE_URL_YEAR,
 } from './constants/form-shareable-url.constant';
+import {
+  formTemplateIdFilter,
+  toFormTemplateObjectId,
+} from './utils/form-template-id-filter.util';
 
 @Injectable()
 export class FormsService {
@@ -540,7 +544,7 @@ export class FormsService {
     const userObjectId = new Types.ObjectId(userId);
     const existing = await this.formSubmissionModel
       .findOne({
-        formTemplateId: new Types.ObjectId(formId),
+        ...formTemplateIdFilter(formId),
         userId: userObjectId,
       })
       .exec();
@@ -563,7 +567,7 @@ export class FormsService {
     const answers = this.buildNormalizedSubmissionAnswers(template, dto.answers);
     if (!existing) {
       const created = new this.formSubmissionModel({
-        formTemplateId: formId,
+        formTemplateId: toFormTemplateObjectId(formId),
         userId: userObjectId,
         status: 'draft',
         answers,
@@ -587,7 +591,7 @@ export class FormsService {
     const userObjectId = new Types.ObjectId(userId);
     const existing = await this.formSubmissionModel
       .findOne({
-        formTemplateId: new Types.ObjectId(formId),
+        ...formTemplateIdFilter(formId),
         userId: userObjectId,
       })
       .exec();
@@ -618,7 +622,7 @@ export class FormsService {
     }
 
     const submission = new this.formSubmissionModel({
-      formTemplateId: formId,
+      formTemplateId: toFormTemplateObjectId(formId),
       userId: userObjectId,
       status: 'submitted',
       submittedAt: new Date(),
@@ -665,7 +669,7 @@ export class FormsService {
     }
     const submission = await this.formSubmissionModel
       .findOne({
-        formTemplateId: new Types.ObjectId(formId),
+        ...formTemplateIdFilter(formId),
         userId: new Types.ObjectId(userId),
       })
       .exec();
@@ -717,7 +721,7 @@ export class FormsService {
     await this.findOne(formId);
     const skip = (page - 1) * limit;
     const filter = {
-      formTemplateId: new Types.ObjectId(formId),
+      ...formTemplateIdFilter(formId),
       $or: [
         { status: 'submitted' },
         { status: { $exists: false } },
@@ -750,7 +754,7 @@ export class FormsService {
     const submission = await this.formSubmissionModel
       .findOne({
         _id: new Types.ObjectId(submissionId),
-        formTemplateId: new Types.ObjectId(formId),
+        ...formTemplateIdFilter(formId),
         $or: [
           { status: 'submitted' },
           { status: { $exists: false } },
@@ -780,7 +784,7 @@ export class FormsService {
   private async countSubmissions(formId: string): Promise<number> {
     return this.formSubmissionModel
       .countDocuments({
-        formTemplateId: new Types.ObjectId(formId),
+        ...formTemplateIdFilter(formId),
         $or: [
           { status: 'submitted' },
           { status: { $exists: false } },

@@ -9,11 +9,16 @@ import {
   Delete,
   Query,
   Headers,
+  HttpCode,
+  HttpStatus,
   UseGuards,
   UseInterceptors,
   UploadedFile,
   ParseFilePipe,
+  StreamableFile,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { MaxFileSizeValidator } from '@nestjs/common/pipes';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -45,9 +50,12 @@ import {
   MySubmissionResponseDto,
 } from './dto/form-responses.dto';
 import { FormAvailabilityGuard } from './guards/form-availability.guard';
+import { AdminGuard } from './guards/admin.guard';
 import { MOCK_FORMS_USER_OBJECT_ID, resolveFormsUserId } from './constants/forms-dev-user.constant';
 import { FormUploadResultDto } from './dto/form-upload-result.dto';
 import { GetFormBySlugQueryDto } from './dto/get-form-by-slug-query.dto';
+import { FormExportService } from './export/form-export.service';
+import { ExportSubmissionPdfDto } from './export/dto/export-submission-pdf.dto';
 
 const MAX_FORM_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -55,7 +63,10 @@ const MAX_FORM_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 @ApiBearerAuth('bearer')
 @Controller('forms')
 export class FormsController {
-  constructor(private readonly formsService: FormsService) {}
+  constructor(
+    private readonly formsService: FormsService,
+    private readonly formExportService: FormExportService,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -380,6 +391,43 @@ export class FormsController {
     @Param('submissionId') submissionId: string,
   ) {
     return this.formsService.getSubmission(formId, submissionId);
+  }
+
+  @Post(':id/submissions/export/pdf')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AdminGuard)
+  @ApiOperation({
+    summary: 'Admin: Export user submission as PDF',
+    description:
+      'Exports selected questions from a submitted form for a specific user as a PDF. Draft submissions are not exported.',
+  })
+  @ApiBody({ type: ExportSubmissionPdfDto })
+  @ApiOkResponse({
+    description: 'PDF file download',
+    content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid IDs, empty questionIds, or unknown question on form.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Form not found or no submitted answers for this user.',
+  })
+  async exportSubmissionPdf(
+    @Param('id') formId: string,
+    @Body() dto: ExportSubmissionPdfDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const buffer = await this.formExportService.exportSubmissionPdf(
+      formId,
+      dto,
+    );
+    const filename = `form-${formId}-user-${dto.userId}.pdf`;
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    });
+    return new StreamableFile(buffer);
   }
 
   @Get(':id/my-submission')

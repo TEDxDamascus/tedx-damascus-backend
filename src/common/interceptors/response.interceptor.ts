@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
+  StreamableFile,
 } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
 import {
@@ -25,6 +26,11 @@ export class ResponseInterceptor<T> implements NestInterceptor<
 
     return next.handle().pipe(
       map((data) => {
+        // Binary downloads (e.g. PDF export) must not be wrapped in the JSON envelope.
+        if (data instanceof StreamableFile) {
+          return data as unknown as ApiResponse<T>;
+        }
+
         if (
           data &&
           typeof data === 'object' &&

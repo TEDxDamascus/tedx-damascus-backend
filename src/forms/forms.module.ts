@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { StorageModule } from '../storage/storage.module';
 import { FormsService } from './forms.service';
+import { FormExportService } from './export/form-export.service';
 import { FormsController } from './forms.controller';
 import {
   FormTemplate,
@@ -26,6 +27,7 @@ import { FormAvailabilityGuard } from './guards/form-availability.guard';
   controllers: [FormsController],
   providers: [
     FormsService,
+    FormExportService,
     AdminGuard,
     TargetRoleGuard,
     FormAvailabilityGuard,
