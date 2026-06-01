@@ -8,11 +8,11 @@ import {
 
 export class ExportSubmissionPdfDto {
   @ApiProperty({
-    description: 'User ID whose submitted answers to export',
+    description: 'Submission ID to export (must belong to the form and be submitted)',
     example: '507f1f77bcf86cd799439011',
   })
   @IsMongoId()
-  userId: string;
+  submissionId: string;
 
   @ApiProperty({
     description:

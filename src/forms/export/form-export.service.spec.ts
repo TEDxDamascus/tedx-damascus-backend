@@ -26,6 +26,7 @@ jest.mock('puppeteer', () => {
 });
 
 const formId = new Types.ObjectId();
+const submissionId = new Types.ObjectId();
 const userId = new Types.ObjectId();
 const questionId = new Types.ObjectId();
 
@@ -87,13 +88,15 @@ describe('FormExportService', () => {
 
     mockFormSubmissionModel.findOne.mockReturnValue({
       exec: jest.fn().mockResolvedValue({
+        _id: submissionId,
+        userId,
         status: 'submitted',
         answers: [{ questionId, value: 'Jane Doe' }],
       }),
     });
 
     const buffer = await service.exportSubmissionPdf(formId.toString(), {
-      userId: userId.toString(),
+      submissionId: submissionId.toString(),
       questionIds: [questionId.toString()],
       locale: 'en',
     });
@@ -102,10 +105,10 @@ describe('FormExportService', () => {
     expect(buffer.toString()).toBe('pdf-content');
     expect(mockFormSubmissionModel.findOne).toHaveBeenCalledWith(
       expect.objectContaining({
+        _id: submissionId,
         formTemplateId: {
           $in: [formId, formId.toString()],
         },
-        userId,
         $or: [{ status: 'submitted' }, { status: { $exists: false } }],
       }),
     );
@@ -126,7 +129,7 @@ describe('FormExportService', () => {
 
     await expect(
       service.exportSubmissionPdf(formId.toString(), {
-        userId: userId.toString(),
+        submissionId: submissionId.toString(),
         questionIds: [questionId.toString()],
         locale: 'en',
       }),
@@ -140,7 +143,7 @@ describe('FormExportService', () => {
 
     await expect(
       service.exportSubmissionPdf(formId.toString(), {
-        userId: userId.toString(),
+        submissionId: submissionId.toString(),
         questionIds: [questionId.toString()],
         locale: 'ar',
       }),

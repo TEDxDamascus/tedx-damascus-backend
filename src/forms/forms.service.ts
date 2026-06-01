@@ -63,6 +63,7 @@ import {
   FORM_SHAREABLE_URL_BASE,
   FORM_SHAREABLE_URL_YEAR,
 } from './constants/form-shareable-url.constant';
+import { generateAnonymousSubmissionUserId } from './constants/forms-dev-user.constant';
 import {
   formTemplateIdFilter,
   toFormTemplateObjectId,
@@ -529,30 +530,18 @@ export class FormsService {
    */
   async uploadFormDocument(
     formId: string,
-    userId: string,
     file: Express.Multer.File,
   ): Promise<{ url: string }> {
+    const userId = generateAnonymousSubmissionUserId().toString();
     return this.storageService.uploadFormUserFile({ userId, formId, file });
   }
 
   async saveDraft(
     formId: string,
-    userId: string,
     dto: SubmitFormDto,
   ): Promise<FormSubmissionResponse> {
     const template = await this.assertFormAcceptingSubmission(formId);
-    const userObjectId = new Types.ObjectId(userId);
-    const existing = await this.formSubmissionModel
-      .findOne({
-        ...formTemplateIdFilter(formId),
-        userId: userObjectId,
-      })
-      .exec();
-    if (existing && existing.status !== 'draft') {
-      throw new ConflictException(
-        'Cannot save draft after the form has been submitted',
-      );
-    }
+    const userObjectId = generateAnonymousSubmissionUserId();
     try {
       validateDraftAnswers(template, dto.answers);
     } catch (err) {
@@ -565,39 +554,22 @@ export class FormsService {
       throw err;
     }
     const answers = this.buildNormalizedSubmissionAnswers(template, dto.answers);
-    if (!existing) {
-      const created = new this.formSubmissionModel({
-        formTemplateId: toFormTemplateObjectId(formId),
-        userId: userObjectId,
-        status: 'draft',
-        answers,
-      });
-      const saved = await created.save();
-      return mapFormSubmission(saved);
-    }
-    existing.answers = answers;
-    existing.status = 'draft';
-    existing.submittedAt = undefined;
-    const saved = await existing.save();
+    const created = new this.formSubmissionModel({
+      formTemplateId: toFormTemplateObjectId(formId),
+      userId: userObjectId,
+      status: 'draft',
+      answers,
+    });
+    const saved = await created.save();
     return mapFormSubmission(saved);
   }
 
   async submitForm(
     formId: string,
-    userId: string,
     dto: SubmitFormDto,
   ): Promise<FormSubmissionResponse> {
     const template = await this.assertFormAcceptingSubmission(formId);
-    const userObjectId = new Types.ObjectId(userId);
-    const existing = await this.formSubmissionModel
-      .findOne({
-        ...formTemplateIdFilter(formId),
-        userId: userObjectId,
-      })
-      .exec();
-    if (existing && existing.status !== 'draft') {
-      throw new ConflictException('You have already submitted this form');
-    }
+    const userObjectId = generateAnonymousSubmissionUserId();
     try {
       validateAnswers(template, dto.answers);
     } catch (err) {
@@ -612,14 +584,6 @@ export class FormsService {
     const answers = this.buildNormalizedSubmissionAnswers(template, dto.answers);
     const submittedCount = await this.countSubmissions(formId);
     throwIfSubmissionCapReached(template, submittedCount);
-
-    if (existing?.status === 'draft') {
-      existing.answers = answers;
-      existing.status = 'submitted';
-      existing.submittedAt = new Date();
-      const saved = await existing.save();
-      return mapFormSubmission(saved);
-    }
 
     const submission = new this.formSubmissionModel({
       formTemplateId: toFormTemplateObjectId(formId),

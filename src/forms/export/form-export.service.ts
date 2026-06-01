@@ -57,7 +57,7 @@ export class FormExportService implements OnModuleDestroy {
   ): Promise<Buffer> {
     return this.buildPdfBuffer(
       formId,
-      dto.userId,
+      dto.submissionId,
       dto.questionIds,
       dto.locale,
     );
@@ -65,15 +65,15 @@ export class FormExportService implements OnModuleDestroy {
 
   private async buildPdfBuffer(
     formId: string,
-    userId: string,
+    submissionId: string,
     questionIds: string[],
     locale: ExportLocale,
   ): Promise<Buffer> {
     if (!Types.ObjectId.isValid(formId)) {
       throw new BadRequestException('Invalid form template ID');
     }
-    if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException('Invalid user ID');
+    if (!Types.ObjectId.isValid(submissionId)) {
+      throw new BadRequestException('Invalid submission ID');
     }
 
     const template = await this.formTemplateModel.findById(formId).exec();
@@ -83,17 +83,17 @@ export class FormExportService implements OnModuleDestroy {
 
     const submission = await this.formSubmissionModel
       .findOne({
+        _id: new Types.ObjectId(submissionId),
         ...formTemplateIdFilter(formId),
-        userId: new Types.ObjectId(userId),
         $or: [{ status: 'submitted' }, { status: { $exists: false } }],
       })
       .exec();
 
     if (!submission) {
-      throw new NotFoundException(
-        'No submitted answers found for this user on this form',
-      );
+      throw new NotFoundException('Submission not found');
     }
+
+    const userId = submission.userId.toString();
 
     const answersByQuestionId = this.normalizeAnswers(submission);
     const questions = template.questions as QuestionWithId[];

@@ -8,7 +8,6 @@ import {
   Param,
   Delete,
   Query,
-  Headers,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -28,7 +27,6 @@ import {
   ApiConsumes,
   ApiCreatedResponse,
   ApiForbiddenResponse,
-  ApiHeader,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
@@ -47,11 +45,9 @@ import {
   FormSubmissionResponseDto,
   FormTemplateSchemaResponseDto,
   FormTemplateSummaryResponseDto,
-  MySubmissionResponseDto,
 } from './dto/form-responses.dto';
 import { FormAvailabilityGuard } from './guards/form-availability.guard';
 import { AdminGuard } from './guards/admin.guard';
-import { MOCK_FORMS_USER_OBJECT_ID, resolveFormsUserId } from './constants/forms-dev-user.constant';
 import { FormUploadResultDto } from './dto/form-upload-result.dto';
 import { GetFormBySlugQueryDto } from './dto/get-form-by-slug-query.dto';
 import { FormExportService } from './export/form-export.service';
@@ -255,13 +251,7 @@ export class FormsController {
   @ApiOperation({
     summary: 'User: Save draft',
     description:
-      'Saves partial answers without requiring required fields. Same body shape as submit. Cannot be used after a successful submit. Finalize with POST /forms/:id/submit.',
-  })
-  @ApiHeader({
-    name: 'x-user-id',
-    required: false,
-    description:
-      `MongoDB ObjectId (24 hex chars). If omitted or invalid, mock user ${MOCK_FORMS_USER_OBJECT_ID} is used until auth is wired.`,
+      'Saves partial answers without requiring required fields. Same body shape as submit. Creates a new draft row each call until user auth is wired.',
   })
   @ApiOkResponse({ type: FormSubmissionResponseDto })
   @ApiBadRequestResponse({ description: 'Validation error or invalid form ID.' })
@@ -274,12 +264,8 @@ export class FormsController {
     description: 'Form has expired (expires_at).',
   })
   @ApiBody({ type: SubmitFormDto })
-  saveDraft(
-    @Param('id') formId: string,
-    @Headers('x-user-id') userId: string,
-    @Body() dto: SubmitFormDto,
-  ) {
-    return this.formsService.saveDraft(formId, resolveFormsUserId(userId), dto);
+  saveDraft(@Param('id') formId: string, @Body() dto: SubmitFormDto) {
+    return this.formsService.saveDraft(formId, dto);
   }
 
   @Post(':id/submit')
@@ -287,13 +273,7 @@ export class FormsController {
   @ApiOperation({
     summary: 'User: Submit form',
     description:
-      'Final submit with full validation (required questions). If a draft exists for this user, it is upgraded to submitted.',
-  })
-  @ApiHeader({
-    name: 'x-user-id',
-    required: false,
-    description:
-      `MongoDB ObjectId (24 hex chars). If omitted or invalid, mock user ${MOCK_FORMS_USER_OBJECT_ID} is used until auth is wired.`,
+      'Final submit with full validation (required questions). Assigns an anonymous placeholder user id server-side until JWT auth is wired.',
   })
   @ApiCreatedResponse({ type: FormSubmissionResponseDto })
   @ApiBadRequestResponse({ description: 'Validation error or invalid form ID.' })
@@ -306,12 +286,8 @@ export class FormsController {
     description: 'Form has expired (expires_at).',
   })
   @ApiBody({ type: SubmitFormDto })
-  submit(
-    @Param('id') formId: string,
-    @Headers('x-user-id') userId: string,
-    @Body() dto: SubmitFormDto,
-  ) {
-    return this.formsService.submitForm(formId, resolveFormsUserId(userId), dto);
+  submit(@Param('id') formId: string, @Body() dto: SubmitFormDto) {
+    return this.formsService.submitForm(formId, dto);
   }
 
   @Post(':id/upload')
@@ -320,7 +296,7 @@ export class FormsController {
   @ApiOperation({
     summary: 'User: Upload file for file_upload questions',
     description:
-      'Uploads a file under users/{userId}/forms/{formId}/... in object storage. Returns a URL to use as the answer string for a file_upload question. Does not create a Media record.',
+      'Uploads a file under users/{anonymousId}/forms/{formId}/... in object storage (anonymous id assigned server-side). Returns a URL to use as the answer string for a file_upload question. Does not create a Media record.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -329,14 +305,8 @@ export class FormsController {
       properties: { file: { type: 'string', format: 'binary' } },
     },
   })
-  @ApiHeader({
-    name: 'x-user-id',
-    required: false,
-    description:
-      `MongoDB ObjectId (24 hex chars). If omitted or invalid, mock user ${MOCK_FORMS_USER_OBJECT_ID} is used until auth is wired.`,
-  })
   @ApiOkResponse({ type: FormUploadResultDto })
-  @ApiBadRequestResponse({ description: 'Invalid or missing file, userId, or formId.' })
+  @ApiBadRequestResponse({ description: 'Invalid or missing file or formId.' })
   @ApiForbiddenResponse({
     description:
       'Form not published, not yet open, submission window closed, or submission limit reached.',
@@ -347,7 +317,6 @@ export class FormsController {
   })
   uploadFormFile(
     @Param('id') formId: string,
-    @Headers('x-user-id') userId: string,
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -358,11 +327,7 @@ export class FormsController {
     )
     file: Express.Multer.File,
   ): Promise<FormUploadResultDto> {
-    return this.formsService.uploadFormDocument(
-      formId,
-      resolveFormsUserId(userId),
-      file,
-    );
+    return this.formsService.uploadFormDocument(formId, file);
   }
 
   @Get(':id/submissions')
@@ -397,9 +362,9 @@ export class FormsController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(AdminGuard)
   @ApiOperation({
-    summary: 'Admin: Export user submission as PDF',
+    summary: 'Admin: Export submission as PDF',
     description:
-      'Exports selected questions from a submitted form for a specific user as a PDF. Draft submissions are not exported.',
+      'Exports selected questions from a submitted form by submission ID as a PDF. Draft submissions are not exported.',
   })
   @ApiBody({ type: ExportSubmissionPdfDto })
   @ApiOkResponse({
@@ -411,7 +376,7 @@ export class FormsController {
   })
   @ApiResponse({
     status: 404,
-    description: 'Form not found or no submitted answers for this user.',
+    description: 'Form not found or submission not found.',
   })
   async exportSubmissionPdf(
     @Param('id') formId: string,
@@ -422,7 +387,7 @@ export class FormsController {
       formId,
       dto,
     );
-    const filename = `form-${formId}-user-${dto.userId}.pdf`;
+    const filename = `form-${formId}-submission-${dto.submissionId}.pdf`;
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="${filename}"`,
@@ -430,23 +395,4 @@ export class FormsController {
     return new StreamableFile(buffer);
   }
 
-  @Get(':id/my-submission')
-  @ApiOperation({
-    summary: 'User: View own draft or submission',
-    description:
-      'Returns the published form schema, answers keyed by question ID, and status (draft or submitted).',
-  })
-  @ApiHeader({
-    name: 'x-user-id',
-    required: false,
-    description:
-      `MongoDB ObjectId (24 hex chars). If omitted or invalid, mock user ${MOCK_FORMS_USER_OBJECT_ID} is used until auth is wired.`,
-  })
-  @ApiOkResponse({ type: MySubmissionResponseDto })
-  getMySubmission(
-    @Param('id') formId: string,
-    @Headers('x-user-id') userId: string,
-  ) {
-    return this.formsService.getMySubmission(formId, resolveFormsUserId(userId));
-  }
 }
