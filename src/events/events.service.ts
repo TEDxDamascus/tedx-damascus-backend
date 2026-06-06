@@ -46,7 +46,7 @@ export class EventsService {
     eventQuery: EventQueryDto,
   ) {
     const { limit, offset } = paginationQueryDto;
-    const { title, year, type } = eventQuery;
+    const { title, year, type ,status} = eventQuery;
 
     const filters: any = {}; // remove any later
     //$ search title
@@ -74,6 +74,9 @@ export class EventsService {
         $gte: new Date(`${y}-01-01`),
         $lte: new Date(`${y}-12-31`),
       };
+    }
+    if(status){
+      filters.status = status;
     }
     const events = await this.eventModel
       .find(filters)
