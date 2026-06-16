@@ -14,6 +14,7 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18n, I18nContext } from 'nestjs-i18n';
 import { ParseIdPipe } from '../common/pipes/parse-id.pipe';
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
+import { WallHistoryAnswerQueryDto } from './dto/wall-history-answer-query.dto';
 import { resolveWallCardsAdminUserId } from './constants/wall-cards-dev-admin.constant';
 import { BlockedWordResponseDto } from './dto/blocked-word-response.dto';
 import { CreateBlockedWordDto } from './dto/create-blocked-word.dto';
@@ -21,11 +22,14 @@ import { CreateWallAnswerDto } from './dto/create-wall-answer.dto';
 import { ModerateWallAnswerDto } from './dto/moderate-wall-answer.dto';
 import { PublishWallQuestionDto } from './dto/publish-wall-question.dto';
 import { SetFeaturedAnswersDto } from './dto/set-featured-answers.dto';
+import { UpdateBlockedWordDto } from './dto/update-blocked-word.dto';
+import { UpdateWallQuestionDto } from './dto/update-wall-question.dto';
 import { WallAnswerQueryDto } from './dto/wall-answer-query.dto';
 import { WallQuestionQueryDto } from './dto/wall-question-query.dto';
 import { WallAnswerResponseDto } from './dto/wall-answer-response.dto';
 import {
   WallCurrentResponseDto,
+  WallHistoryAnswersResponseDto,
   WallQuestionResponseDto,
 } from './dto/wall-question-response.dto';
 import { WallCardsService } from './wall_cards.service';
@@ -66,15 +70,19 @@ export class WallCardsController {
   }
 
   @Get('history/:questionId/answers')
-  @ApiOperation({ summary: 'Paginated public answers for a question' })
+  @ApiOperation({
+    summary:
+      'Question details with paginated pending and approved answers (optional status filter)',
+  })
+  @ApiOkResponse({ type: WallHistoryAnswersResponseDto })
   listHistoryAnswers(
     @I18n() i18n: I18nContext,
     @Param('questionId', ParseIdPipe) questionId: string,
-    @Query() pagination: OffsetPaginationDto,
+    @Query() query: WallHistoryAnswerQueryDto,
   ) {
-    return this.wallCardsService.listPublicAnswers(
+    return this.wallCardsService.listHistoryAnswers(
       questionId,
-      pagination,
+      query,
       i18n.lang,
     );
   }
@@ -100,6 +108,16 @@ export class WallCardsController {
   @ApiOkResponse({ type: BlockedWordResponseDto })
   addBlockedWord(@Body() dto: CreateBlockedWordDto) {
     return this.wallCardsService.addBlockedWord(dto);
+  }
+
+  @Patch('blocked-words/:blockwordId')
+  @ApiOperation({ summary: 'Update a blocked word' })
+  @ApiOkResponse({ type: BlockedWordResponseDto })
+  updateBlockedWord(
+    @Param('blockwordId', ParseIdPipe) blockwordId: string,
+    @Body() dto: UpdateBlockedWordDto,
+  ) {
+    return this.wallCardsService.updateBlockedWord(blockwordId, dto);
   }
 
   @Delete('blocked-words/:id')
@@ -140,6 +158,26 @@ export class WallCardsController {
     @Query() query: WallAnswerQueryDto,
   ) {
     return this.wallCardsService.listAnswersAdmin(questionId, query, i18n.lang);
+  }
+
+  @Patch('questions/:questionId')
+  @ApiOperation({ summary: 'Update a question text and/or status' })
+  @ApiOkResponse({ type: WallQuestionResponseDto })
+  updateQuestion(
+    @I18n() i18n: I18nContext,
+    @Param('questionId', ParseIdPipe) questionId: string,
+    @Body() dto: UpdateWallQuestionDto,
+  ) {
+    return this.wallCardsService.updateQuestion(questionId, dto, i18n.lang);
+  }
+
+  @Delete('questions/:questionId')
+  @ApiOperation({ summary: 'Delete a question and its answers' })
+  removeQuestion(
+    @I18n() i18n: I18nContext,
+    @Param('questionId', ParseIdPipe) questionId: string,
+  ) {
+    return this.wallCardsService.removeQuestion(questionId, i18n.lang);
   }
 
   @Get('answers/pending')

@@ -15,7 +15,7 @@ describe('WallCardsController', () => {
             getCurrent: jest.fn(),
             submitAnswer: jest.fn(),
             listHistory: jest.fn(),
-            listPublicAnswers: jest.fn(),
+            listHistoryAnswers: jest.fn(),
             setFeaturedAnswers: jest.fn(),
             listBlockedWords: jest.fn(),
             addBlockedWord: jest.fn(),

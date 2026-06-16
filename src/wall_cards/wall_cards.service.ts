@@ -16,7 +16,13 @@ import { CreateBlockedWordDto } from './dto/create-blocked-word.dto';
 import { ModerateWallAnswerDto } from './dto/moderate-wall-answer.dto';
 import { PublishWallQuestionDto } from './dto/publish-wall-question.dto';
 import { SetFeaturedAnswersDto } from './dto/set-featured-answers.dto';
+import { UpdateBlockedWordDto } from './dto/update-blocked-word.dto';
+import { UpdateWallQuestionDto } from './dto/update-wall-question.dto';
 import { WallAnswerQueryDto } from './dto/wall-answer-query.dto';
+import {
+  WallHistoryAnswerQueryDto,
+  WallHistoryAnswerStatus,
+} from './dto/wall-history-answer-query.dto';
 import { WallQuestionQueryDto } from './dto/wall-question-query.dto';
 import {
   WallAnswer,
@@ -98,19 +104,7 @@ export class WallCardsService {
     // Archive the current active question first so the partial unique index
     // on status:'active' allows inserting the new one (no replica-set transaction).
     if (previousActive) {
-      await this.answerModel
-        .updateMany(
-          {
-            questionId: previousActive._id,
-            status: 'pending',
-          },
-          { $set: { status: 'archived' as WallAnswerStatus } },
-        )
-        .exec();
-
-      previousActive.status = 'archived';
-      previousActive.archivedAt = now;
-      await previousActive.save();
+      await this.archiveQuestionWithPendingAnswers(previousActive, now);
     }
 
     const created = await this.questionModel.create({
@@ -252,6 +246,157 @@ export class WallCardsService {
     return { message: 'Blocked word removed successfully' };
   }
 
+  async updateQuestion(
+    questionId: string,
+    dto: UpdateWallQuestionDto,
+    lang: string,
+  ): Promise<{ message: string; data: WallQuestionResponse }> {
+    const question = await this.findQuestionById(questionId, lang);
+
+    if (dto.text === undefined && dto.status === undefined) {
+      throw new BadRequestException(
+        await this.t(lang, 'errors.EMPTY_UPDATE_BODY'),
+      );
+    }
+
+    if (dto.text !== undefined) {
+      const nextText = { ...question.text };
+
+      if (dto.text.en !== undefined) {
+        nextText.en = dto.text.en.trim();
+      }
+      if (dto.text.ar !== undefined) {
+        nextText.ar = dto.text.ar.trim();
+      }
+
+      if (!nextText.en && !nextText.ar) {
+        throw new BadRequestException(
+          await this.t(lang, 'errors.EMPTY_UPDATE_BODY'),
+        );
+      }
+
+      question.text = nextText;
+    }
+
+    if (dto.status !== undefined && dto.status !== question.status) {
+      const now = new Date();
+
+      if (dto.status === 'active') {
+        if (question.expiresAt <= now) {
+          throw new BadRequestException(
+            await this.t(lang, 'errors.CANNOT_ACTIVATE_EXPIRED'),
+          );
+        }
+
+        const otherActive = await this.questionModel
+          .findOne({ status: 'active' })
+          .exec();
+
+        if (
+          otherActive &&
+          otherActive._id.toString() !== question._id.toString()
+        ) {
+          await this.archiveQuestionWithPendingAnswers(
+            otherActive,
+            now,
+            question._id,
+          );
+        }
+
+        question.status = 'active';
+        question.archivedAt = undefined;
+      } else if (
+        question.status === 'active' &&
+        dto.status === 'archived'
+      ) {
+        await this.archivePendingAnswers(question._id);
+        question.status = 'archived';
+        question.archivedAt = now;
+      } else {
+        question.status = dto.status;
+        if (dto.status === 'archived' && !question.archivedAt) {
+          question.archivedAt = now;
+        }
+      }
+    }
+
+    await question.save();
+
+    return {
+      message: await this.t(lang, 'success.UPDATED'),
+      data: mapWallQuestion(question, lang),
+    };
+  }
+
+  async removeQuestion(
+    questionId: string,
+    lang: string,
+  ): Promise<{ message: string }> {
+    const question = await this.findQuestionById(questionId, lang);
+
+    if (question.status === 'active') {
+      throw new BadRequestException(
+        await this.t(lang, 'errors.CANNOT_DELETE_ACTIVE_QUESTION'),
+      );
+    }
+
+    await this.answerModel
+      .deleteMany({ questionId: question._id })
+      .exec();
+
+    const deleted = await this.questionModel
+      .findByIdAndDelete(questionId)
+      .exec();
+
+    if (!deleted) {
+      throw new NotFoundException(
+        await this.t(lang, 'errors.QUESTION_NOT_FOUND'),
+      );
+    }
+
+    return { message: await this.t(lang, 'success.DELETED') };
+  }
+
+  async updateBlockedWord(
+    blockwordId: string,
+    dto: UpdateBlockedWordDto,
+  ): Promise<{ id: string; word: string; createdAt: string }> {
+    const entry = await this.blockedWordModel.findById(blockwordId).exec();
+
+    if (!entry) {
+      throw new NotFoundException('Blocked word not found');
+    }
+
+    const word = normalizeBlockedWordInput(dto.word);
+
+    if (!word) {
+      throw new BadRequestException('Blocked word cannot be empty');
+    }
+
+    const existing = await this.blockedWordModel
+      .find({ _id: { $ne: entry._id } })
+      .select('word')
+      .lean()
+      .exec();
+
+    const duplicate = existing.some((item) =>
+      blockedWordsMatch(item.word, word),
+    );
+
+    if (duplicate) {
+      throw new ConflictException('Blocked word already exists');
+    }
+
+    entry.word = word;
+    await entry.save();
+
+    return {
+      id: entry.id,
+      word: entry.word,
+      createdAt: entry.createdAt.toISOString(),
+    };
+  }
+
   async submitAnswer(
     dto: CreateWallAnswerDto,
     lang: string,
@@ -306,13 +451,23 @@ export class WallCardsService {
     return this.paginateQuestions(filter, query, lang);
   }
 
-  async listPublicAnswers(
+  async listHistoryAnswers(
     questionId: string,
-    pagination: OffsetPaginationDto,
+    query: WallHistoryAnswerQueryDto,
     lang: string,
-  ): Promise<PaginatedResult<WallAnswerResponse>> {
-    await this.findQuestionById(questionId, lang);
-    return this.listAnswersForQuestion(questionId, pagination, 'public');
+  ): Promise<
+    { question: WallQuestionResponse } & PaginatedResult<WallAnswerResponse>
+  > {
+    const questionDoc = await this.findQuestionById(questionId, lang);
+    const question = mapWallQuestion(questionDoc, lang);
+    const statusFilter = this.resolveHistoryAnswerStatusFilter(query.status);
+    const answers = await this.listAnswersForQuestion(
+      questionId,
+      query,
+      statusFilter,
+    );
+
+    return { question, ...answers };
   }
 
   async listQuestionsAdmin(
@@ -475,6 +630,34 @@ export class WallCardsService {
     };
   }
 
+  private async archivePendingAnswers(
+    questionId: Types.ObjectId,
+  ): Promise<void> {
+    await this.answerModel
+      .updateMany(
+        { questionId, status: 'pending' },
+        { $set: { status: 'archived' as WallAnswerStatus } },
+      )
+      .exec();
+  }
+
+  private async archiveQuestionWithPendingAnswers(
+    question: WallQuestionDocument,
+    now: Date,
+    replacedByQuestionId?: Types.ObjectId,
+  ): Promise<void> {
+    await this.archivePendingAnswers(question._id);
+
+    question.status = 'archived';
+    question.archivedAt = now;
+
+    if (replacedByQuestionId) {
+      question.replacedByQuestionId = replacedByQuestionId;
+    }
+
+    await question.save();
+  }
+
   private dedupePreserveOrder(ids: string[]): string[] {
     const seen = new Set<string>();
     const result: string[] = [];
@@ -634,10 +817,20 @@ export class WallCardsService {
     );
   }
 
+  private resolveHistoryAnswerStatusFilter(
+    status?: WallHistoryAnswerStatus,
+  ): WallAnswerStatus | WallAnswerStatus[] {
+    if (!status) {
+      return ['pending', 'public'];
+    }
+
+    return status === 'approved' ? 'public' : status;
+  }
+
   private async listAnswersForQuestion(
     questionId: string,
     pagination: OffsetPaginationDto,
-    status?: WallAnswerStatus,
+    status?: WallAnswerStatus | WallAnswerStatus[],
   ): Promise<PaginatedResult<WallAnswerResponse>> {
     const page = pagination.page ?? 1;
     const limit = pagination.limit ?? 10;
@@ -646,7 +839,9 @@ export class WallCardsService {
       questionId: new Types.ObjectId(questionId),
     };
 
-    if (status) {
+    if (Array.isArray(status)) {
+      filter.status = { $in: status };
+    } else if (status) {
       filter.status = status;
     }
 
