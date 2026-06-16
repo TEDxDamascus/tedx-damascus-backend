@@ -43,3 +43,29 @@ export class WallCurrentResponseDto {
   @ApiProperty({ type: [WallAnswerResponseDto] })
   answers: WallAnswerResponseDto[];
 }
+
+export class WallHistoryAnswersResponseDto {
+  @ApiProperty({ type: WallQuestionResponseDto })
+  question: WallQuestionResponseDto;
+
+  @ApiProperty({ type: [WallAnswerResponseDto] })
+  items: WallAnswerResponseDto[];
+
+  @ApiProperty()
+  total: number;
+
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  limit: number;
+
+  @ApiProperty()
+  totalPages: number;
+
+  @ApiProperty()
+  hasNextPage: boolean;
+
+  @ApiProperty()
+  hasPreviousPage: boolean;
+}
