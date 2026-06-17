@@ -7,6 +7,7 @@ import {
   ParseFilePipe,
   Post,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -25,6 +26,12 @@ import { UpdateMediaBasenameDto } from './dto/update-media-name.dto';
 import { MediaDto } from './dto/media.dto';
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
 import { PaginatedResult } from '../common/pagination/interfaces/paginated-result.interface';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserPermission, UserRole } from '../users/entities/user.entity';
 
 const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -34,6 +41,9 @@ export class StorageController {
   constructor(private readonly storageService: StorageService) {}
 
   @Post('upload')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.MEDIA_CREATE)
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -57,6 +67,9 @@ export class StorageController {
   }
 
   @Post('media/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.MEDIA_UPDATE)
   @ApiOkResponse({
     description: 'Media basename updated (format is unchanged)',
     type: MediaDto,
@@ -73,6 +86,9 @@ export class StorageController {
   }
 
   @Delete('media/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.MEDIA_DELETE)
   @ApiOkResponse({ description: 'Media soft-deleted (is_active set to false)' })
   @ApiResponse({ status: 404, description: 'Media not found' })
   async deleteMedia(@Param('id') id: string): Promise<void> {

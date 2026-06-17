@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { SpeakersService } from './speakers.service';
 import { CreateSpeakerDto } from './dto/create-speaker.dto';
@@ -15,6 +16,12 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ParseIdPipe } from '../common/pipes/parse-id.pipe';
 import { I18n, I18nContext } from 'nestjs-i18n';
 import { PaginationQueryDto } from '../events/dto/pagination.dto';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserPermission, UserRole } from '../users/entities/user.entity';
 @ApiTags('Speakers')
 @Controller('speakers')
 export class SpeakersController {
@@ -23,6 +30,9 @@ export class SpeakersController {
   //! Create New Speaker
   @ApiOperation({ summary: 'Create new Speaker' })
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.SPEAKERS_CREATE)
   create(@Body() createSpeakerDto: CreateSpeakerDto) {
     return this.speakersService.create(createSpeakerDto);
   }
@@ -47,6 +57,9 @@ export class SpeakersController {
   //! Update Speaker By Id
   @ApiOperation({ summary: 'Update Existing Speaker By Id' })
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.SPEAKERS_UPDATE)
   update(
     @Param('id', ParseIdPipe) id: string,
     @Body() updateSpeakerDto: UpdateSpeakerDto,
@@ -58,6 +71,9 @@ export class SpeakersController {
   //! Delete Speaker By Id
   @ApiOperation({ summary: 'Delete Existing Speaker By Id' })
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.SPEAKERS_DELETE)
   remove(@Param('id', ParseIdPipe) id: string) {
     return this.speakersService.remove(id);
   }

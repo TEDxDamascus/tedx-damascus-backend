@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
@@ -12,12 +13,14 @@ import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
 import { UpdateUserPermissionsDto } from './dto/update-user-permissions.dto';
 import {
   ADMIN_DEFAULT_PERMISSIONS,
+  SUPERADMIN_DEFAULT_PERMISSIONS,
   User,
   UserDocument,
   UserPermission,
   UserRole,
 } from './entities/user.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
 
 
 @Injectable()
@@ -29,7 +32,12 @@ export class UsersService {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
 
-  async create(createUserDto: CreateUserDto) {
+  async create(
+    createUserDto: CreateUserDto,
+    actor?: { id: string; role: string },
+  ) {
+    this.assertCanCreateUser(actor, createUserDto);
+
     const existingUser = await this.userModel
       .findOne({ email: createUserDto.email.toLowerCase() })
       .lean();
@@ -61,17 +69,38 @@ export class UsersService {
     };
   }
 
-  async findAll() {
-    const users = await this.userModel
-      .find()
-      .select(this.publicUserSelection)
-      .lean();
+  async findAll(pagination: OffsetPaginationDto) {
+    const page = pagination.page ?? 1;
+    const limit = Math.min(pagination.limit ?? 10, 100);
+    const filter = { role: UserRole.USER };
+
+    const [users, total] = await Promise.all([
+      this.userModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .select(this.publicUserSelection)
+        .lean(),
+      this.userModel.countDocuments(filter),
+    ]);
+    const totalPages = Math.ceil(total / limit);
 
     return {
+      success: true,
+      statusCode: 200,
       message: 'Users fetched successfully',
       data: users.map((user) =>
         this.toPublicUser(user as unknown as Record<string, unknown>),
       ),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
     };
   }
 
@@ -95,6 +124,10 @@ export class UsersService {
     actor?: { id: string; role: string },
   ) {
     const payload: UpdateUserDto = { ...updateUserDto };
+    const targetUser = await this.findUserRoleByIdOrFail(id);
+
+    this.assertCanUpdateUser(actor, targetUser.role, payload);
+
     const isSuperadminSelfAction = this.isSuperadminSelfAction(actor, id);
 
     if (isSuperadminSelfAction && payload.role !== undefined) {
@@ -170,6 +203,7 @@ export class UsersService {
   async updatePermissions(
     id: string,
     updateUserPermissionsDto: UpdateUserPermissionsDto,
+    actor?: { id: string; role: string },
   ) {
     const user = await this.userModel.findById(id).select('role').lean();
     if (!user) {
@@ -177,6 +211,10 @@ export class UsersService {
     }
 
     const role = user.role;
+    if (actor?.role !== UserRole.SUPERADMIN) {
+      throw new ForbiddenException('Only superadmin can change permissions');
+    }
+
     if (role === UserRole.USER) {
       throw new BadRequestException(
         'Regular users do not support custom permissions',
@@ -189,7 +227,9 @@ export class UsersService {
       );
     }
 
-    const permissions = this.permissionsFromModules(updateUserPermissionsDto);
+    const permissions = [
+      ...new Set(updateUserPermissionsDto.permissions ?? []),
+    ];
 
     const updatedUser = await this.userModel
       .findByIdAndUpdate(
@@ -212,7 +252,17 @@ export class UsersService {
     };
   }
 
-  async remove(id: string) {
+  async remove(id: string, actor?: { id: string; role: string }) {
+    const targetUser = await this.findUserRoleByIdOrFail(id);
+    if (
+      [UserRole.ADMIN, UserRole.SUPERADMIN].includes(targetUser.role) &&
+      actor?.role !== UserRole.SUPERADMIN
+    ) {
+      throw new ForbiddenException(
+        'Only superadmin can delete admin and superadmin accounts',
+      );
+    }
+
     const user = await this.userModel
       .findByIdAndDelete(id)
       .select(this.publicUserSelection)
@@ -233,6 +283,10 @@ export class UsersService {
     isActive: boolean,
     actor?: { id: string; role: string },
   ) {
+    if (actor?.role !== UserRole.SUPERADMIN) {
+      throw new ForbiddenException('Only superadmin can change active status');
+    }
+
     if (!isActive && this.isSuperadminSelfAction(actor, id)) {
       throw new BadRequestException('Superadmin cannot disable themselves');
     }
@@ -273,7 +327,7 @@ export class UsersService {
     requestedPermissions?: UserPermission[],
   ): UserPermission[] {
     if (role === UserRole.SUPERADMIN) {
-      return [...ADMIN_DEFAULT_PERMISSIONS];
+      return [...SUPERADMIN_DEFAULT_PERMISSIONS];
     }
 
     if (role === UserRole.ADMIN) {
@@ -286,33 +340,76 @@ export class UsersService {
     return [];
   }
 
-  private permissionsFromModules(
-    payload: UpdateUserPermissionsDto,
-  ): UserPermission[] {
-    const users = payload.users ?? {};
-    const permissions: UserPermission[] = [];
-
-    if (users.create) {
-      permissions.push(UserPermission.USERS_CREATE);
-    }
-    if (users.read) {
-      permissions.push(UserPermission.USERS_READ);
-    }
-    if (users.update) {
-      permissions.push(UserPermission.USERS_UPDATE);
-    }
-    if (users.delete) {
-      permissions.push(UserPermission.USERS_DELETE);
-    }
-
-    return permissions;
-  }
-
   private isSuperadminSelfAction(
     actor: { id: string; role: string } | undefined,
     targetUserId: string,
   ): boolean {
     return actor?.role === UserRole.SUPERADMIN && actor.id === targetUserId;
+  }
+
+  private assertCanUpdateUser(
+    actor: { id: string; role: string } | undefined,
+    targetRole: UserRole,
+    payload: UpdateUserDto,
+  ) {
+    if (actor?.role === UserRole.SUPERADMIN) {
+      return;
+    }
+
+    if ([UserRole.ADMIN, UserRole.SUPERADMIN].includes(targetRole)) {
+      throw new ForbiddenException(
+        'Only superadmin can modify admin and superadmin accounts',
+      );
+    }
+
+    if (
+      payload.role !== undefined ||
+      payload.permissions !== undefined ||
+      payload.is_active !== undefined
+    ) {
+      throw new ForbiddenException(
+        'Only superadmin can change role, permissions, or active status',
+      );
+    }
+  }
+
+  private assertCanCreateUser(
+    actor: { id: string; role: string } | undefined,
+    payload: CreateUserDto,
+  ) {
+    if (actor?.role === UserRole.SUPERADMIN) {
+      return;
+    }
+
+    if (
+      [UserRole.ADMIN, UserRole.SUPERADMIN].includes(
+        payload.role as UserRole,
+      )
+    ) {
+      throw new ForbiddenException(
+        'Only superadmin can create admin and superadmin accounts',
+      );
+    }
+
+    if (payload.role !== undefined) {
+      throw new ForbiddenException('Only superadmin can set user roles');
+    }
+
+    if (payload.permissions !== undefined) {
+      throw new ForbiddenException('Only superadmin can set permissions');
+    }
+
+    if (payload.is_active !== undefined) {
+      throw new ForbiddenException('Only superadmin can set active status');
+    }
+  }
+
+  private async findUserRoleByIdOrFail(id: string) {
+    const user = await this.userModel.findById(id).select('role').lean();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
   }
 
   private async findPublicUserByIdOrFail(id: string) {
