@@ -105,16 +105,19 @@ export class EventsService {
       description: translateFieldHelper(event.description, lang),
       brief: translateFieldHelper(event.brief, lang),
       location: translateFieldHelper(event.location, lang),
-      location_description: translateFieldHelper(event.location_description, lang),
+      location_description: translateFieldHelper(
+        event.location_description,
+        lang,
+      ),
       event_image: event.event_image?.url,
       speaker_count: event.speakers?.length ?? 0,
-      gallery: event.gallery?.map((img) => img.url),
-      speakers: event.speakers.map((speaker) => ({
-        name: translateFieldHelper(speaker.name, lang),
-        bio: translateFieldHelper(speaker.bio, lang),
-        description: translateFieldHelper(speaker.description, lang),
-        speaker_image: speaker.speaker_image.url,
-      })),
+      gallery: event.gallery?.map((img) => img.url), //TODO UNCOMMENT
+      // speakers: event.speakers.map((speaker) => ({
+      //   name: translateFieldHelper(speaker.name, lang),
+      //   bio: translateFieldHelper(speaker.bio, lang),
+      //   description: translateFieldHelper(speaker.description, lang),
+      //   speaker_image: speaker.speaker_image.url,
+      // })),
     }));
   }
   //! Get Event By Id
@@ -142,15 +145,18 @@ export class EventsService {
       description: translateFieldHelper(event.description, lang),
       brief: event.brief ? translateFieldHelper(event.brief, lang) : undefined,
       location: translateFieldHelper(event.location, lang),
-      location_description: translateFieldHelper(event.location_description, lang),
+      location_description: translateFieldHelper(
+        event.location_description,
+        lang,
+      ),
       event_image: event.event_image?.url,
       speaker_count: event.speakers?.length ?? 0,
-      gallery: event.gallery?.map((gall) => gall.url),
-      speakers: event.speakers.map((speaker) => ({
-        name: translateFieldHelper(speaker.name, lang),
-        bio: translateFieldHelper(speaker.bio, lang),
-        speaker_image: speaker.speaker_image.url,
-      })),
+      gallery: event.gallery?.map((gall) => gall.url), //TODO UNCOMMENT
+      // speakers: event.speakers.map((speaker) => ({
+      //   name: translateFieldHelper(speaker.name, lang),
+      //   bio: translateFieldHelper(speaker.bio, lang),
+      //   speaker_image: speaker.speaker_image.url,
+      // })),
     };
   }
   //! Update Event By Id

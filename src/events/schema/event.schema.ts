@@ -99,8 +99,8 @@ export class Event {
 
   //! Speakers
   @Prop({
-    required: true,
-    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Speaker' }],
+    required: false, //! Change to true 
+    // type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Speaker' }], //TODO UNCOMMENT
   })
   speakers: Speaker[];
 

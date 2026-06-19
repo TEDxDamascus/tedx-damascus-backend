@@ -99,10 +99,10 @@ export class CreateEventDto {
   volunteers_count?: number;
 
   @IsEmail()
-  location_email: string;
+  location_email!: string;
 
   @IsPhoneNumber()
-  location_phone: string;
+  location_phone!: string;
 
   //! Date
   @IsDefined()
@@ -112,11 +112,11 @@ export class CreateEventDto {
   date!: Date;
 
   //! Speakers
-  @IsDefined()
-  @IsMongoId({ each: true })
-  @ArrayNotEmpty()
-  @ArrayUnique({ message: 'Each speaker can only be added once' })
-  @IsExistingSpeaker({ each: true })
+  @IsDefined() //TODO UNCOMMENT
+  // @IsMongoId({ each: true })
+  // @ArrayNotEmpty()
+  // @ArrayUnique({ message: 'Each speaker can only be added once' })
+  // @IsExistingSpeaker({ each: true })
   speakers!: string[];
 
   //! is_deleted
@@ -134,5 +134,3 @@ export class CreateEventDto {
   })
   gallery?: string[];
 }
-
-// i think we should add a photo module ?
