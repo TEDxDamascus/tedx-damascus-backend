@@ -1,15 +1,22 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   ArrayNotEmpty,
   ArrayUnique,
+  IsArray,
   IsBoolean,
   IsDate,
   IsDefined,
+  IsEmail,
   IsEnum,
   IsMongoId,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
+  IsPhoneNumber,
   IsString,
   IsUrl,
+  Matches,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -48,6 +55,13 @@ export class CreateEventDto {
   @Type(() => TranslationDto)
   location!: TranslationDto;
 
+  @IsDefined()
+  @ValidateNested({
+    message: 'location description  must contain both en and ar translations',
+  })
+  @Type(() => TranslationDto)
+  location_description!: TranslationDto;
+
   //! Event Type (salon,main_event,meetup)
   @IsDefined()
   @IsEnum(EventType, {
@@ -70,6 +84,43 @@ export class CreateEventDto {
   @IsNotEmpty()
   status!: string;
 
+  @IsDefined()
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @Type(() => Number)
+  @IsNumber({}, { each: true })
+  coordinates!: [number, number];
+
+  //! volunteer count
+
+  @IsDefined()
+  @Type(() => Number)
+  @IsNumber()
+  volunteers_count?: number;
+
+  @IsEmail()
+  location_email!: string;
+
+  @IsPhoneNumber()
+  location_phone!: string;
+
+  @IsDefined()
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^(0?[1-9]|1[0-2]):[0-5]\d (AM|PM)$/, {
+    message: 'start_time must be in h:mm AM/PM format (e.g. 4:00 AM)',
+  })
+  start_time!: string;
+
+  @IsDefined()
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^(0?[1-9]|1[0-2]):[0-5]\d (AM|PM)$/, {
+    message: 'end_time must be in h:mm AM/PM format (e.g. 10:00 PM)',
+  })
+  end_time!: string;
+
   //! Date
   @IsDefined()
   @IsNotEmpty()
@@ -78,11 +129,11 @@ export class CreateEventDto {
   date!: Date;
 
   //! Speakers
-  @IsDefined()
-  @IsMongoId({ each: true })
-  @ArrayNotEmpty()
-  @ArrayUnique({ message: 'Each speaker can only be added once' })
-  @IsExistingSpeaker({ each: true })
+  @IsDefined() //TODO UNCOMMENT
+  // @IsMongoId({ each: true })
+  // @ArrayNotEmpty()
+  // @ArrayUnique({ message: 'Each speaker can only be added once' })
+  // @IsExistingSpeaker({ each: true })
   speakers!: string[];
 
   //! is_deleted
@@ -100,5 +151,3 @@ export class CreateEventDto {
   })
   gallery?: string[];
 }
-
-// i think we should add a photo module ?

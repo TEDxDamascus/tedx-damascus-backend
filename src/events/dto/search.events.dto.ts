@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { EventType } from '../enums/event-type.enum';
 import { Type } from 'class-transformer';
+import { EventStatus } from '../enums/event-status.enum';
 
 export class EventQueryDto {
   //! searching with
@@ -32,4 +33,12 @@ export class EventQueryDto {
     message: `event_type must be one of: [${Object.values(EventType).join(', ')}]`,
   })
   type?: EventType;
+
+  //! filtering by status
+  @IsOptional()
+  @IsString()
+  @IsEnum(EventStatus, {
+    message: `status must be one of: [${Object.values(EventStatus).join(', ')}]`,
+  })
+  status?: EventStatus;
 }
