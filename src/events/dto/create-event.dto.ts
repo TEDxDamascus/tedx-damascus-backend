@@ -1,13 +1,19 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   ArrayNotEmpty,
   ArrayUnique,
+  IsArray,
   IsBoolean,
   IsDate,
   IsDefined,
+  IsEmail,
   IsEnum,
   IsMongoId,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
+  IsPhoneNumber,
   IsString,
   IsUrl,
   ValidateNested,
@@ -48,6 +54,13 @@ export class CreateEventDto {
   @Type(() => TranslationDto)
   location!: TranslationDto;
 
+  @IsDefined()
+  @ValidateNested({
+    message: 'location description  must contain both en and ar translations',
+  })
+  @Type(() => TranslationDto)
+  location_description!: TranslationDto;
+
   //! Event Type (salon,main_event,meetup)
   @IsDefined()
   @IsEnum(EventType, {
@@ -69,6 +82,27 @@ export class CreateEventDto {
   })
   @IsNotEmpty()
   status!: string;
+
+  @IsDefined()
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @Type(() => Number)
+  @IsNumber({}, { each: true })
+  coordinates!: [number, number];
+
+  //! volunteer count
+
+  @IsDefined()
+  @Type(() => Number)
+  @IsNumber()
+  volunteers_count?: number;
+
+  @IsEmail()
+  location_email: string;
+
+  @IsPhoneNumber()
+  location_phone: string;
 
   //! Date
   @IsDefined()

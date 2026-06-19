@@ -22,8 +22,7 @@ export class EventsService {
     const payload: Record<string, unknown> = { ...rest };
 
     if (event_image) {
-      const eventImageDoc =
-        await this.storageservice.findOneByURL(event_image);
+      const eventImageDoc = await this.storageservice.findOneByURL(event_image);
       payload.event_image = eventImageDoc._id;
     }
 
@@ -46,7 +45,7 @@ export class EventsService {
     eventQuery: EventQueryDto,
   ) {
     const { limit, offset } = paginationQueryDto;
-    const { title, year, type ,status} = eventQuery;
+    const { title, year, type, status } = eventQuery;
 
     const filters: any = {}; // remove any later
     //$ search title
@@ -75,7 +74,7 @@ export class EventsService {
         $lte: new Date(`${y}-12-31`),
       };
     }
-    if(status){
+    if (status) {
       filters.status = status;
     }
     const events = await this.eventModel
@@ -106,7 +105,9 @@ export class EventsService {
       description: translateFieldHelper(event.description, lang),
       brief: translateFieldHelper(event.brief, lang),
       location: translateFieldHelper(event.location, lang),
+      location_description: translateFieldHelper(event.location_description, lang),
       event_image: event.event_image?.url,
+      speaker_count: event.speakers?.length ?? 0,
       gallery: event.gallery?.map((img) => img.url),
       speakers: event.speakers.map((speaker) => ({
         name: translateFieldHelper(speaker.name, lang),
@@ -141,7 +142,9 @@ export class EventsService {
       description: translateFieldHelper(event.description, lang),
       brief: event.brief ? translateFieldHelper(event.brief, lang) : undefined,
       location: translateFieldHelper(event.location, lang),
+      location_description: translateFieldHelper(event.location_description, lang),
       event_image: event.event_image?.url,
+      speaker_count: event.speakers?.length ?? 0,
       gallery: event.gallery?.map((gall) => gall.url),
       speakers: event.speakers.map((speaker) => ({
         name: translateFieldHelper(speaker.name, lang),
