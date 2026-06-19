@@ -16,6 +16,7 @@ import {
   IsPhoneNumber,
   IsString,
   IsUrl,
+  Matches,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -103,6 +104,22 @@ export class CreateEventDto {
 
   @IsPhoneNumber()
   location_phone!: string;
+
+  @IsDefined()
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^(0?[1-9]|1[0-2]):[0-5]\d (AM|PM)$/, {
+    message: 'start_time must be in h:mm AM/PM format (e.g. 4:00 AM)',
+  })
+  start_time!: string;
+
+  @IsDefined()
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^(0?[1-9]|1[0-2]):[0-5]\d (AM|PM)$/, {
+    message: 'end_time must be in h:mm AM/PM format (e.g. 10:00 PM)',
+  })
+  end_time!: string;
 
   //! Date
   @IsDefined()

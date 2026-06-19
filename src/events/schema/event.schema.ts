@@ -86,6 +86,13 @@ export class Event {
   })
   coordinates: [number, number];
 
+  @Prop({ required: true })
+  start_time: string;
+
+  //! End Time (e.g. "22:00")
+  @Prop({ required: true })
+  end_time: string;
+
   //! Date
   @Prop({ required: true })
   date: Date;
@@ -99,7 +106,7 @@ export class Event {
 
   //! Speakers
   @Prop({
-    required: false, //! Change to true 
+    required: false, //! Change to true
     // type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Speaker' }], //TODO UNCOMMENT
   })
   speakers: Speaker[];
