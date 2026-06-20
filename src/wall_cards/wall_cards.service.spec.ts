@@ -8,6 +8,7 @@ import {
 import { I18nService } from 'nestjs-i18n';
 import { Types } from 'mongoose';
 import { WallCardsService } from './wall_cards.service';
+import { WallAnswerQueryDto } from './dto/wall-answer-query.dto';
 import { WallQuestion } from './entities/wall-question.entity';
 import { WallAnswer } from './entities/wall-answer.entity';
 import { WallBlockedWord } from './entities/wall-blocked-word.entity';
@@ -171,6 +172,145 @@ describe('WallCardsService', () => {
           'en',
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe('listAnswersAdmin', () => {
+    const answerOne = {
+      _id: answerId1,
+      id: answerId1.toString(),
+      questionId,
+      text: 'first',
+      status: 'public',
+      submittedAt: new Date('2026-01-01'),
+    };
+    const answerTwo = {
+      _id: answerId2,
+      id: answerId2.toString(),
+      questionId,
+      text: 'second',
+      status: 'public',
+      submittedAt: new Date('2026-01-02'),
+    };
+
+    beforeEach(() => {
+      mockQuestionModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ ...activeQuestion }),
+      });
+    });
+
+    it('returns featuredAnswers in admin order when featuredAnswerIds is set', async () => {
+      const featuredIds = [answerId2, answerId1];
+      mockQuestionModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          ...activeQuestion,
+          featuredAnswerIds: featuredIds,
+        }),
+      });
+
+      mockAnswerModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([answerOne, answerTwo]),
+      });
+
+      mockAnswerModel.countDocuments.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(2),
+      });
+
+      mockAnswerModel.find.mockImplementation((filter: Record<string, unknown>) => {
+        if (filter._id) {
+          return { exec: jest.fn().mockResolvedValue([answerOne, answerTwo]) };
+        }
+        return {
+          sort: jest.fn().mockReturnValue({
+            skip: jest.fn().mockReturnValue({
+              limit: jest.fn().mockReturnValue({
+                exec: jest.fn().mockResolvedValue([answerOne, answerTwo]),
+              }),
+            }),
+          }),
+        };
+      });
+
+      const result = await service.listAnswersAdmin(
+        questionId.toString(),
+        Object.assign(new WallAnswerQueryDto(), { page: 1, limit: 10 }),
+        'en',
+      );
+
+      expect(result.featuredAnswers).toHaveLength(2);
+      expect(result.featuredAnswers[0].id).toBe(answerId2.toString());
+      expect(result.featuredAnswers[1].id).toBe(answerId1.toString());
+    });
+
+    it('returns empty featuredAnswers when none selected', async () => {
+      mockAnswerModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              exec: jest.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      });
+
+      mockAnswerModel.countDocuments.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(0),
+      });
+
+      const result = await service.listAnswersAdmin(
+        questionId.toString(),
+        Object.assign(new WallAnswerQueryDto(), { page: 1, limit: 10 }),
+        'en',
+      );
+
+      expect(result.featuredAnswers).toEqual([]);
+    });
+
+    it('filters paginated items to featured answers when featured=true', async () => {
+      const featuredIds = [answerId2, answerId1];
+      mockQuestionModel.findById.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          ...activeQuestion,
+          featuredAnswerIds: featuredIds,
+        }),
+      });
+
+      mockAnswerModel.find.mockImplementation((filter: Record<string, unknown>) => {
+        expect(filter._id).toEqual({ $in: featuredIds });
+        return { exec: jest.fn().mockResolvedValue([answerOne, answerTwo]) };
+      });
+
+      const result = await service.listAnswersAdmin(
+        questionId.toString(),
+        Object.assign(new WallAnswerQueryDto(), {
+          page: 1,
+          limit: 10,
+          featured: true,
+        }),
+        'en',
+      );
+
+      expect(result.items).toHaveLength(2);
+      expect(result.items[0].id).toBe(answerId2.toString());
+      expect(result.items[1].id).toBe(answerId1.toString());
+      expect(result.featuredAnswers).toHaveLength(2);
+    });
+
+    it('returns empty items when featured=true and no featuredAnswerIds', async () => {
+      const result = await service.listAnswersAdmin(
+        questionId.toString(),
+        Object.assign(new WallAnswerQueryDto(), {
+          page: 1,
+          limit: 10,
+          featured: true,
+        }),
+        'en',
+      );
+
+      expect(result.items).toEqual([]);
+      expect(result.total).toBe(0);
+      expect(result.featuredAnswers).toEqual([]);
+      expect(mockAnswerModel.find).not.toHaveBeenCalled();
     });
   });
 

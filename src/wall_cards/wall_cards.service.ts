@@ -485,13 +485,20 @@ export class WallCardsService {
     questionId: string,
     query: WallAnswerQueryDto,
     lang: string,
-  ): Promise<PaginatedResult<WallAnswerResponse>> {
-    await this.findQuestionById(questionId, lang);
-    return this.listAnswersForQuestion(
+  ): Promise<
+    { featuredAnswers: WallAnswerResponse[] } & PaginatedResult<WallAnswerResponse>
+  > {
+    const questionDoc = await this.findQuestionById(questionId, lang);
+    const featuredAnswers =
+      await this.resolveFeaturedAnswersForAdmin(questionDoc);
+    const answers = await this.listAnswersForQuestion(
       questionId,
       query,
       query.status,
+      query.featured ? questionDoc.featuredAnswerIds : undefined,
     );
+
+    return { featuredAnswers, ...answers };
   }
 
   async listPendingAnswers(
@@ -672,6 +679,36 @@ export class WallCardsService {
     return result;
   }
 
+  private async resolveFeaturedAnswersForAdmin(
+    questionDoc: WallQuestionDocument,
+  ): Promise<WallAnswerResponse[]> {
+    if (!questionDoc.featuredAnswerIds?.length) {
+      return [];
+    }
+
+    const questionId = questionDoc._id;
+    const answers = await this.answerModel
+      .find({
+        _id: { $in: questionDoc.featuredAnswerIds },
+        questionId,
+      })
+      .exec();
+
+    const answersById = new Map(
+      answers.map((answer) => [answer.id, answer]),
+    );
+
+    const ordered: WallAnswerDocument[] = [];
+    for (const id of questionDoc.featuredAnswerIds) {
+      const answer = answersById.get(id.toString());
+      if (answer) {
+        ordered.push(answer);
+      }
+    }
+
+    return ordered.slice(0, 3).map((answer) => mapWallAnswer(answer));
+  }
+
   private async resolveFeaturedAnswers(
     questionDoc: WallQuestionDocument,
   ): Promise<WallAnswerResponse[]> {
@@ -831,9 +868,14 @@ export class WallCardsService {
     questionId: string,
     pagination: OffsetPaginationDto,
     status?: WallAnswerStatus | WallAnswerStatus[],
+    featuredAnswerIds?: Types.ObjectId[],
   ): Promise<PaginatedResult<WallAnswerResponse>> {
     const page = pagination.page ?? 1;
     const limit = pagination.limit ?? 10;
+
+    if (featuredAnswerIds !== undefined && featuredAnswerIds.length === 0) {
+      return buildPaginatedResult([], 0, page, limit);
+    }
 
     const filter: Record<string, unknown> = {
       questionId: new Types.ObjectId(questionId),
@@ -843,6 +885,32 @@ export class WallCardsService {
       filter.status = { $in: status };
     } else if (status) {
       filter.status = status;
+    }
+
+    if (featuredAnswerIds !== undefined) {
+      filter._id = { $in: featuredAnswerIds };
+    }
+
+    if (featuredAnswerIds !== undefined) {
+      const answers = await this.answerModel.find(filter).exec();
+      const answersById = new Map(
+        answers.map((answer) => [answer.id, answer]),
+      );
+      const ordered: WallAnswerDocument[] = [];
+
+      for (const id of featuredAnswerIds) {
+        const answer = answersById.get(id.toString());
+        if (answer) {
+          ordered.push(answer);
+        }
+      }
+
+      const total = ordered.length;
+      const items = ordered
+        .slice(pagination.skip, pagination.skip + limit)
+        .map((answer) => mapWallAnswer(answer));
+
+      return buildPaginatedResult(items, total, page, limit);
     }
 
     const [items, total] = await Promise.all([

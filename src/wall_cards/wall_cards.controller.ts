@@ -26,7 +26,10 @@ import { UpdateBlockedWordDto } from './dto/update-blocked-word.dto';
 import { UpdateWallQuestionDto } from './dto/update-wall-question.dto';
 import { WallAnswerQueryDto } from './dto/wall-answer-query.dto';
 import { WallQuestionQueryDto } from './dto/wall-question-query.dto';
-import { WallAnswerResponseDto } from './dto/wall-answer-response.dto';
+import {
+  WallAnswerResponseDto,
+  WallQuestionAnswersResponseDto,
+} from './dto/wall-answer-response.dto';
 import {
   WallCurrentResponseDto,
   WallHistoryAnswersResponseDto,
@@ -152,6 +155,7 @@ export class WallCardsController {
 
   @Get('questions/:questionId/answers')
   @ApiOperation({ summary: 'List answers for a question' })
+  @ApiOkResponse({ type: WallQuestionAnswersResponseDto })
   listAnswersAdmin(
     @I18n() i18n: I18nContext,
     @Param('questionId', ParseIdPipe) questionId: string,

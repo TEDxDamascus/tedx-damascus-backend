@@ -25,3 +25,29 @@ export class WallAnswerResponseDto {
   @ApiPropertyOptional()
   approvedBy?: string;
 }
+
+export class WallQuestionAnswersResponseDto {
+  @ApiProperty({ type: [WallAnswerResponseDto] })
+  featuredAnswers: WallAnswerResponseDto[];
+
+  @ApiProperty({ type: [WallAnswerResponseDto] })
+  items: WallAnswerResponseDto[];
+
+  @ApiProperty()
+  total: number;
+
+  @ApiProperty()
+  page: number;
+
+  @ApiProperty()
+  limit: number;
+
+  @ApiProperty()
+  totalPages: number;
+
+  @ApiProperty()
+  hasNextPage: boolean;
+
+  @ApiProperty()
+  hasPreviousPage: boolean;
+}
