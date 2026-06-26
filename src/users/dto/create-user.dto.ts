@@ -3,16 +3,26 @@ import {
   IsBoolean,
   IsEmail,
   IsEnum,
+  IsObject,
   IsOptional,
   IsString,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { UserPermission, UserRole } from '../entities/user.entity';
+import { LocalizedStringDto } from './localized-string.dto';
 
 export class CreateUserDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  description?: LocalizedStringDto;
 
   @IsEmail()
   email: string;

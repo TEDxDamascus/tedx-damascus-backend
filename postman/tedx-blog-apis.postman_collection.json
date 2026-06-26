@@ -1,0 +1,1049 @@
+{
+  "info": {
+    "_postman_id": "1fda9403-4ebc-44d1-8ae2-5ab5a95f2f64",
+    "name": "TEDx Damascus - Blog APIs",
+    "description": "Postman collection for blog-related APIs: auth setup, categories, blogs, localized language display/search, SEO fields, related blogs, gallery, and blog references.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "lang",
+      "value": "en"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@example.com"
+    },
+    {
+      "key": "adminPassword",
+      "value": "password123"
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "blogId",
+      "value": ""
+    },
+    {
+      "key": "relatedBlogId",
+      "value": ""
+    },
+    {
+      "key": "authorUserId",
+      "value": ""
+    },
+    {
+      "key": "blogImageId",
+      "value": ""
+    },
+    {
+      "key": "ogImageId",
+      "value": ""
+    },
+    {
+      "key": "galleryMediaId1",
+      "value": ""
+    },
+    {
+      "key": "galleryMediaId2",
+      "value": ""
+    },
+    {
+      "key": "blogReferenceId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Public Website Blogs",
+      "item": [
+        {
+          "name": "Get Published Blogs - Public Website",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/public/blogs?lang={{lang}}&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Public read-only endpoint for website visitors. Returns only published blogs and localizes fields by lang."
+          }
+        },
+        {
+          "name": "Search Published Blogs - Public Website",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/public/blogs?lang={{lang}}&search=Damascus&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                },
+                {
+                  "key": "search",
+                  "value": "Damascus"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Searches published blogs in the requested language."
+          }
+        },
+        {
+          "name": "Get Published Blog By ID - Public Website",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/public/blogs/{{blogId}}?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "blogs",
+                "{{blogId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            },
+            "description": "Public detail endpoint by Mongo ID. Returns 404 if the blog is not published."
+          }
+        },
+        {
+          "name": "Get Published Blog By Slug - Public Website",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/public/blogs/a-new-tedx-damascus-story?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "public",
+                "blogs",
+                "a-new-tedx-damascus-story"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            },
+            "description": "Public detail endpoint by English or Arabic slug. Change the path segment to the blog slug."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Setup / Auth",
+      "item": [
+        {
+          "name": "Admin Login - Save Bearer Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.access_token) {",
+                  "  pm.collectionVariables.set('token', json.data.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "login"
+              ]
+            },
+            "description": "Logs in as admin/superadmin and stores data.access_token in the collection variable token."
+          }
+        },
+        {
+          "name": "Auth Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Blog Categories",
+      "item": [
+        {
+          "name": "Create Category - Save categoryId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json && (json._id || json.id || (json.data && (json.data._id || json.data.id)));",
+                  "if (id) pm.collectionVariables.set('categoryId', id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": {\n    \"en\": \"Ideas\",\n    \"ar\": \"أفكار\"\n  },\n  \"description\": {\n    \"en\": \"Stories and ideas from TEDx Damascus.\",\n    \"ar\": \"قصص وأفكار من تيدكس دمشق.\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/categories?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Category By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{categoryId}}?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{categoryId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": {\n    \"en\": \"Updated English category description.\",\n    \"ar\": \"وصف عربي محدث للتصنيف.\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{categoryId}}?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{categoryId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/categories/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "{{categoryId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Blogs",
+      "item": [
+        {
+          "name": "Create Blog - Full Payload - Save blogId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json && (json._id || json.id || (json.data && (json.data._id || json.data.id)));",
+                  "if (id) pm.collectionVariables.set('blogId', id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {\n    \"en\": \"A New TEDx Damascus Story\",\n    \"ar\": \"قصة جديدة من تيدكس دمشق\"\n  },\n  \"slug\": {\n    \"en\": \"a-new-tedx-damascus-story\",\n    \"ar\": \"قصة-جديدة-من-تيدكس-دمشق\"\n  },\n  \"description\": {\n    \"en\": \"Short English summary for cards and SEO fallback.\",\n    \"ar\": \"ملخص عربي قصير للبطاقات وتحسين محركات البحث.\"\n  },\n  \"content\": {\n    \"en\": \"Full English blog content goes here.\",\n    \"ar\": \"محتوى المقال العربي الكامل هنا.\"\n  },\n  \"tags\": {\n    \"en\": [\"TEDx\", \"Damascus\", \"Ideas\"],\n    \"ar\": [\"تيدكس\", \"دمشق\", \"أفكار\"]\n  },\n  \"status\": \"draft\",\n  \"publishedAt\": \"2026-06-25T10:00:00.000Z\",\n  \"category_id\": \"{{categoryId}}\",\n  \"user_id\": \"{{authorUserId}}\",\n  \"blog_image\": \"{{blogImageId}}\",\n  \"og_image\": \"{{ogImageId}}\",\n  \"gallery\": [\"{{galleryMediaId1}}\", \"{{galleryMediaId2}}\"],\n  \"related_blogs_ids\": [\"{{relatedBlogId}}\"],\n  \"read_time\": 5,\n  \"meta_title\": {\n    \"en\": \"SEO English Title\",\n    \"ar\": \"عنوان عربي لمحركات البحث\"\n  },\n  \"meta_description\": {\n    \"en\": \"SEO English description.\",\n    \"ar\": \"وصف عربي لمحركات البحث.\"\n  },\n  \"meta_keywords\": {\n    \"en\": [\"tedx\", \"damascus\", \"blog\"],\n    \"ar\": [\"تيدكس\", \"دمشق\", \"مدونة\"]\n  },\n  \"canonical_url\": \"https://tedxdamascus.com/blogs/a-new-tedx-damascus-story\",\n  \"og_title\": {\n    \"en\": \"Open Graph English Title\",\n    \"ar\": \"عنوان مشاركة عربي\"\n  },\n  \"og_description\": {\n    \"en\": \"Open Graph English description.\",\n    \"ar\": \"وصف مشاركة عربي.\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/blogs?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            },
+            "description": "Use valid Mongo IDs for media/user/category fields. Remove optional IDs if you do not have them."
+          }
+        },
+        {
+          "name": "Create Blog - Minimal Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {\n    \"en\": \"Minimal Blog\",\n    \"ar\": \"مقال مختصر\"\n  },\n  \"description\": {\n    \"en\": \"Minimal blog description.\",\n    \"ar\": \"وصف مختصر للمقال.\"\n  },\n  \"content\": {\n    \"en\": \"Minimal English content.\",\n    \"ar\": \"محتوى عربي مختصر.\"\n  },\n  \"status\": \"draft\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/blogs?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Blogs - Default Both Languages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs?lang={{lang}}&page=1&limit=10&sort=createdAt&order=desc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Blogs - Arabic Only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs?lang={{lang}}&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Returns localized blog fields as Arabic strings/arrays instead of { ar, en } objects."
+          }
+        },
+        {
+          "name": "Get All Blogs - English Only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs?lang={{lang}}&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Blogs - Arabic",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs?lang={{lang}}&search=دمشق",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                },
+                {
+                  "key": "search",
+                  "value": "دمشق"
+                }
+              ]
+            },
+            "description": "Searches only Arabic localized fields when lang=ar."
+          }
+        },
+        {
+          "name": "Search Blogs - English",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs?lang={{lang}}&search=Damascus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                },
+                {
+                  "key": "search",
+                  "value": "Damascus"
+                }
+              ]
+            },
+            "description": "Searches only English localized fields when lang=en."
+          }
+        },
+        {
+          "name": "Filter Blogs - Status And Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs?lang={{lang}}&status=published&category_id={{categoryId}}&page=1&limit=6",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                },
+                {
+                  "key": "status",
+                  "value": "published"
+                },
+                {
+                  "key": "category_id",
+                  "value": "{{categoryId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "6"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Blog By ID - Both Languages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs/{{blogId}}?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blogId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Blog By ID - Arabic",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs/{{blogId}}?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blogId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Blog By ID - English",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs/{{blogId}}?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blogId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Blog - Publish",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"published\",\n  \"publishedAt\": \"2026-06-25T10:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/blogs/{{blogId}}?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blogId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Blog - Localized Content",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {\n    \"en\": \"Updated English Blog Title\",\n    \"ar\": \"عنوان عربي محدث للمقال\"\n  },\n  \"description\": {\n    \"en\": \"Updated English description.\",\n    \"ar\": \"وصف عربي محدث.\"\n  },\n  \"content\": {\n    \"en\": \"Updated English content.\",\n    \"ar\": \"محتوى عربي محدث.\"\n  },\n  \"tags\": {\n    \"en\": [\"updated\", \"blog\"],\n    \"ar\": [\"محدث\", \"مدونة\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/blogs/{{blogId}}?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blogId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Blog - SEO",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"meta_title\": {\n    \"en\": \"Updated SEO English Title\",\n    \"ar\": \"عنوان عربي محدث لمحركات البحث\"\n  },\n  \"meta_description\": {\n    \"en\": \"Updated SEO English description.\",\n    \"ar\": \"وصف عربي محدث لمحركات البحث.\"\n  },\n  \"meta_keywords\": {\n    \"en\": [\"seo\", \"tedx\", \"damascus\"],\n    \"ar\": [\"سيو\", \"تيدكس\", \"دمشق\"]\n  },\n  \"canonical_url\": \"https://tedxdamascus.com/blogs/updated-english-blog-title\",\n  \"og_title\": {\n    \"en\": \"Updated Open Graph English Title\",\n    \"ar\": \"عنوان مشاركة عربي محدث\"\n  },\n  \"og_description\": {\n    \"en\": \"Updated Open Graph English description.\",\n    \"ar\": \"وصف مشاركة عربي محدث.\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/blogs/{{blogId}}?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blogId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Blog - Media And Related Blogs",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blog_image\": \"{{blogImageId}}\",\n  \"og_image\": \"{{ogImageId}}\",\n  \"gallery\": [\"{{galleryMediaId1}}\", \"{{galleryMediaId2}}\"],\n  \"related_blogs_ids\": [\"{{relatedBlogId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/blogs/{{blogId}}?lang={{lang}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blogId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Blog",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blogs/{{blogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blogId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Blog References",
+      "item": [
+        {
+          "name": "Create Blog Reference - Save blogReferenceId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const id = json && (json._id || json.id || (json.data && (json.data._id || json.data.id)));",
+                  "if (id) pm.collectionVariables.set('blogReferenceId', id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blog_id\": \"{{blogId}}\",\n  \"name\": \"TED Reference\",\n  \"desc\": \"A source used by this blog post.\",\n  \"url\": \"https://www.ted.com/\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/blog-references",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blog-references"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Blog References",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blog-references",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blog-references"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Blog References By Blog ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blog-references?blog_id={{blogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blog-references"
+              ],
+              "query": [
+                {
+                  "key": "blog_id",
+                  "value": "{{blogId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Blog Reference By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blog-references/{{blogReferenceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blog-references",
+                "{{blogReferenceId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Blog Reference",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated TED Reference\",\n  \"desc\": \"Updated reference description.\",\n  \"url\": \"https://www.ted.com/about/our-organization\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/blog-references/{{blogReferenceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blog-references",
+                "{{blogReferenceId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Blog Reference",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/blog-references/{{blogReferenceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blog-references",
+                "{{blogReferenceId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

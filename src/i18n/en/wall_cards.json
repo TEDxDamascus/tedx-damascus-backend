@@ -12,7 +12,7 @@
     "EXPIRES_AT_MUST_BE_FUTURE": "Expiry date must be in the future.",
     "BLOCKED_WORD_DETECTED": "Your answer contains language that is not allowed.",
     "INVALID_FEATURED_ANSWERS": "One or more selected answers are invalid for this question.",
-    "TOO_MANY_FEATURED_ANSWERS": "You can select at most 3 featured answers.",
+    "TOO_MANY_FEATURED_ANSWERS": "You can select at most 4 featured answers.",
     "EMPTY_UPDATE_BODY": "At least one field (text or status) is required.",
     "CANNOT_DELETE_ACTIVE_QUESTION": "Cannot delete the active question. Archive it or publish a replacement first.",
     "CANNOT_ACTIVATE_EXPIRED": "Cannot activate a question whose expiry date has passed."

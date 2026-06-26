@@ -11,6 +11,7 @@ import { buildPaginatedResult } from '../common/pagination/utils/pagination.util
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
 import { PaginatedResult } from '../common/pagination/interfaces/paginated-result.interface';
 import { Category, CategoryDocument } from '../categories/entities/category.entity';
+import { MAX_FEATURED_ANSWERS } from './constants/wall-cards.constants';
 import { CreateWallAnswerDto } from './dto/create-wall-answer.dto';
 import { CreateBlockedWordDto } from './dto/create-blocked-word.dto';
 import { ModerateWallAnswerDto } from './dto/moderate-wall-answer.dto';
@@ -153,7 +154,7 @@ export class WallCardsService {
     const questionDoc = await this.findActiveQuestionDocument(lang);
     const answerIds = this.dedupePreserveOrder(dto.answerIds);
 
-    if (answerIds.length > 3) {
+    if (answerIds.length > MAX_FEATURED_ANSWERS) {
       throw new BadRequestException(
         await this.t(lang, 'errors.TOO_MANY_FEATURED_ANSWERS'),
       );
@@ -706,7 +707,7 @@ export class WallCardsService {
       }
     }
 
-    return ordered.slice(0, 3).map((answer) => mapWallAnswer(answer));
+    return ordered.slice(0, MAX_FEATURED_ANSWERS).map((answer) => mapWallAnswer(answer));
   }
 
   private async resolveFeaturedAnswers(
@@ -735,13 +736,13 @@ export class WallCardsService {
         }
       }
 
-      return ordered.slice(0, 3).map((answer) => mapWallAnswer(answer));
+      return ordered.slice(0, MAX_FEATURED_ANSWERS).map((answer) => mapWallAnswer(answer));
     }
 
     const fallback = await this.answerModel
       .find({ questionId, status: 'public' })
       .sort({ submittedAt: 1 })
-      .limit(3)
+      .limit(MAX_FEATURED_ANSWERS)
       .exec();
 
     return fallback.map((answer) => mapWallAnswer(answer));

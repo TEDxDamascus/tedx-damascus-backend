@@ -19,11 +19,10 @@ import {
 } from './entities/user.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
 
-
 @Injectable()
 export class UsersService {
   private readonly publicUserSelection =
-    'name email role permissions is_active createdAt updatedAt';
+    'name description email role permissions is_active createdAt updatedAt';
 
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,

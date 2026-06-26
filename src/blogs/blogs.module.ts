@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BlogsService } from './blogs.service';
 import { BlogsController } from './blogs.controller';
+import { PublicBlogsController } from './public-blogs.controller';
 import { Blog, BlogSchema } from './entities/blog.entity';
 import {
   Category,
@@ -22,7 +23,7 @@ import { Media, MediaSchema } from '../storage/entities/media.entity';
       { name: Media.name, schema: MediaSchema },
     ]),
   ],
-  controllers: [BlogsController],
+  controllers: [BlogsController, PublicBlogsController],
   providers: [BlogsService],
 })
 export class BlogsModule {}

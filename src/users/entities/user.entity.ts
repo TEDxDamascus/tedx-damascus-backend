@@ -16,6 +16,11 @@ export enum UserPermission {
   USERS_DELETE = 'users:delete',
 }
 
+const localizedStringSchema = {
+  ar: { type: String, trim: true, default: '' },
+  en: { type: String, trim: true, default: '' },
+};
+
 export const ADMIN_DEFAULT_PERMISSIONS: UserPermission[] = [
   UserPermission.USERS_READ,
   UserPermission.USERS_CREATE,
@@ -27,6 +32,9 @@ export const ADMIN_DEFAULT_PERMISSIONS: UserPermission[] = [
 export class User {
   @Prop({ required: false, trim: true })
   name?: string;
+
+  @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
+  description: { ar: string; en: string };
 
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;

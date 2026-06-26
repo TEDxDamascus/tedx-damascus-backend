@@ -12,7 +12,7 @@
     "EXPIRES_AT_MUST_BE_FUTURE": "يجب أن يكون تاريخ الانتهاء في المستقبل.",
     "BLOCKED_WORD_DETECTED": "إجابتك تحتوي على لغة غير مسموح بها.",
     "INVALID_FEATURED_ANSWERS": "إجابة أو أكثر من الإجابات المحددة غير صالحة لهذا السؤال.",
-    "TOO_MANY_FEATURED_ANSWERS": "يمكنك اختيار 3 إجابات مميزة كحد أقصى.",
+    "TOO_MANY_FEATURED_ANSWERS": "يمكنك اختيار 4 إجابات مميزة كحد أقصى.",
     "EMPTY_UPDATE_BODY": "يجب توفير حقل واحد على الأقل (النص أو الحالة).",
     "CANNOT_DELETE_ACTIVE_QUESTION": "لا يمكن حذف السؤال النشط. قم بأرشفته أو انشر سؤالاً بديلاً أولاً.",
     "CANNOT_ACTIVATE_EXPIRED": "لا يمكن تفعيل سؤال انتهت صلاحيته."

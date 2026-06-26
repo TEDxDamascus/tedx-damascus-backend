@@ -91,7 +91,7 @@ export class WallCardsController {
   }
 
   @Put('questions/active/featured-answers')
-  @ApiOperation({ summary: 'Set up to 3 featured public answers' })
+  @ApiOperation({ summary: 'Set up to 4 featured public answers' })
   setFeaturedAnswers(
     @I18n() i18n: I18nContext,
     @Body() dto: SetFeaturedAnswersDto,

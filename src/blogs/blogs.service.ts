@@ -36,8 +36,14 @@ type LocalizedTextListInput = {
   en?: string | string[];
 };
 
+type AuthorResponse = {
+  name: string | null;
+  description: LocalizedText;
+};
+
 type BlogResponse = BlogDocument & {
   user_name?: string | null;
+  author?: AuthorResponse | null;
   references?: BlogReferenceDocument[];
   prev_blog?: {
     id: string;
@@ -59,6 +65,21 @@ type BlogResponse = BlogDocument & {
   json_ld: Record<Locale, Record<string, unknown>>;
 };
 
+type BlogSearchField = 'title' | 'description' | 'slug' | 'tags' | 'content';
+
+type BlogsQuery = {
+  page?: string | number;
+  limit?: string | number;
+  search?: string;
+  status?: string;
+  category_id?: string;
+  category?: string;
+  language?: string;
+  lang?: string;
+  sort?: string;
+  order?: string;
+};
+
 @Injectable()
 export class BlogsService {
   constructor(
@@ -71,7 +92,7 @@ export class BlogsService {
     private readonly configService: ConfigService,
   ) {}
 
-  async create(createBlogDto: CreateBlogDto) {
+  async create(createBlogDto: CreateBlogDto, language?: string) {
     await this.assertCategoryExists(createBlogDto.category_id);
     await this.assertRelatedBlogsExist(createBlogDto.related_blogs_ids);
 
@@ -79,13 +100,13 @@ export class BlogsService {
       const blog = new this.blogModel(this.prepareBlogPayload(createBlogDto));
       const savedBlog = await blog.save();
 
-      return this.findOne(savedBlog.id);
+      return this.findOne(savedBlog.id, language);
     } catch (error) {
       this.handleDuplicateSlugError(error);
     }
   }
 
-  async findAll(query: any) {
+  async findAll(query: BlogsQuery) {
     const {
       page = 1,
       limit = 10,
@@ -99,7 +120,7 @@ export class BlogsService {
       order = 'desc',
     } = query;
 
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
 
     if (status) filter.status = status;
     if (category_id || category) filter.category_id = category_id || category;
@@ -109,17 +130,10 @@ export class BlogsService {
       filter[`content.${locale}`] = { $exists: true, $type: 'string', $ne: '' };
     }
 
-    if (search) {
-      filter.$or = [
-        { 'title.en': { $regex: search, $options: 'i' } },
-        { 'title.ar': { $regex: search, $options: 'i' } },
-        { 'description.en': { $regex: search, $options: 'i' } },
-        { 'description.ar': { $regex: search, $options: 'i' } },
-        { 'slug.en': { $regex: search, $options: 'i' } },
-        { 'slug.ar': { $regex: search, $options: 'i' } },
-        { 'tags.en': { $regex: search, $options: 'i' } },
-        { 'tags.ar': { $regex: search, $options: 'i' } },
-      ];
+    const cleanSearch = search?.trim();
+
+    if (cleanSearch) {
+      filter.$or = this.buildLocalizedSearchFilters(cleanSearch, locale);
     }
 
     const blogs = await this.blogModel
@@ -134,7 +148,7 @@ export class BlogsService {
 
     const total = await this.blogModel.countDocuments(filter);
 
-    const userNamesById = await this.getUserNamesById(
+    const authorsById = await this.getAuthorsById(
       blogs.map((blog) => blog.user_id),
     );
     const referencesByBlogId = await this.getReferencesByBlogId(
@@ -147,8 +161,9 @@ export class BlogsService {
           blog,
           undefined,
           undefined,
-          userNamesById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
+          authorsById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
           referencesByBlogId.get(String(blog._id)) || [],
+          locale,
         ),
       ),
       total,
@@ -157,30 +172,37 @@ export class BlogsService {
     };
   }
 
-  async findOne(id: string) {
-    const blog = await this.blogModel
-      .findById(id)
-      .populate('category_id')
-      .populate('blog_image')
-      .populate('og_image')
-      .populate('gallery');
+  async findPublishedAll(query: BlogsQuery) {
+    return this.findAll({
+      ...query,
+      status: 'published',
+    });
+  }
 
-    if (!blog) throw new NotFoundException('Blog not found');
+  async findOne(id: string, language?: string) {
+    return this.findOneByFilter({ _id: id }, language);
+  }
 
-    const [prevBlog, nextBlog] = await this.findSiblingBlogs(blog);
-    const userNamesById = await this.getUserNamesById([blog.user_id]);
-    const referencesByBlogId = await this.getReferencesByBlogId([blog._id]);
-
-    return this.serializeBlog(
-      blog,
-      prevBlog,
-      nextBlog,
-      userNamesById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
-      referencesByBlogId.get(String(blog._id)) || [],
+  async findPublishedOne(identifier: string, language?: string) {
+    return this.findOneByFilter(
+      this.buildPublicBlogFilter(identifier),
+      language,
+      'Published blog not found',
     );
   }
 
-  async update(id: string, updateBlogDto: UpdateBlogDto) {
+  private buildPublicBlogFilter(identifier: string): Record<string, unknown> {
+    if (Types.ObjectId.isValid(identifier)) {
+      return { _id: identifier, status: 'published' };
+    }
+
+    return {
+      status: 'published',
+      $or: [{ 'slug.en': identifier }, { 'slug.ar': identifier }],
+    };
+  }
+
+  async update(id: string, updateBlogDto: UpdateBlogDto, language?: string) {
     const existingBlog = await this.blogModel.findById(id);
 
     if (!existingBlog) {
@@ -194,7 +216,7 @@ export class BlogsService {
       existingBlog.set(this.prepareBlogPayload(updateBlogDto, existingBlog));
       await existingBlog.save();
 
-      return this.findOne(id);
+      return this.findOne(id, language);
     } catch (error) {
       this.handleDuplicateSlugError(error);
     }
@@ -206,6 +228,35 @@ export class BlogsService {
     if (!blog) throw new NotFoundException('Blog not found');
 
     return { message: 'Blog deleted successfully' };
+  }
+
+  private async findOneByFilter(
+    filter: Record<string, unknown>,
+    language?: string,
+    notFoundMessage = 'Blog not found',
+  ) {
+    const blog = await this.blogModel
+      .findOne(filter)
+      .populate('category_id')
+      .populate('blog_image')
+      .populate('og_image')
+      .populate('gallery');
+
+    if (!blog) throw new NotFoundException(notFoundMessage);
+
+    const [prevBlog, nextBlog] = await this.findSiblingBlogs(blog);
+    const authorsById = await this.getAuthorsById([blog.user_id]);
+    const referencesByBlogId = await this.getReferencesByBlogId([blog._id]);
+    const locale = this.resolveLocaleFilter(language);
+
+    return this.serializeBlog(
+      blog,
+      prevBlog,
+      nextBlog,
+      authorsById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
+      referencesByBlogId.get(String(blog._id)) || [],
+      locale,
+    );
   }
 
   private prepareBlogPayload(
@@ -383,8 +434,9 @@ export class BlogsService {
     blog: BlogDocument,
     prevBlog?: BlogDocument | null,
     nextBlog?: BlogDocument | null,
-    userName?: string | null,
+    author?: AuthorResponse | null,
     references: BlogReferenceDocument[] = [],
+    locale?: Locale | null,
   ): BlogResponse {
     const resolvedMetaTitle = this.resolveLocalizedFallback(
       blog.meta_title,
@@ -407,9 +459,10 @@ export class BlogsService {
     const blogImage = this.resolveMedia(blog.blog_image);
     const ogImage = this.resolveMedia(blog.og_image || blog.blog_image || null);
 
-    return {
+    const response = {
       ...blog.toObject(),
-      user_name: userName ?? null,
+      user_name: author?.name ?? null,
+      author,
       references,
       blog_image: blogImage,
       og_image: this.resolveMedia(blog.og_image),
@@ -429,6 +482,8 @@ export class BlogsService {
         en: this.buildJsonLd(blog, 'en', ogImage),
       },
     } as BlogResponse;
+
+    return locale ? this.localizeBlogResponse(response, locale) : response;
   }
 
   private resolveLocaleFilter(language?: unknown): Locale | null {
@@ -437,6 +492,125 @@ export class BlogsService {
     }
 
     return language;
+  }
+
+  private buildLocalizedSearchFilters(search: string, locale: Locale | null) {
+    const fields: BlogSearchField[] = [
+      'title',
+      'description',
+      'slug',
+      'tags',
+      'content',
+    ];
+    const locales: Locale[] = locale ? [locale] : ['en', 'ar'];
+
+    return fields.flatMap((field) =>
+      locales.map((currentLocale) => ({
+        [`${field}.${currentLocale}`]: { $regex: search, $options: 'i' },
+      })),
+    );
+  }
+
+  private localizeBlogResponse(
+    blog: BlogResponse,
+    locale: Locale,
+  ): BlogResponse {
+    return {
+      ...blog,
+      title: this.translateLocalizedText(blog.title, locale),
+      slug: this.translateLocalizedText(blog.slug, locale),
+      description: this.translateLocalizedText(blog.description, locale),
+      content: this.translateLocalizedText(blog.content, locale),
+      tags: this.translateLocalizedList(blog.tags, locale),
+      category_id: this.localizeCategory(blog.category_id, locale),
+      author: blog.author
+        ? {
+            ...blog.author,
+            description: this.translateLocalizedText(
+              blog.author.description,
+              locale,
+            ),
+          }
+        : null,
+      prev_blog: this.localizeSiblingBlog(blog.prev_blog, locale),
+      next_blog: this.localizeSiblingBlog(blog.next_blog, locale),
+      seo: {
+        ...blog.seo,
+        meta_title: this.translateLocalizedText(blog.seo.meta_title, locale),
+        meta_description: this.translateLocalizedText(
+          blog.seo.meta_description,
+          locale,
+        ),
+        meta_keywords: this.translateLocalizedList(
+          blog.seo.meta_keywords,
+          locale,
+        ),
+        og_title: this.translateLocalizedText(blog.seo.og_title, locale),
+        og_description: this.translateLocalizedText(
+          blog.seo.og_description,
+          locale,
+        ),
+      },
+      json_ld: blog.json_ld[locale],
+    } as BlogResponse;
+  }
+
+  private translateLocalizedText(
+    value: Partial<LocalizedText> | undefined,
+    locale: Locale,
+  ): string {
+    return (
+      value?.[locale]?.trim() || value?.en?.trim() || value?.ar?.trim() || ''
+    );
+  }
+
+  private translateLocalizedList(
+    value: Partial<LocalizedTextList> | undefined,
+    locale: Locale,
+  ): string[] {
+    return value?.[locale]?.length
+      ? value[locale]
+      : value?.en || value?.ar || [];
+  }
+
+  private localizeCategory(category: unknown, locale: Locale) {
+    if (!category || typeof category !== 'object') {
+      return category;
+    }
+
+    const categoryObject = category as Record<string, unknown>;
+
+    return {
+      ...categoryObject,
+      name: this.translateLocalizedText(
+        categoryObject.name as Partial<LocalizedText> | undefined,
+        locale,
+      ),
+      description: this.translateLocalizedText(
+        categoryObject.description as Partial<LocalizedText> | undefined,
+        locale,
+      ),
+    };
+  }
+
+  private localizeSiblingBlog(
+    blog:
+      | {
+          id: string;
+          title: LocalizedText;
+        }
+      | null
+      | undefined,
+    locale: Locale,
+  ) {
+    if (!blog) {
+      return null;
+    }
+
+    return {
+      ...blog,
+      title: this.translateLocalizedText(blog.title, locale),
+    };
   }
 
   private async getReferencesByBlogId(blogIds: unknown[]) {
@@ -469,7 +643,7 @@ export class BlogsService {
     }, new Map<string, BlogReferenceDocument[]>());
   }
 
-  private async getUserNamesById(userIds: unknown[]) {
+  private async getAuthorsById(userIds: unknown[]) {
     const uniqueUserIds = [
       ...new Set(
         userIds.map((userId) => this.getObjectIdString(userId)).filter(Boolean),
@@ -477,7 +651,7 @@ export class BlogsService {
     ] as string[];
 
     if (!uniqueUserIds.length) {
-      return new Map<string, string>();
+      return new Map<string, AuthorResponse>();
     }
 
     const users = await this.blogModel.db
@@ -492,11 +666,18 @@ export class BlogsService {
         last_name: 1,
         username: 1,
         email: 1,
+        description: 1,
       })
       .toArray();
 
     return new Map(
-      users.map((user) => [String(user._id), this.resolveUserName(user)]),
+      users.map((user) => [
+        String(user._id),
+        {
+          name: this.resolveUserName(user),
+          description: this.resolveUserDescription(user),
+        },
+      ]),
     );
   }
 
@@ -517,9 +698,13 @@ export class BlogsService {
       return this.getObjectIdString((value as { _id?: unknown })._id);
     }
 
-    const stringValue = String(value);
+    if (typeof value === 'number' || typeof value === 'bigint') {
+      const stringValue = String(value);
 
-    return Types.ObjectId.isValid(stringValue) ? stringValue : null;
+      return Types.ObjectId.isValid(stringValue) ? stringValue : null;
+    }
+
+    return null;
   }
 
   private resolveUserName(user: Record<string, unknown>): string | null {
@@ -569,6 +754,27 @@ export class BlogsService {
     const email = user.email;
 
     return typeof email === 'string' && email.trim() ? email.trim() : null;
+  }
+
+  private resolveUserDescription(user: Record<string, unknown>): LocalizedText {
+    const description = user.description;
+
+    if (!description || typeof description !== 'object') {
+      return { ar: '', en: '' };
+    }
+
+    const localizedDescription = description as Record<string, unknown>;
+
+    return {
+      ar:
+        typeof localizedDescription.ar === 'string'
+          ? localizedDescription.ar
+          : '',
+      en:
+        typeof localizedDescription.en === 'string'
+          ? localizedDescription.en
+          : '',
+    };
   }
 
   private resolveLocalizedFallback(
