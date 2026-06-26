@@ -41,28 +41,84 @@ type AuthorResponse = {
   description: LocalizedText;
 };
 
+type LocalizedAuthorResponse = {
+  name: string | null;
+  description: string;
+};
+
+type BlogSiblingResponse = {
+  id: string;
+  title: LocalizedText;
+};
+
+type LocalizedBlogSiblingResponse = {
+  id: string;
+  title: string;
+};
+
+type BlogSeoResponse = {
+  meta_title: LocalizedText;
+  meta_description: LocalizedText;
+  meta_keywords: LocalizedTextList;
+  canonical_url: string;
+  og_image: unknown;
+  og_title: LocalizedText;
+  og_description: LocalizedText;
+};
+
+type LocalizedBlogSeoResponse = {
+  meta_title: string;
+  meta_description: string;
+  meta_keywords: string[];
+  canonical_url: string;
+  og_image: unknown;
+  og_title: string;
+  og_description: string;
+};
+
 type BlogResponse = BlogDocument & {
   user_name?: string | null;
   author?: AuthorResponse | null;
   references?: BlogReferenceDocument[];
-  prev_blog?: {
-    id: string;
-    title: LocalizedText;
-  } | null;
-  next_blog?: {
-    id: string;
-    title: LocalizedText;
-  } | null;
-  seo: {
-    meta_title: LocalizedText;
-    meta_description: LocalizedText;
-    meta_keywords: LocalizedTextList;
-    canonical_url: string;
-    og_image: unknown;
-    og_title: LocalizedText;
-    og_description: LocalizedText;
-  };
+  prev_blog?: BlogSiblingResponse | null;
+  next_blog?: BlogSiblingResponse | null;
+  seo: BlogSeoResponse;
   json_ld: Record<Locale, Record<string, unknown>>;
+};
+
+type LocalizedBlogResponse = Omit<
+  Blog,
+  | 'title'
+  | 'slug'
+  | 'description'
+  | 'content'
+  | 'tags'
+  | 'category_id'
+  | 'meta_title'
+  | 'meta_description'
+  | 'meta_keywords'
+  | 'og_title'
+  | 'og_description'
+> & {
+  _id: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+  user_name?: string | null;
+  author?: LocalizedAuthorResponse | null;
+  references?: BlogReferenceDocument[];
+  prev_blog?: LocalizedBlogSiblingResponse | null;
+  next_blog?: LocalizedBlogSiblingResponse | null;
+  seo: LocalizedBlogSeoResponse;
+  json_ld: Record<string, unknown>;
+  title: string;
+  slug: string;
+  description: string;
+  content: string;
+  tags: string[];
+  category_id?: unknown;
+  blog_image?: unknown;
+  og_image?: unknown;
+  gallery?: unknown[];
 };
 
 type BlogSearchField = 'title' | 'description' | 'slug' | 'tags' | 'content';
@@ -437,7 +493,7 @@ export class BlogsService {
     author?: AuthorResponse | null,
     references: BlogReferenceDocument[] = [],
     locale?: Locale | null,
-  ): BlogResponse {
+  ): BlogResponse | LocalizedBlogResponse {
     const resolvedMetaTitle = this.resolveLocalizedFallback(
       blog.meta_title,
       blog.title,
@@ -514,7 +570,7 @@ export class BlogsService {
   private localizeBlogResponse(
     blog: BlogResponse,
     locale: Locale,
-  ): BlogResponse {
+  ): LocalizedBlogResponse {
     return {
       ...blog,
       title: this.translateLocalizedText(blog.title, locale),
@@ -552,7 +608,7 @@ export class BlogsService {
         ),
       },
       json_ld: blog.json_ld[locale],
-    } as BlogResponse;
+    };
   }
 
   private translateLocalizedText(
@@ -594,15 +650,9 @@ export class BlogsService {
   }
 
   private localizeSiblingBlog(
-    blog:
-      | {
-          id: string;
-          title: LocalizedText;
-        }
-      | null
-      | undefined,
+    blog: BlogSiblingResponse | null | undefined,
     locale: Locale,
-  ) {
+  ): LocalizedBlogSiblingResponse | null {
     if (!blog) {
       return null;
     }
