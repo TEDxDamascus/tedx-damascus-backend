@@ -47,31 +47,47 @@ export class PartnersService {
       .find(filter)
       .skip(offset)
       .limit(limit)
+      .populate('image')
       .lean()
       .exec();
     if (!partners)
       throw new NotFoundException(`Something Went Wrong no partners`);
-    return partners.map((foundPartner) => ({
-      ...foundPartner,
-      name: translateFieldHelper(foundPartner.name, lang),
-      slug: translateFieldHelper(foundPartner.slug, lang),
-      description: translateFieldHelper(foundPartner.description, lang),
-    }));
+    return partners;
     {
     }
   }
 
   //! find existing partner by Id + language+ language
   async findOne(id: string, lang: string) {
-    const foundPartner = await this.partnerModel.findById(id).lean().exec();
+    const foundPartner = await this.partnerModel
+      .findById(id)
+      .populate('image')
+      .lean()
+      .exec();
     if (!foundPartner)
       throw new NotFoundException(`Partner with id ${id} was not found`);
 
     return {
       ...foundPartner,
-      name: translateFieldHelper(foundPartner.name, lang),
-      slug: translateFieldHelper(foundPartner.slug, lang),
-      description: translateFieldHelper(foundPartner.description, lang),
+
+      // name: translateFieldHelper(foundPartner.name, lang),
+      // slug: translateFieldHelper(foundPartner.slug, lang),
+      // long_description: translateFieldHelper(
+      //   foundPartner.long_description,
+      //   lang,
+      // ),
+      // short_description: translateFieldHelper(
+      //   foundPartner.short_description,
+      //   lang,
+      // ),
+      // contact_info: {
+      //   ...foundPartner.contact_info,
+      //   address: translateFieldHelper(foundPartner.contact_info.address, lang),
+      // },
+      // services: foundPartner.services?.map((s) => ({
+      //   ...s,
+      //   description: translateFieldHelper(s.description, lang),
+      // })),
     };
   }
 
