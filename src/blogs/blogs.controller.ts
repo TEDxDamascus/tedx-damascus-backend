@@ -12,7 +12,6 @@ import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-
 @ApiTags('Blogs')
 @Controller('blogs')
 export class BlogsController {
@@ -38,10 +37,7 @@ export class BlogsController {
 
   @ApiOperation({ summary: 'Update Existing Blog By Id' })
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateBlogDto: UpdateBlogDto,
-  ) {
+  update(@Param('id') id: string, @Body() updateBlogDto: UpdateBlogDto) {
     return this.blogsService.update(id, updateBlogDto);
   }
 

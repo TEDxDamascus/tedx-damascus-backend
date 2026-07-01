@@ -15,26 +15,59 @@ import {
 import {
   FormSubmission,
   FormSubmissionDocument,
+  SubmissionStatus,
 } from './entities/form-submission.schema';
+import { SubmissionAnswer } from './entities/submission-answer.schema';
 import { CreateFormTemplateDto } from './dto/create-form-template.dto';
 import { UpdateFormTemplateDto } from './dto/update-form-template.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { SubmitFormDto } from './dto/submit-form.dto';
-import { validateAnswers, normalizeAnswerValue } from './validators/answer.validator';
+import {
+  AnswerValidationError,
+  validateAnswers,
+  validateDraftAnswers,
+  normalizeAnswerValue,
+} from './validators/answer.validator';
 import { buildPaginatedResult } from '../common/pagination/utils/pagination.util';
 import { PaginatedResult } from '../common/pagination/interfaces/paginated-result.interface';
 import { FormQuestion } from './entities/form-question.schema';
 import { QuestionOption } from './entities/question-option.schema';
 import {
   FormSubmissionResponse,
+  FormTemplateAdminDetailResponse,
   FormTemplateSchemaResponse,
   FormTemplateSummaryResponse,
 } from './interfaces/form-responses.interface';
 import {
   mapFormSubmission,
+  mapFormTemplateToAdminDetail,
   mapFormTemplateToSchema,
   mapFormTemplateToSummary,
 } from './utils/form-mappers.util';
+import {
+  assertCannotDemoteSectionWithChildren,
+  assertSectionConstraints,
+  assertValidParent,
+  getQuestionId,
+  QuestionWithId,
+  rerootChildrenOnSectionDelete,
+  resolveParentId,
+  validateQuestionTree,
+} from './utils/form-question-tree.util';
+import {
+  throwIfFormNotAcceptingSubmission,
+  throwIfSubmissionCapReached,
+} from './utils/form-availability.util';
+import { StorageService } from '../storage/storage.service';
+import {
+  FORM_SHAREABLE_URL_BASE,
+  FORM_SHAREABLE_URL_YEAR,
+} from './constants/form-shareable-url.constant';
+import { generateAnonymousSubmissionUserId } from './constants/forms-dev-user.constant';
+import {
+  formTemplateIdFilter,
+  toFormTemplateObjectId,
+} from './utils/form-template-id-filter.util';
 
 @Injectable()
 export class FormsService {
@@ -43,19 +76,157 @@ export class FormsService {
     private formTemplateModel: Model<FormTemplateDocument>,
     @InjectModel(FormSubmission.name)
     private formSubmissionModel: Model<FormSubmissionDocument>,
+    private storageService: StorageService,
   ) {}
 
+  private slugifyFromName(name: string): string {
+    const slug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    return slug || 'form';
+  }
+
+  private slugifyFromNameForAr(name: string): string {
+    const slug = name
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    return slug || 'form';
+  }
+
+  private buildShareableUrlForLocale(
+    targetRole: TargetRole,
+    slugSegment: string,
+  ): string {
+    if (!slugSegment?.trim()) return '';
+    const encoded = encodeURIComponent(slugSegment.trim());
+    return `${FORM_SHAREABLE_URL_BASE}/${targetRole}/${FORM_SHAREABLE_URL_YEAR}/${encoded}`;
+  }
+
+  private buildShareableUrls(
+    targetRole: TargetRole,
+    slug: { en?: string; ar?: string },
+  ): { en: string; ar: string } {
+    return {
+      en: this.buildShareableUrlForLocale(targetRole, slug?.en ?? ''),
+      ar: this.buildShareableUrlForLocale(targetRole, slug?.ar ?? ''),
+    };
+  }
+
+  private slugConflictMessage =
+    'A form with this slug already exists. Please use a different slug.';
+
+  private async assertSlugEnAvailable(
+    slug: string,
+    excludeId?: Types.ObjectId,
+  ): Promise<void> {
+    if (!slug?.trim()) return;
+    const query: Record<string, unknown> = { 'slug.en': slug.trim() };
+    if (excludeId) query['_id'] = { $ne: excludeId };
+    const exists = await this.formTemplateModel.findOne(query).exec();
+    if (exists) {
+      throw new ConflictException(this.slugConflictMessage);
+    }
+  }
+
+  private async assertSlugArAvailable(
+    slug: string,
+    excludeId?: Types.ObjectId,
+  ): Promise<void> {
+    if (!slug?.trim()) return;
+    const query: Record<string, unknown> = { 'slug.ar': slug.trim() };
+    if (excludeId) query['_id'] = { $ne: excludeId };
+    const exists = await this.formTemplateModel.findOne(query).exec();
+    if (exists) {
+      throw new ConflictException(this.slugConflictMessage);
+    }
+  }
+
+  private async ensureUniqueSlugEn(
+    base: string,
+    excludeId?: Types.ObjectId,
+  ): Promise<string> {
+    if (!base?.trim()) return '';
+    let candidate = base.trim();
+    let n = 1;
+    while (true) {
+      const query: Record<string, unknown> = { 'slug.en': candidate };
+      if (excludeId) query['_id'] = { $ne: excludeId };
+      const exists = await this.formTemplateModel.findOne(query).exec();
+      if (!exists) return candidate;
+      candidate = `${base.trim()}-${++n}`;
+    }
+  }
+
+  private async ensureUniqueSlugAr(
+    base: string,
+    excludeId?: Types.ObjectId,
+  ): Promise<string> {
+    if (!base?.trim()) return '';
+    let candidate = base.trim();
+    let n = 1;
+    while (true) {
+      const query: Record<string, unknown> = { 'slug.ar': candidate };
+      if (excludeId) query['_id'] = { $ne: excludeId };
+      const exists = await this.formTemplateModel.findOne(query).exec();
+      if (!exists) return candidate;
+      candidate = `${base.trim()}-${++n}`;
+    }
+  }
+
   async create(dto: CreateFormTemplateDto): Promise<FormTemplateSummaryResponse> {
+    let slugEn = dto.slug?.en?.trim() ?? '';
+    let slugAr = dto.slug?.ar?.trim() ?? '';
+    if (slugEn) {
+      await this.assertSlugEnAvailable(slugEn);
+    }
+    if (slugAr) {
+      await this.assertSlugArAvailable(slugAr);
+    }
+    const slug =
+      slugEn || slugAr ? { en: slugEn, ar: slugAr } : undefined;
+    let shareable_url: { en: string; ar: string } | undefined;
+    if (slug) {
+      shareable_url = this.buildShareableUrls(dto.targetRole, {
+        en: slugEn,
+        ar: slugAr,
+      });
+    } else if (dto.shareable_url && (dto.shareable_url.en || dto.shareable_url.ar)) {
+      shareable_url = {
+        en: dto.shareable_url.en ?? '',
+        ar: dto.shareable_url.ar ?? '',
+      };
+    }
     const created = new this.formTemplateModel({
-      ...dto,
+      name: dto.name,
+      description: dto.description,
+      targetRole: dto.targetRole,
+      starts_at: dto.starts_at ? new Date(dto.starts_at) : undefined,
+      ends_at: dto.ends_at ? new Date(dto.ends_at) : undefined,
+      expires_at: dto.expires_at ? new Date(dto.expires_at) : undefined,
+      max_submissions: dto.max_submissions,
       status: 'Draft' as FormStatus,
+      ...(slug && { slug }),
+      ...(shareable_url && { shareable_url }),
     });
-    const saved = await created.save();
-    return mapFormTemplateToSummary(saved);
+    try {
+      const saved = await created.save();
+      return mapFormTemplateToSummary(saved);
+    } catch (e) {
+      this.handleSlugConflict(e);
+    }
   }
 
   async findAll(): Promise<FormTemplateSummaryResponse[]> {
-    const docs = await this.formTemplateModel.find().sort({ createdAt: -1 }).exec();
+    const docs = await this.formTemplateModel
+      .find()
+      .sort({ createdAt: -1 })
+      .exec();
     return docs.map((d) => mapFormTemplateToSummary(d));
   }
 
@@ -70,15 +241,88 @@ export class FormsService {
     return doc;
   }
 
+  async findOneForAdmin(id: string): Promise<FormTemplateAdminDetailResponse> {
+    const doc = await this.findOne(id);
+    return mapFormTemplateToAdminDetail(doc);
+  }
+
   async update(
     id: string,
     dto: UpdateFormTemplateDto,
   ): Promise<FormTemplateSummaryResponse> {
     const template = await this.findOne(id);
     this.ensureDraft(template);
-    Object.assign(template, dto);
-    const saved = await template.save();
-    return mapFormTemplateToSummary(saved);
+    const excludeId = new Types.ObjectId(id);
+    if (dto.name !== undefined) template.name = dto.name as FormTemplate['name'];
+    if (dto.description !== undefined) {
+      template.description = dto.description as FormTemplate['description'];
+    }
+    const targetRoleChanged =
+      dto.targetRole !== undefined && dto.targetRole !== template.targetRole;
+    if (dto.targetRole !== undefined) template.targetRole = dto.targetRole;
+    if (dto.starts_at !== undefined) {
+      template.starts_at = dto.starts_at ? new Date(dto.starts_at) : undefined;
+    }
+    if (dto.ends_at !== undefined) {
+      template.ends_at = dto.ends_at ? new Date(dto.ends_at) : undefined;
+    }
+    if (dto.expires_at !== undefined) {
+      template.expires_at = dto.expires_at ? new Date(dto.expires_at) : undefined;
+    }
+    if (dto.max_submissions !== undefined) {
+      template.max_submissions = dto.max_submissions;
+    }
+    const currentSlugEn = template.slug?.en?.trim() ?? '';
+    const currentSlugAr = template.slug?.ar?.trim() ?? '';
+    const incomingSlugEn = dto.slug?.en?.trim() ?? '';
+    const incomingSlugAr = dto.slug?.ar?.trim() ?? '';
+    const slugEnChanged = dto.slug && 'en' in dto.slug && incomingSlugEn !== currentSlugEn;
+    const slugArChanged = dto.slug && 'ar' in dto.slug && incomingSlugAr !== currentSlugAr;
+    let finalSlugEn = currentSlugEn;
+    let finalSlugAr = currentSlugAr;
+    if (slugEnChanged && incomingSlugEn) {
+      await this.assertSlugEnAvailable(incomingSlugEn, excludeId);
+      finalSlugEn = incomingSlugEn;
+      template.slug = template.slug ?? { en: '', ar: '' };
+      template.slug.en = finalSlugEn;
+    } else if (dto.slug?.en !== undefined) {
+      template.slug = template.slug ?? { en: '', ar: '' };
+      template.slug.en = incomingSlugEn;
+      finalSlugEn = incomingSlugEn;
+    }
+    if (slugArChanged && incomingSlugAr) {
+      await this.assertSlugArAvailable(incomingSlugAr, excludeId);
+      finalSlugAr = incomingSlugAr;
+      template.slug = template.slug ?? { en: '', ar: '' };
+      template.slug.ar = finalSlugAr;
+    } else if (dto.slug?.ar !== undefined) {
+      template.slug = template.slug ?? { en: '', ar: '' };
+      template.slug.ar = incomingSlugAr;
+      finalSlugAr = incomingSlugAr;
+    }
+    template.shareable_url = template.shareable_url ?? { en: '', ar: '' };
+    if ((slugEnChanged || targetRoleChanged) && finalSlugEn) {
+      template.shareable_url.en = this.buildShareableUrlForLocale(
+        template.targetRole,
+        finalSlugEn,
+      );
+    } else if (dto.shareable_url?.en !== undefined && !slugEnChanged) {
+      template.shareable_url.en = dto.shareable_url.en ?? '';
+    }
+    if ((slugArChanged || targetRoleChanged) && finalSlugAr) {
+      template.shareable_url.ar = this.buildShareableUrlForLocale(
+        template.targetRole,
+        finalSlugAr,
+      );
+    } else if (dto.shareable_url?.ar !== undefined && !slugArChanged) {
+      template.shareable_url.ar = dto.shareable_url.ar ?? '';
+    }
+    try {
+      const saved = await template.save();
+      return mapFormTemplateToSummary(saved);
+    } catch (e) {
+      this.handleSlugConflict(e);
+    }
   }
 
   async remove(id: string): Promise<void> {
@@ -93,17 +337,28 @@ export class FormsService {
   ): Promise<FormTemplateSchemaResponse> {
     const template = await this.findOne(formId);
     this.ensureDraft(template);
+    const questions = template.questions as QuestionWithId[];
+    assertSectionConstraints(dto.type, dto.isRequired, dto.options);
+    assertValidParent(questions, dto.parentId);
     const question: Partial<FormQuestion> = {
       orderIndex: dto.orderIndex,
       type: dto.type,
+      parentId: resolveParentId(dto.parentId),
       title: dto.title,
       helpText: dto.helpText,
-      isRequired: dto.isRequired ?? false,
+      isRequired:
+        dto.type === 'section' ? false : (dto.isRequired ?? false),
       config: dto.config ?? {},
-      options: (dto.options ?? []).map((o) => ({
-        orderIndex: o.orderIndex,
-        label: o.label,
-      } as QuestionOption)),
+      options:
+        dto.type === 'section'
+          ? []
+          : (dto.options ?? []).map(
+              (o) =>
+                ({
+                  orderIndex: o.orderIndex,
+                  label: o.label,
+                }) as QuestionOption,
+            ),
     };
     template.questions.push(question as FormQuestion);
     const saved = await template.save();
@@ -118,22 +373,44 @@ export class FormsService {
     const template = await this.findOne(formId);
     this.ensureDraft(template);
     const idx = template.questions.findIndex(
-      (q) => (q as { _id?: { toString(): string } })._id?.toString() === questionId,
+      (q) =>
+        (q as { _id?: { toString(): string } })._id?.toString() === questionId,
     );
     if (idx === -1) {
       throw new NotFoundException('Question not found');
     }
-    if (dto.orderIndex !== undefined) template.questions[idx].orderIndex = dto.orderIndex;
+    const questions = template.questions as QuestionWithId[];
+    const current = questions[idx];
+    const nextType = dto.type ?? current.type;
+    if (dto.type !== undefined) {
+      assertCannotDemoteSectionWithChildren(questions, questionId, nextType);
+    }
+    if (dto.orderIndex !== undefined)
+      template.questions[idx].orderIndex = dto.orderIndex;
     if (dto.type !== undefined) template.questions[idx].type = dto.type;
     if (dto.title !== undefined) template.questions[idx].title = dto.title;
-    if (dto.helpText !== undefined) template.questions[idx].helpText = dto.helpText;
-    if (dto.isRequired !== undefined) template.questions[idx].isRequired = dto.isRequired;
+    if (dto.helpText !== undefined)
+      template.questions[idx].helpText = dto.helpText;
+    if (dto.isRequired !== undefined)
+      template.questions[idx].isRequired = dto.isRequired;
     if (dto.config !== undefined) template.questions[idx].config = dto.config;
     if (dto.options !== undefined) {
       template.questions[idx].options = dto.options.map((o) => ({
         orderIndex: o.orderIndex,
         label: o.label,
       })) as unknown as QuestionOption[];
+    }
+    if ('parentId' in dto) {
+      assertValidParent(questions, dto.parentId, questionId);
+      template.questions[idx].parentId = resolveParentId(dto.parentId);
+    }
+    const mergedType = template.questions[idx].type;
+    const mergedRequired = template.questions[idx].isRequired;
+    const mergedOptions = template.questions[idx].options;
+    assertSectionConstraints(mergedType, mergedRequired, mergedOptions);
+    if (mergedType === 'section') {
+      template.questions[idx].isRequired = false;
+      template.questions[idx].options = [];
     }
     const saved = await template.save();
     return mapFormTemplateToSchema(saved);
@@ -146,10 +423,21 @@ export class FormsService {
     const template = await this.findOne(formId);
     this.ensureDraft(template);
     const idx = template.questions.findIndex(
-      (q) => (q as { _id?: { toString(): string } })._id?.toString() === questionId,
+      (q) =>
+        (q as { _id?: { toString(): string } })._id?.toString() === questionId,
     );
     if (idx === -1) {
       throw new NotFoundException('Question not found');
+    }
+    const questions = template.questions as QuestionWithId[];
+    const removed = questions[idx];
+    const removedId = getQuestionId(removed);
+    if (removed.type === 'section' && removedId) {
+      rerootChildrenOnSectionDelete(
+        questions,
+        removedId,
+        removed.parentId ?? null,
+      );
     }
     template.questions.splice(idx, 1);
     const saved = await template.save();
@@ -159,10 +447,33 @@ export class FormsService {
   async publish(id: string): Promise<FormTemplateSummaryResponse> {
     const template = await this.findOne(id);
     this.ensureDraft(template);
+    validateQuestionTree(template.questions as QuestionWithId[]);
+    const excludeId = new Types.ObjectId(id);
+    let slugEn = template.slug?.en?.trim() ?? '';
+    let slugAr = template.slug?.ar?.trim() ?? '';
+    if (!slugEn && template.name?.en) {
+      const base = this.slugifyFromName(template.name.en);
+      slugEn = await this.ensureUniqueSlugEn(base, excludeId);
+    }
+    if (!slugAr && template.name?.ar) {
+      const base = this.slugifyFromNameForAr(template.name.ar);
+      slugAr = await this.ensureUniqueSlugAr(base, excludeId);
+    }
+    if (slugEn || slugAr) {
+      template.slug = { en: slugEn, ar: slugAr };
+      template.shareable_url = this.buildShareableUrls(template.targetRole, {
+        en: slugEn,
+        ar: slugAr,
+      });
+    }
     template.status = 'Published' as FormStatus;
     template.publishedAt = new Date();
-    const saved = await template.save();
-    return mapFormTemplateToSummary(saved);
+    try {
+      const saved = await template.save();
+      return mapFormTemplateToSummary(saved);
+    } catch (e) {
+      this.handleSlugConflict(e);
+    }
   }
 
   async unpublish(id: string): Promise<FormTemplateSummaryResponse> {
@@ -184,6 +495,25 @@ export class FormsService {
     return mapFormTemplateToSchema(template);
   }
 
+  async getFormSchemaBySlug(slug: string): Promise<FormTemplateSchemaResponse> {
+    const normalized = slug.trim();
+    if (!normalized) {
+      throw new BadRequestException('Slug is required');
+    }
+    let template = await this.formTemplateModel
+      .findOne({ 'slug.en': normalized, status: 'Published' })
+      .exec();
+    if (!template) {
+      template = await this.formTemplateModel
+        .findOne({ 'slug.ar': normalized, status: 'Published' })
+        .exec();
+    }
+    if (!template) {
+      throw new NotFoundException('Form not found');
+    }
+    return mapFormTemplateToSchema(template);
+  }
+
   async listAvailableForms(
     userRole: TargetRole,
   ): Promise<FormTemplateSummaryResponse[]> {
@@ -194,45 +524,69 @@ export class FormsService {
     return templates.map((t) => mapFormTemplateToSummary(t));
   }
 
-  async submitForm(
+  /**
+   * Stores a file under users/{userId}/forms/{formId}/... without creating Media.
+   * Call only when the form is accepting submissions (e.g. after FormAvailabilityGuard).
+   */
+  async uploadFormDocument(
     formId: string,
-    userId: string,
+    file: Express.Multer.File,
+  ): Promise<{ url: string }> {
+    const userId = generateAnonymousSubmissionUserId().toString();
+    return this.storageService.uploadFormUserFile({ userId, formId, file });
+  }
+
+  async saveDraft(
+    formId: string,
     dto: SubmitFormDto,
   ): Promise<FormSubmissionResponse> {
-    const template = await this.findOne(formId);
-    if (template.status !== 'Published') {
-      throw new BadRequestException('Form is not published');
+    const template = await this.assertFormAcceptingSubmission(formId);
+    const userObjectId = generateAnonymousSubmissionUserId();
+    try {
+      validateDraftAnswers(template, dto.answers);
+    } catch (err) {
+      if (err instanceof AnswerValidationError) {
+        throw new BadRequestException({
+          message: err.message,
+          questionId: err.questionId,
+        });
+      }
+      throw err;
     }
-    const userObjectId = new Types.ObjectId(userId);
-    const existing = await this.formSubmissionModel
-      .findOne({
-        formTemplateId: new Types.ObjectId(formId),
-        userId: userObjectId,
-      })
-      .exec();
-    if (existing) {
-      throw new ConflictException('You have already submitted this form');
+    const answers = this.buildNormalizedSubmissionAnswers(template, dto.answers);
+    const created = new this.formSubmissionModel({
+      formTemplateId: toFormTemplateObjectId(formId),
+      userId: userObjectId,
+      status: 'draft',
+      answers,
+    });
+    const saved = await created.save();
+    return mapFormSubmission(saved);
+  }
+
+  async submitForm(
+    formId: string,
+    dto: SubmitFormDto,
+  ): Promise<FormSubmissionResponse> {
+    const template = await this.assertFormAcceptingSubmission(formId);
+    const userObjectId = generateAnonymousSubmissionUserId();
+    try {
+      validateAnswers(template, dto.answers);
+    } catch (err) {
+      if (err instanceof AnswerValidationError) {
+        throw new BadRequestException({
+          message: err.message,
+          questionId: err.questionId,
+        });
+      }
+      throw err;
     }
-    validateAnswers(template, dto.answers);
-    const qWithId = template.questions as Array<
-      FormQuestion & { _id: Types.ObjectId }
-    >;
-    const answers = qWithId
-      .filter((q) => {
-        const qId = q._id?.toString();
-        return qId && dto.answers[qId] !== undefined && dto.answers[qId] !== '';
-      })
-      .map((q) => {
-        const qId = q._id.toString();
-        const raw = dto.answers[qId];
-        const value = normalizeAnswerValue(
-          q as { _id?: Types.ObjectId } & FormQuestion,
-          raw,
-        );
-        return { questionId: q._id, value };
-      });
+    const answers = this.buildNormalizedSubmissionAnswers(template, dto.answers);
+    const submittedCount = await this.countSubmissions(formId);
+    throwIfSubmissionCapReached(template, submittedCount);
+
     const submission = new this.formSubmissionModel({
-      formTemplateId: formId,
+      formTemplateId: toFormTemplateObjectId(formId),
       userId: userObjectId,
       status: 'submitted',
       submittedAt: new Date(),
@@ -242,22 +596,51 @@ export class FormsService {
     return mapFormSubmission(saved);
   }
 
+  private buildNormalizedSubmissionAnswers(
+    template: FormTemplateDocument,
+    answers: Record<string, unknown>,
+  ): SubmissionAnswer[] {
+    const qWithId = template.questions as Array<
+      FormQuestion & { _id: Types.ObjectId }
+    >;
+    return qWithId
+      .filter((q) => {
+        const qId = q._id?.toString();
+        return qId && answers[qId] !== undefined && answers[qId] !== '';
+      })
+      .map((q) => {
+        const qId = q._id.toString();
+        const raw = answers[qId];
+        const value = normalizeAnswerValue(
+          q as { _id?: Types.ObjectId } & FormQuestion,
+          raw,
+        );
+        return { questionId: q._id, value } as SubmissionAnswer;
+      });
+  }
+
   async getMySubmission(
     formId: string,
     userId: string,
-  ): Promise<{ schema: object; answers: Record<string, unknown> }> {
+  ): Promise<{
+    schema: object;
+    answers: Record<string, unknown>;
+    status: SubmissionStatus;
+  }> {
     const template = await this.findOne(formId);
     if (template.status !== 'Published') {
       throw new BadRequestException('Form is not published');
     }
     const submission = await this.formSubmissionModel
       .findOne({
-        formTemplateId: new Types.ObjectId(formId),
+        ...formTemplateIdFilter(formId),
         userId: new Types.ObjectId(userId),
       })
       .exec();
     if (!submission) {
-      throw new NotFoundException('You have not submitted this form');
+      throw new NotFoundException(
+        'You have no saved draft or submission for this form',
+      );
     }
     const schema = mapFormTemplateToSchema(template);
     const answers: Record<string, unknown> = {};
@@ -266,13 +649,32 @@ export class FormsService {
       if (qId) {
         let v: unknown = a.value;
         if (v instanceof Date) v = v.toISOString();
-        if (Array.isArray(v))
+        if (Array.isArray(v)) {
           v = v.map((x) => (x instanceof Types.ObjectId ? x.toString() : x));
-        else if (v instanceof Types.ObjectId) v = v.toString();
+        } else if (v instanceof Types.ObjectId) {
+          v = v.toString();
+        } else if (v && typeof v === 'object') {
+          const obj = v as Record<string, unknown>;
+          const result: Record<string, unknown> = {};
+          for (const [key, val] of Object.entries(obj)) {
+            if (val instanceof Date) {
+              result[key] = val.toISOString();
+            } else if (val instanceof Types.ObjectId) {
+              result[key] = val.toString();
+            } else {
+              result[key] = val;
+            }
+          }
+          v = result;
+        }
         answers[qId] = v;
       }
     }
-    return { schema, answers };
+    return {
+      schema,
+      answers,
+      status: (submission.status ?? 'submitted') as SubmissionStatus,
+    };
   }
 
   async listSubmissions(
@@ -282,16 +684,21 @@ export class FormsService {
   ): Promise<PaginatedResult<FormSubmissionResponse>> {
     await this.findOne(formId);
     const skip = (page - 1) * limit;
+    const filter = {
+      ...formTemplateIdFilter(formId),
+      $or: [
+        { status: 'submitted' },
+        { status: { $exists: false } },
+      ],
+    };
     const [items, total] = await Promise.all([
       this.formSubmissionModel
-        .find({ formTemplateId: new Types.ObjectId(formId) })
+        .find(filter)
         .sort({ submittedAt: -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
-      this.formSubmissionModel
-        .countDocuments({ formTemplateId: new Types.ObjectId(formId) })
-        .exec(),
+      this.formSubmissionModel.countDocuments(filter).exec(),
     ]);
     const mappedItems = items.map((s) => mapFormSubmission(s));
     return buildPaginatedResult(mappedItems, total, page, limit);
@@ -300,7 +707,10 @@ export class FormsService {
   async getSubmission(
     formId: string,
     submissionId: string,
-  ): Promise<{ schema: FormTemplateSchemaResponse; submission: FormSubmissionResponse }> {
+  ): Promise<{
+    schema: FormTemplateSchemaResponse;
+    submission: FormSubmissionResponse;
+  }> {
     const template = await this.findOne(formId);
     if (!Types.ObjectId.isValid(submissionId)) {
       throw new BadRequestException('Invalid submission ID');
@@ -308,7 +718,11 @@ export class FormsService {
     const submission = await this.formSubmissionModel
       .findOne({
         _id: new Types.ObjectId(submissionId),
-        formTemplateId: new Types.ObjectId(formId),
+        ...formTemplateIdFilter(formId),
+        $or: [
+          { status: 'submitted' },
+          { status: { $exists: false } },
+        ],
       })
       .exec();
     if (!submission) {
@@ -319,6 +733,30 @@ export class FormsService {
     return { schema, submission: mappedSubmission };
   }
 
+  /**
+   * Used by FormAvailabilityGuard and submit flow. Loads template + submission count and enforces rules.
+   */
+  async assertFormAcceptingSubmission(
+    formId: string,
+  ): Promise<FormTemplateDocument> {
+    const template = await this.findOne(formId);
+    const count = await this.countSubmissions(formId);
+    throwIfFormNotAcceptingSubmission(template, count);
+    return template;
+  }
+
+  private async countSubmissions(formId: string): Promise<number> {
+    return this.formSubmissionModel
+      .countDocuments({
+        ...formTemplateIdFilter(formId),
+        $or: [
+          { status: 'submitted' },
+          { status: { $exists: false } },
+        ],
+      })
+      .exec();
+  }
+
   private ensureDraft(template: FormTemplateDocument): void {
     if (template.status === 'Published') {
       throw new BadRequestException(
@@ -327,4 +765,16 @@ export class FormsService {
     }
   }
 
+  private isMongoDuplicateKeyError(err: unknown): boolean {
+    if (!err || typeof err !== 'object') return false;
+    const code = (err as { code?: unknown }).code;
+    return typeof code === 'number' && code === 11000;
+  }
+
+  private handleSlugConflict(err: unknown): never {
+    if (this.isMongoDuplicateKeyError(err)) {
+      throw new ConflictException(this.slugConflictMessage);
+    }
+    throw err;
+  }
 }

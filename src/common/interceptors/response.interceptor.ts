@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
+  StreamableFile,
 } from '@nestjs/common';
 import { Observable, map } from 'rxjs';
 import {
@@ -25,6 +26,11 @@ export class ResponseInterceptor<T> implements NestInterceptor<
 
     return next.handle().pipe(
       map((data) => {
+        // Binary downloads (e.g. PDF export) must not be wrapped in the JSON envelope.
+        if (data instanceof StreamableFile) {
+          return data as unknown as ApiResponse<T>;
+        }
+
         if (
           data &&
           typeof data === 'object' &&
@@ -91,7 +97,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<
 
   private toPaginatedData(
     candidate: Record<string, unknown>,
-  ): PaginatedData<unknown> {
+  ): PaginatedData<unknown> & Record<string, unknown> {
     const items = (candidate.items ?? candidate.docs ?? []) as unknown[];
     const total = Number(candidate.total ?? candidate.totalDocs ?? 0);
     const page = Number(candidate.page ?? candidate.currentPage ?? 1);
@@ -104,7 +110,21 @@ export class ResponseInterceptor<T> implements NestInterceptor<
       candidate.hasPreviousPage ?? candidate.hasPrevPage ?? page > 1,
     );
 
-    return {
+    const paginationKeys = new Set([
+      'items',
+      'docs',
+      'total',
+      'totalDocs',
+      'page',
+      'currentPage',
+      'limit',
+      'totalPages',
+      'hasNextPage',
+      'hasPreviousPage',
+      'hasPrevPage',
+    ]);
+
+    const result: PaginatedData<unknown> & Record<string, unknown> = {
       items,
       total,
       page,
@@ -113,6 +133,14 @@ export class ResponseInterceptor<T> implements NestInterceptor<
       hasNextPage,
       hasPreviousPage,
     };
+
+    for (const [key, value] of Object.entries(candidate)) {
+      if (!paginationKeys.has(key)) {
+        result[key] = value;
+      }
+    }
+
+    return result;
   }
 
   private getDefaultMessage(method: string): string {

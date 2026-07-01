@@ -12,7 +12,6 @@ export function getBasename(filename: string): string {
   return lastDot > 0 ? filename.slice(0, lastDot) : filename;
 }
 
-
 export function getExtensionFromMime(mime: string): string {
   if (!mime) return '';
   return MIME_TO_EXTENSION[mime.toLowerCase()] ?? '';

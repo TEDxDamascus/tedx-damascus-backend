@@ -6,83 +6,63 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { ConfigType } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
-import { Model } from 'mongoose';
-import { appConfig } from '../common/config/app.config';
+import { Model, Types } from 'mongoose';
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
 import { PaginatedResult } from '../common/pagination/interfaces/paginated-result.interface';
 import { buildPaginatedResult } from '../common/pagination/utils/pagination.util';
-import { UploadImageResultDto } from './dto/upload-image-result.dto';
+import { UploadFileResultDto } from './dto/upload-file-result.dto';
 import { Media, MediaDocument } from './entities/media.entity';
+import type { StorageProvider } from './providers/storage-provider.interface';
+import { STORAGE_PROVIDER } from './providers/storage-provider.token';
 import { getBasename, getDisplayName } from './utils/filename.util';
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  private readonly supabase: SupabaseClient;
-  private readonly bucketName: string;
 
   constructor(
-    @Inject(appConfig.KEY)
-    private readonly config: ConfigType<typeof appConfig>,
+    @Inject(STORAGE_PROVIDER)
+    private readonly storageProvider: StorageProvider,
     @InjectModel(Media.name)
     private readonly mediaModel: Model<MediaDocument>,
-  ) {
-    const url = this.config.supabaseProjectUrl;
-    const key = this.config.supabaseAnonKey;
-    const bucket = this.config.supabaseStorageName;
+  ) {}
 
-    if (!url || !key || !bucket) {
-      throw new Error(
-        'Missing Supabase config: SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY, and SUPABASE_STORAGE_NAME must be set',
-      );
-    }
-
-    this.supabase = createClient(url, key);
-    this.bucketName = bucket;
-  }
-
-  async uploadImage(file: Express.Multer.File): Promise<UploadImageResultDto> {
+  async uploadFile(file: Express.Multer.File): Promise<UploadFileResultDto> {
     if (!file?.buffer && !file?.originalname) {
-      this.logger.warn('uploadImage called with no file');
+      this.logger.warn('uploadFile called with no file');
       throw new BadRequestException('No file provided');
     }
 
-    const safeName = (file.originalname || 'image')
+    const safeName = (file.originalname || 'file')
       .replace(/[^a-zA-Z0-9.-]/g, '_')
       .slice(0, 100);
-    const path = `images/${randomUUID()}-${safeName}`;
+    const path = `uploads/${randomUUID()}-${safeName}`;
 
     this.logger.debug(
-      `Uploading to bucket=${this.bucketName} path=${path} size=${file.size} mimetype=${file.mimetype}`,
+      `Uploading via driver=${this.storageProvider.driver} path=${path} size=${file.size} mimetype=${file.mimetype}`,
     );
 
-    const { data, error } = await this.supabase.storage
-      .from(this.bucketName)
-      .upload(path, file.buffer, {
-        contentType: file.mimetype || 'application/octet-stream',
-        upsert: false,
+    try {
+      await this.storageProvider.upload_object({
+        key: path,
+        body: file.buffer,
+        content_type: file.mimetype || 'application/octet-stream',
       });
-
-    if (error) {
-      this.logger.error(`Storage upload failed: ${error.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Storage upload failed: ${message}`);
       this.logger.error(
-        `Context: bucket=${this.bucketName} path=${path} errorName=${error.name} details=${JSON.stringify(error)}`,
+        `Context: driver=${this.storageProvider.driver} path=${path} details=${JSON.stringify(err)}`,
       );
-      throw new InternalServerErrorException(
-        `Storage upload failed: ${error.message}`,
-      );
+      throw new InternalServerErrorException(`Storage upload failed: ${message}`);
     }
 
-    const { data: urlData } = this.supabase.storage
-      .from(this.bucketName)
-      .getPublicUrl(data.path);
+    const publicUrl = this.storageProvider.get_public_url(path);
 
     this.logger.log(
-      `Upload succeeded path=${data.path} url=${urlData.publicUrl}`,
+      `Upload succeeded path=${path} url=${publicUrl}`,
     );
 
     const bytes = file.size ?? 0;
@@ -93,7 +73,7 @@ export class StorageService {
 
     const media = await this.mediaModel.create({
       basename,
-      url: urlData.publicUrl,
+      url: publicUrl,
       format: mime,
       size: bytes,
       is_active: true,
@@ -113,6 +93,50 @@ export class StorageService {
       size: media.size,
       sizeInMb,
     };
+  }
+
+  /**
+   * Uploads a file for form submissions under users/{userId}/forms/{formId}/...
+   * Does not create a Media document (not listed in storage media APIs).
+   */
+  async uploadFormUserFile(params: {
+    userId: string;
+    formId: string;
+    file: Express.Multer.File;
+  }): Promise<{ url: string }> {
+    const { userId, formId, file } = params;
+    if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(formId)) {
+      throw new BadRequestException('Invalid userId or formId');
+    }
+    if (!file?.buffer && !file?.originalname) {
+      this.logger.warn('uploadFormUserFile called with no file');
+      throw new BadRequestException('No file provided');
+    }
+
+    const safeName = (file.originalname || 'file')
+      .replace(/[^a-zA-Z0-9.-]/g, '_')
+      .slice(0, 100);
+    const key = `users/${userId}/forms/${formId}/${randomUUID()}-${safeName}`;
+
+    this.logger.debug(
+      `Form upload driver=${this.storageProvider.driver} key=${key} size=${file.size} mimetype=${file.mimetype}`,
+    );
+
+    try {
+      await this.storageProvider.upload_object({
+        key,
+        body: file.buffer,
+        content_type: file.mimetype || 'application/octet-stream',
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Form storage upload failed: ${message}`);
+      throw new InternalServerErrorException(`Storage upload failed: ${message}`);
+    }
+
+    const url = this.storageProvider.get_public_url(key);
+    this.logger.log(`Form upload succeeded key=${key}`);
+    return { url };
   }
 
   async updateMediaBasename(id: string, basename: string): Promise<Media> {

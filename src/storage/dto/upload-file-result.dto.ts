@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 /**
- * Result of an image upload to Supabase storage.
+ * Result of a file upload to object storage.
  * Mirrors the Media schema (basename + format) with derived name and sizeInMb.
  */
-export class UploadImageResultDto {
+export class UploadFileResultDto {
   @ApiProperty({ description: 'Media document identifier' })
   id: string;
 
@@ -16,7 +16,7 @@ export class UploadImageResultDto {
   })
   name: string;
 
-  @ApiProperty({ description: 'Public URL of the uploaded image' })
+  @ApiProperty({ description: 'Public URL of the uploaded file' })
   url: string;
 
   @ApiProperty({
@@ -26,7 +26,7 @@ export class UploadImageResultDto {
   })
   createdAt: Date;
 
-  @ApiProperty({ example: 'image/jpeg', description: 'MIME type of the file' })
+  @ApiProperty({ example: 'application/pdf', description: 'MIME type of the file' })
   format: string;
 
   @ApiProperty({

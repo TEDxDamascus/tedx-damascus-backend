@@ -4,20 +4,66 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { ApiErrorResponse } from '../interfaces/api-response.interface';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
     const statusCode = this.getStatusCode(exception);
+    this.logException(exception, statusCode, request);
+
     const payload = this.buildErrorPayload(exception, statusCode);
 
     response.status(statusCode).json(payload);
+  }
+
+  private logException(
+    exception: unknown,
+    statusCode: number,
+    request: Request,
+  ): void {
+    const context = `${request.method} ${request.url}`;
+
+    if (exception instanceof HttpException) {
+      const response = exception.getResponse();
+      const detail =
+        typeof response === 'string'
+          ? response
+          : JSON.stringify(response);
+
+      if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
+        this.logger.error(
+          `[${statusCode}] ${context} ${exception.message} — ${detail}`,
+          exception.stack,
+        );
+      } else {
+        this.logger.warn(
+          `[${statusCode}] ${context} ${exception.message} — ${detail}`,
+        );
+      }
+      return;
+    }
+
+    if (exception instanceof Error) {
+      this.logger.error(
+        `[${statusCode}] ${context} ${exception.name}: ${exception.message}`,
+        exception.stack,
+      );
+      return;
+    }
+
+    this.logger.error(
+      `[${statusCode}] ${context} ${String(exception)}`,
+    );
   }
 
   private getStatusCode(exception: unknown): number {
@@ -32,12 +78,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
     statusCode: number,
   ): ApiErrorResponse {
     if (!(exception instanceof HttpException)) {
+      const isDev = process.env.NODE_ENV !== 'production';
       return {
         success: false,
         statusCode,
         message: 'Internal server error',
         error: 'INTERNAL_SERVER_ERROR',
-        details: null,
+        details: isDev ? this.serializeUnknownError(exception) : null,
       };
     }
 
@@ -159,5 +206,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
         .replace(/[^A-Z0-9]+/g, '_')
         .replace(/^_+|_+$/g, '') || 'REQUEST_FAILED'
     );
+  }
+
+  private serializeUnknownError(exception: unknown): {
+    name?: string;
+    message: string;
+  } {
+    if (exception instanceof Error) {
+      return {
+        name: exception.name,
+        message: exception.message,
+      };
+    }
+
+    return { message: String(exception) };
   }
 }

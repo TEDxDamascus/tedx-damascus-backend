@@ -4,10 +4,10 @@ import { EventsController } from './events.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { EventSchema } from './schema/event.schema';
 import { Media, MediaSchema } from '../storage/entities/media.entity';
-import { SpeakersModule } from 'src/speakers/speakers.module';
-import { IsExistingSpeakerConstrain } from 'src/common/decorators/is-existing-speaker.decorator';
-import { StorageModule } from 'src/storage/storage.module';
-import { IsExistingMediaConstrain } from 'src/common/decorators/is-existing-media.decorator';
+import { SpeakersModule } from '../speakers/speakers.module';
+import { IsExistingSpeakerConstrain } from '../common/decorators/is-existing-speaker.decorator';
+import { StorageModule } from '../storage/storage.module';
+import { IsExistingMediaConstrain } from '../common/decorators/is-existing-media.decorator';
 
 @Module({
   imports: [

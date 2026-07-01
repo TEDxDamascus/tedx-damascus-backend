@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Speaker, SpeakerSchema } from './schemas/speaker.schema';
 import { StorageModule } from 'src/storage/storage.module';
 import { IsExistingMediaConstrain } from 'src/common/decorators/is-existing-media.decorator';
+import { Media, MediaSchema } from 'src/storage/entities/media.entity';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { IsExistingMediaConstrain } from 'src/common/decorators/is-existing-medi
         name: Speaker.name,
         schema: SpeakerSchema,
       },
+      { name: Media.name, schema: MediaSchema },
     ]),
     StorageModule,
   ],

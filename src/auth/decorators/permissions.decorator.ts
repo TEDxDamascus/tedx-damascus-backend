@@ -4,4 +4,3 @@ import { UserPermission } from '../../users/entities/user.entity';
 export const PERMISSIONS_KEY = 'permissions';
 export const Permissions = (...permissions: UserPermission[]) =>
   SetMetadata(PERMISSIONS_KEY, permissions);
-

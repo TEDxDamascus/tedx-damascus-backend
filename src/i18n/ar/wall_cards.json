@@ -1,0 +1,29 @@
+{
+  "errors": {
+    "NO_ACTIVE_QUESTION": "لا يوجد سؤال نشط حالياً.",
+    "QUESTION_NOT_FOUND": "السؤال غير موجود.",
+    "QUESTION_EXPIRED": "انتهت صلاحية هذا السؤال.",
+    "QUESTION_NOT_ACCEPTING_ANSWERS": "هذا السؤال لا يقبل إجابات جديدة.",
+    "QUESTION_ARCHIVED": "تم أرشفة هذا السؤال.",
+    "INVALID_CATEGORY": "الفئة المحددة غير موجودة.",
+    "ANSWER_NOT_FOUND": "الإجابة غير موجودة.",
+    "ANSWER_NOT_PENDING": "يمكن الموافقة على الإجابات المعلقة فقط.",
+    "ANSWER_NOT_APPROVABLE": "لا يمكن الموافقة على هذه الإجابة.",
+    "EXPIRES_AT_MUST_BE_FUTURE": "يجب أن يكون تاريخ الانتهاء في المستقبل.",
+    "BLOCKED_WORD_DETECTED": "إجابتك تحتوي على لغة غير مسموح بها.",
+    "INVALID_FEATURED_ANSWERS": "إجابة أو أكثر من الإجابات المحددة غير صالحة لهذا السؤال.",
+    "TOO_MANY_FEATURED_ANSWERS": "يمكنك اختيار 3 إجابات مميزة كحد أقصى.",
+    "EMPTY_UPDATE_BODY": "يجب توفير حقل واحد على الأقل (النص أو الحالة).",
+    "CANNOT_DELETE_ACTIVE_QUESTION": "لا يمكن حذف السؤال النشط. قم بأرشفته أو انشر سؤالاً بديلاً أولاً.",
+    "CANNOT_ACTIVATE_EXPIRED": "لا يمكن تفعيل سؤال انتهت صلاحيته."
+  },
+  "success": {
+    "PUBLISHED": "تم نشر السؤال بنجاح.",
+    "ANSWER_SUBMITTED": "تم إرسال الإجابة بنجاح.",
+    "ANSWER_APPROVED": "تمت الموافقة على الإجابة بنجاح.",
+    "ANSWER_DECLINED": "تم رفض الإجابة بنجاح.",
+    "FEATURED_ANSWERS_UPDATED": "تم تحديث الإجابات المميزة بنجاح.",
+    "UPDATED": "تم التحديث بنجاح.",
+    "DELETED": "تم الحذف بنجاح."
+  }
+}

@@ -12,10 +12,16 @@ import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
 import { appConfig } from './common/config/app.config';
 import { FormsModule } from './forms/forms.module';
+import { EmailsModule } from './emails/emails.module';
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
 import { PartnersModule } from './partners/partners.module';
 import * as path from 'path';
 import { TeamModule } from './team/team.module';
+import { OrganizerModule } from './organizer/organizer.module';
+import { BlogReferencesModule } from './blog-references/blog-references.module';
+import { CategoriesModule } from './categories/categories.module';
+import { HomeSettingsModule } from './home-settings/home-settings.module';
+import { WallCardsModule } from './wall_cards/wall_cards.module';
 
 @Module({
   imports: [
@@ -49,7 +55,13 @@ import { TeamModule } from './team/team.module';
     StorageModule,
     FormsModule,
     PartnersModule,
-    TeamModule
+    TeamModule,
+    OrganizerModule,
+    BlogReferencesModule,
+    CategoriesModule,
+    HomeSettingsModule,
+    EmailsModule,
+    WallCardsModule
   ],
   controllers: [AppController],
   providers: [AppService],

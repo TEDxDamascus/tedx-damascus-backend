@@ -1,32 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { NotFoundException } from '@nestjs/common';
-import { appConfig } from '../common/config/app.config';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { StorageService } from './storage.service';
 import { Media } from './entities/media.entity';
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
+import { STORAGE_PROVIDER } from './providers/storage-provider.token';
 
 describe('StorageService', () => {
   let service: StorageService;
 
-  const mockAppConfig = {
-    mongodbUri: 'mongodb://localhost:27017/test',
-    supabaseProjectUrl: 'https://test.supabase.co',
-    supabaseAnonKey: 'test-anon-key',
-    supabaseStorageName: 'test-bucket',
-    port: 3000,
+  const mockStorageProvider = {
+    driver: 'supabase',
+    upload_object: jest.fn(),
+    ensure_prefix: jest.fn(),
+    get_public_url: jest.fn(),
   };
-
-  const mockSupabaseStorage = {
-    upload: jest.fn(),
-    getPublicUrl: jest.fn(),
-  };
-
-  const mockSupabaseClient = {
-    storage: {
-      from: jest.fn(() => mockSupabaseStorage),
-    },
-  } as any;
 
   const mockMediaModel = {
     create: jest.fn(),
@@ -35,13 +23,10 @@ describe('StorageService', () => {
     countDocuments: jest.fn(),
   };
 
-  jest.mock('@supabase/supabase-js', () => ({
-    createClient: () => mockSupabaseClient,
-  }));
-
   beforeEach(async () => {
-    mockSupabaseStorage.upload.mockReset();
-    mockSupabaseStorage.getPublicUrl.mockReset();
+    mockStorageProvider.upload_object.mockReset();
+    mockStorageProvider.ensure_prefix.mockReset();
+    mockStorageProvider.get_public_url.mockReset();
     mockMediaModel.create.mockReset();
     mockMediaModel.findOneAndUpdate.mockReset();
     mockMediaModel.find.mockReset();
@@ -50,7 +35,7 @@ describe('StorageService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StorageService,
-        { provide: appConfig.KEY, useValue: mockAppConfig },
+        { provide: STORAGE_PROVIDER, useValue: mockStorageProvider },
         { provide: getModelToken(Media.name), useValue: mockMediaModel },
       ],
     }).compile();
@@ -70,19 +55,18 @@ describe('StorageService', () => {
       buffer: Buffer.from('test'),
     } as any;
 
-    mockSupabaseStorage.upload.mockResolvedValue({
-      data: { path: 'images/uuid-test-image.jpg' },
-      error: null,
+    mockStorageProvider.upload_object.mockResolvedValue({
+      key: 'uploads/uuid-test-image.jpg',
     });
 
-    mockSupabaseStorage.getPublicUrl.mockReturnValue({
-      data: { publicUrl: 'https://public.url/images/uuid-test-image.jpg' },
-    });
+    mockStorageProvider.get_public_url.mockReturnValue(
+      'https://public.url/uploads/uuid-test-image.jpg',
+    );
 
     const mediaDoc = {
       id: 'media-id-123',
       basename: 'test-image',
-      url: 'https://public.url/images/uuid-test-image.jpg',
+      url: 'https://public.url/uploads/uuid-test-image.jpg',
       format: 'image/jpeg',
       size: file.size,
       createdAt: new Date('2024-01-01T00:00:00.000Z'),
@@ -90,13 +74,13 @@ describe('StorageService', () => {
 
     mockMediaModel.create.mockResolvedValue(mediaDoc);
 
-    const result = await service.uploadImage(file);
+    const result = await service.uploadFile(file);
 
-    expect(mockSupabaseStorage.upload).toHaveBeenCalled();
-    expect(mockSupabaseStorage.getPublicUrl).toHaveBeenCalled();
+    expect(mockStorageProvider.upload_object).toHaveBeenCalled();
+    expect(mockStorageProvider.get_public_url).toHaveBeenCalled();
     expect(mockMediaModel.create).toHaveBeenCalledWith({
       basename: 'test-image',
-      url: 'https://public.url/images/uuid-test-image.jpg',
+      url: 'https://public.url/uploads/uuid-test-image.jpg',
       format: 'image/jpeg',
       size: file.size,
       is_active: true,
@@ -113,11 +97,61 @@ describe('StorageService', () => {
     expect(typeof result.sizeInMb).toBe('number');
   });
 
+  it('uploadFormUserFile uploads under users/{userId}/forms/{formId}/ and does not create Media', async () => {
+    const userId = '507f1f77bcf86cd799439011';
+    const formId = '507f1f77bcf86cd799439012';
+    const file = {
+      originalname: 'document.pdf',
+      mimetype: 'application/pdf',
+      size: 512,
+      buffer: Buffer.from('pdf-bytes'),
+    } as Express.Multer.File;
+
+    mockStorageProvider.upload_object.mockResolvedValue({ key: 'stub' });
+    mockStorageProvider.get_public_url.mockReturnValue(
+      'https://cdn.example.com/users/507f1f77bcf86cd799439011/forms/507f1f77bcf86cd799439012/uuid-document.pdf',
+    );
+
+    const result = await service.uploadFormUserFile({ userId, formId, file });
+
+    expect(mockStorageProvider.upload_object).toHaveBeenCalledTimes(1);
+    const uploadArg = mockStorageProvider.upload_object.mock.calls[0][0];
+    expect(uploadArg.key).toMatch(
+      new RegExp(
+        `^users/${userId}/forms/${formId}/[0-9a-f-]{36}-document\\.pdf$`,
+        'i',
+      ),
+    );
+    expect(uploadArg.body).toEqual(file.buffer);
+    expect(uploadArg.content_type).toBe('application/pdf');
+    expect(mockMediaModel.create).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      url: 'https://cdn.example.com/users/507f1f77bcf86cd799439011/forms/507f1f77bcf86cd799439012/uuid-document.pdf',
+    });
+  });
+
+  it('uploadFormUserFile throws BadRequestException for invalid userId', async () => {
+    const file = {
+      originalname: 'a.txt',
+      mimetype: 'text/plain',
+      buffer: Buffer.from('x'),
+    } as Express.Multer.File;
+
+    await expect(
+      service.uploadFormUserFile({
+        userId: 'not-an-objectid',
+        formId: '507f1f77bcf86cd799439012',
+        file,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(mockStorageProvider.upload_object).not.toHaveBeenCalled();
+  });
+
   it('updates media basename and returns updated document', async () => {
     const mediaDoc = {
       id: 'media-id-123',
       basename: 'old-name',
-      url: 'https://public.url/images/uuid-test-image.jpg',
+      url: 'https://public.url/uploads/uuid-test-image.jpg',
       format: 'image/jpeg',
       size: 1024,
       createdAt: new Date('2024-01-01T00:00:00.000Z'),
@@ -127,10 +161,7 @@ describe('StorageService', () => {
       exec: jest.fn().mockResolvedValue({ ...mediaDoc, basename: 'new-name' }),
     });
 
-    const result = await service.updateMediaBasename(
-      mediaDoc.id,
-      'new-name',
-    );
+    const result = await service.updateMediaBasename(mediaDoc.id, 'new-name');
 
     expect(mockMediaModel.findOneAndUpdate).toHaveBeenCalledWith(
       { _id: mediaDoc.id, is_active: true },
@@ -154,7 +185,7 @@ describe('StorageService', () => {
     const mediaDoc = {
       id: 'media-id-123',
       basename: 'name',
-      url: 'https://public.url/images/uuid-test-image.jpg',
+      url: 'https://public.url/uploads/uuid-test-image.jpg',
       format: 'image/jpeg',
       size: 1024,
       is_active: true,
@@ -191,7 +222,7 @@ describe('StorageService', () => {
     const mediaDoc = {
       id: 'media-id-1',
       basename: 'name',
-      url: 'https://public.url/images/uuid-test-image.jpg',
+      url: 'https://public.url/uploads/uuid-test-image.jpg',
       format: 'image/jpeg',
       size: 1024,
       createdAt: new Date('2024-01-01T00:00:00.000Z'),
@@ -212,7 +243,9 @@ describe('StorageService', () => {
     const result = await service.listMedia(pagination);
 
     expect(mockMediaModel.find).toHaveBeenCalledWith({ is_active: true });
-    expect(mockMediaModel.countDocuments).toHaveBeenCalledWith({ is_active: true });
+    expect(mockMediaModel.countDocuments).toHaveBeenCalledWith({
+      is_active: true,
+    });
     expect(findChain.sort).toHaveBeenCalledWith({ createdAt: -1 });
     expect(findChain.skip).toHaveBeenCalledWith(pagination.skip);
     expect(findChain.limit).toHaveBeenCalledWith(pagination.limit);

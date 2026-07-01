@@ -6,7 +6,7 @@ import {
   ValidationArguments,
 } from 'class-validator';
 import { Injectable } from '@nestjs/common';
-import { SpeakersService } from 'src/speakers/speakers.service';
+import { SpeakersService } from '../../speakers/speakers.service';
 import { Types } from 'mongoose';
 
 @ValidatorConstraint({ async: true })

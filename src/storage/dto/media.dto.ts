@@ -7,7 +7,8 @@ export class MediaDto {
   id: string;
 
   @ApiProperty({
-    description: 'Basename only (no extension); use "name" for full display filename',
+    description:
+      'Basename only (no extension); use "name" for full display filename',
   })
   basename: string;
 
@@ -26,7 +27,10 @@ export class MediaDto {
   })
   createdAt: Date;
 
-  @ApiProperty({ example: 'image/jpeg', description: 'MIME type / format of the media' })
+  @ApiProperty({
+    example: 'image/jpeg',
+    description: 'MIME type / format of the media',
+  })
   format: string;
 
   @ApiProperty({
@@ -51,4 +55,3 @@ export class MediaDto {
     return dto;
   }
 }
-

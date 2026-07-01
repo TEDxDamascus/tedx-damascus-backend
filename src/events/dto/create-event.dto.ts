@@ -1,23 +1,30 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   ArrayNotEmpty,
   ArrayUnique,
+  IsArray,
   IsBoolean,
   IsDate,
   IsDefined,
+  IsEmail,
   IsEnum,
   IsMongoId,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
+  IsPhoneNumber,
   IsString,
   IsUrl,
+  Matches,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { EventType } from '../enums/event-type.enum';
 import { EventStatus } from '../enums/event-status.enum';
 import { TranslationDto } from '../../common/dto/translation.dto';
-import { IsExistingSpeaker } from 'src/common/decorators/is-existing-speaker.decorator';
-import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
+import { IsExistingSpeaker } from '../../common/decorators/is-existing-speaker.decorator';
+import { IsExistingMedia } from '../../common/decorators/is-existing-media.decorator';
 
 export class CreateEventDto {
   //! Title
@@ -48,6 +55,13 @@ export class CreateEventDto {
   @Type(() => TranslationDto)
   location!: TranslationDto;
 
+  @IsDefined()
+  @ValidateNested({
+    message: 'location description  must contain both en and ar translations',
+  })
+  @Type(() => TranslationDto)
+  location_description!: TranslationDto;
+
   //! Event Type (salon,main_event,meetup)
   @IsDefined()
   @IsEnum(EventType, {
@@ -57,11 +71,10 @@ export class CreateEventDto {
   event_type!: string;
 
   //! Event Image
-  @IsDefined()
+  @IsOptional()
   @IsUrl() // url is the right pick if you see an conflict
-  @IsNotEmpty()
   @IsExistingMedia()
-  event_image!: string;
+  event_image?: string;
 
   //! Event Status
   @IsDefined()
@@ -71,6 +84,43 @@ export class CreateEventDto {
   @IsNotEmpty()
   status!: string;
 
+  @IsDefined()
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @Type(() => Number)
+  @IsNumber({}, { each: true })
+  coordinates!: [number, number];
+
+  //! volunteer count
+
+  @IsDefined()
+  @Type(() => Number)
+  @IsNumber()
+  volunteers_count?: number;
+
+  @IsEmail()
+  location_email!: string;
+
+  @IsPhoneNumber()
+  location_phone!: string;
+
+  @IsDefined()
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^(0?[1-9]|1[0-2]):[0-5]\d (AM|PM)$/, {
+    message: 'start_time must be in h:mm AM/PM format (e.g. 4:00 AM)',
+  })
+  start_time!: string;
+
+  @IsDefined()
+  @IsNotEmpty()
+  @IsString()
+  @Matches(/^(0?[1-9]|1[0-2]):[0-5]\d (AM|PM)$/, {
+    message: 'end_time must be in h:mm AM/PM format (e.g. 10:00 PM)',
+  })
+  end_time!: string;
+
   //! Date
   @IsDefined()
   @IsNotEmpty()
@@ -79,11 +129,11 @@ export class CreateEventDto {
   date!: Date;
 
   //! Speakers
-  @IsDefined()
-  @IsMongoId({ each: true })
-  @ArrayNotEmpty()
-  @ArrayUnique({ message: 'Each speaker can only be added once' })
-  @IsExistingSpeaker({ each: true })
+  @IsDefined() //TODO UNCOMMENT
+  // @IsMongoId({ each: true })
+  // @ArrayNotEmpty()
+  // @ArrayUnique({ message: 'Each speaker can only be added once' })
+  // @IsExistingSpeaker({ each: true })
   speakers!: string[];
 
   //! is_deleted
@@ -93,14 +143,11 @@ export class CreateEventDto {
   is_deleted?: boolean;
 
   //! Gallery
-  @IsDefined()
+  @IsOptional()
   @IsUrl({}, { each: true })
-  @ArrayNotEmpty()
   @IsExistingMedia({
     each: true,
     message: 'One or more gallery images do not exist in storage',
   })
-  gallery!: string[];
+  gallery?: string[];
 }
-
-// i think we should add a photo module ?

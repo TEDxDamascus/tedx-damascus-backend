@@ -1,13 +1,23 @@
 import { Types } from 'mongoose';
 import { FormTemplateDocument } from '../entities/form-template.schema';
-import {
-  FormQuestion,
-  QuestionType,
-} from '../entities/form-question.schema';
+import { FormQuestion, QuestionType } from '../entities/form-question.schema';
 
 interface QuestionWithId extends FormQuestion {
   _id?: Types.ObjectId;
 }
+
+type AnswerValue =
+  | string
+  | number
+  | boolean
+  | string[]
+  | {
+      start?: string | Date;
+      end?: string | Date;
+      url?: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [key: string]: any;
+    };
 
 export class AnswerValidationError extends Error {
   constructor(
@@ -19,7 +29,10 @@ export class AnswerValidationError extends Error {
   }
 }
 
-function validateShortText(value: unknown, config: Record<string, unknown>): void {
+function validateShortText(
+  value: unknown,
+  config: Record<string, unknown>,
+): void {
   if (typeof value !== 'string') {
     throw new Error('Expected string');
   }
@@ -33,14 +46,14 @@ function validateShortText(value: unknown, config: Record<string, unknown>): voi
   }
 }
 
-function validateLongText(value: unknown, config: Record<string, unknown>): void {
+function validateLongText(
+  value: unknown,
+  config: Record<string, unknown>,
+): void {
   validateShortText(value, config);
 }
 
-function validateSingleChoice(
-  value: unknown,
-  question: QuestionWithId,
-): void {
+function validateSingleChoice(value: unknown, question: QuestionWithId): void {
   if (typeof value !== 'string') {
     throw new Error('Expected option ID string');
   }
@@ -79,6 +92,36 @@ function validateCheckboxGroup(
   }
 }
 
+/** Draft save: option IDs must be valid; min/max selected not enforced. */
+function validateCheckboxGroupDraft(
+  value: unknown,
+  question: QuestionWithId,
+): void {
+  const arr = Array.isArray(value) ? value : [value];
+  if (!arr.every((v) => typeof v === 'string')) {
+    throw new Error('Expected array of option ID strings');
+  }
+  const optionIds = question.options.map((o) =>
+    (o as { _id?: { toString(): string } })._id?.toString(),
+  );
+  for (const v of arr) {
+    if (!optionIds.includes(v as string)) {
+      throw new Error('Invalid option selected');
+    }
+  }
+}
+
+/** Draft save: must be string; min/max length not enforced. */
+function validateShortTextDraft(value: unknown): void {
+  if (typeof value !== 'string') {
+    throw new Error('Expected string');
+  }
+}
+
+function validateLongTextDraft(value: unknown): void {
+  validateShortTextDraft(value);
+}
+
 function validateDate(value: unknown, config: Record<string, unknown>): void {
   const date = value instanceof Date ? value : new Date(value as string);
   if (isNaN(date.getTime())) {
@@ -98,15 +141,248 @@ function validateDate(value: unknown, config: Record<string, unknown>): void {
   }
 }
 
-export function validateAnswers(
+function validatePhoneNumber(value: unknown): void {
+  if (typeof value !== 'string') {
+    throw new Error('Expected string');
+  }
+  const trimmed = value.trim();
+  const plus963Pattern = /^\+963\d{9}$/;
+  const localPattern = /^\d{10}$/;
+  if (!plus963Pattern.test(trimmed) && !localPattern.test(trimmed)) {
+    throw new Error(
+      'Invalid phone number. Use +963 followed by 9 digits or 10-digit local number.',
+    );
+  }
+}
+
+/** Optional sign, digits, optional single decimal point; no spaces or letters. */
+const STRICT_NUMERIC_STRING = /^-?\d+(\.\d+)?$/;
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseFiniteNumber(value: unknown): number {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      throw new Error('Expected a valid number');
+    }
+    return value;
+  }
+  if (typeof value === 'string') {
+    if (!STRICT_NUMERIC_STRING.test(value)) {
+      throw new Error('Expected a valid number with no extra characters');
+    }
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      throw new Error('Expected a valid number');
+    }
+    return num;
+  }
+  throw new Error('Expected a valid number');
+}
+
+function validateEmail(value: unknown): void {
+  if (typeof value !== 'string') {
+    throw new Error('Expected string');
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error('Email cannot be empty');
+  }
+  if (!EMAIL_PATTERN.test(trimmed)) {
+    throw new Error('Invalid email address');
+  }
+}
+
+function validateNumber(value: unknown): void {
+  parseFiniteNumber(value);
+}
+
+function validateUrl(value: unknown): void {
+  if (typeof value !== 'string') {
+    throw new Error('Expected string');
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error('URL cannot be empty');
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(trimmed);
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
+function validateRating(value: unknown, config: Record<string, unknown>): void {
+  const min = config.min as number | undefined;
+  const max = config.max as number | undefined;
+  if (typeof min !== 'number' || typeof max !== 'number' || min > max) {
+    throw new Error('Invalid rating configuration (min/max)');
+  }
+  const num =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+      ? Number(value)
+      : NaN;
+  if (!Number.isFinite(num)) {
+    throw new Error('Expected numeric rating');
+  }
+  if (!Number.isInteger(num)) {
+    throw new Error('Rating must be an integer');
+  }
+  if (num < min || num > max) {
+    throw new Error(`Rating must be between ${min} and ${max}`);
+  }
+}
+
+function validateDateRange(
+  value: unknown,
+  config: Record<string, unknown>,
+): void {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value)
+  ) {
+    throw new Error('Expected object with start and end');
+  }
+  const { start, end } = value as {
+    start?: string | Date;
+    end?: string | Date;
+  };
+  const startDate =
+    start instanceof Date ? start : start ? new Date(start) : undefined;
+  const endDate =
+    end instanceof Date ? end : end ? new Date(end) : undefined;
+  if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    throw new Error('Invalid date range');
+  }
+  if (startDate > endDate) {
+    throw new Error('Start date must be before or equal to end date');
+  }
+  const minDate = config.min_date
+    ? new Date(config.min_date as string)
+    : undefined;
+  const maxDate = config.max_date
+    ? new Date(config.max_date as string)
+    : undefined;
+  if (minDate && (startDate < minDate || endDate < minDate)) {
+    throw new Error(
+      `Date range must start on or after ${minDate.toISOString()}`,
+    );
+  }
+  if (maxDate && (startDate > maxDate || endDate > maxDate)) {
+    throw new Error(
+      `Date range must end on or before ${maxDate.toISOString()}`,
+    );
+  }
+}
+
+function validateFileUpload(value: unknown): void {
+  validateUrl(value);
+}
+
+/**
+ * Validates only answers that are present. Does not enforce isRequired.
+ * Text min/max length and checkbox min/max counts are relaxed so users can save partial progress.
+ */
+export function validateDraftAnswers(
   template: FormTemplateDocument,
-  answers: Record<string, string | string[] | boolean>,
+  answers: Record<string, unknown>,
 ): void {
   for (const question of template.questions) {
     const qId = (question as { _id?: { toString(): string } })._id?.toString();
     if (!qId) continue;
+    if (question.type === 'section') {
+      const value = answers[qId];
+      if (value !== undefined && value !== null && value !== '') {
+        throw new AnswerValidationError(
+          'Section questions cannot have answers',
+          qId,
+        );
+      }
+      continue;
+    }
     const value = answers[qId];
-    if (question.isRequired && (value === undefined || value === null || value === '')) {
+    if (value === undefined || value === null || value === '') {
+      continue;
+    }
+    const config = question.config || {};
+    try {
+      switch (question.type as QuestionType) {
+        case 'short_text':
+          validateShortTextDraft(value);
+          break;
+        case 'long_text':
+          validateLongTextDraft(value);
+          break;
+        case 'single_choice':
+          validateSingleChoice(value, question);
+          break;
+        case 'checkbox_group':
+          validateCheckboxGroupDraft(value, question);
+          break;
+        case 'date':
+          validateDate(value, config);
+          break;
+        case 'phone_number':
+          validatePhoneNumber(value);
+          break;
+        case 'email':
+          validateEmail(value);
+          break;
+        case 'number':
+          validateNumber(value);
+          break;
+        case 'url':
+          validateUrl(value);
+          break;
+        case 'rating':
+          validateRating(value, config);
+          break;
+        case 'date_range':
+          validateDateRange(value, config);
+          break;
+        case 'file_upload':
+          validateFileUpload(value);
+          break;
+        default:
+          throw new Error(`Unknown question type: ${question.type}`);
+      }
+    } catch (err) {
+      throw new AnswerValidationError(
+        err instanceof Error ? err.message : 'Invalid answer',
+        qId,
+      );
+    }
+  }
+}
+
+export function validateAnswers(
+  template: FormTemplateDocument,
+  // Use unknown here so DTOs can pass Record<string, unknown>;
+  // runtime validators enforce the exact shape per question type.
+  answers: Record<string, unknown>,
+): void {
+  for (const question of template.questions) {
+    const qId = (question as { _id?: { toString(): string } })._id?.toString();
+    if (!qId) continue;
+    if (question.type === 'section') {
+      const value = answers[qId];
+      if (value !== undefined && value !== null && value !== '') {
+        throw new AnswerValidationError(
+          'Section questions cannot have answers',
+          qId,
+        );
+      }
+      continue;
+    }
+    const value = answers[qId];
+    if (
+      question.isRequired &&
+      (value === undefined || value === null || value === '')
+    ) {
       throw new AnswerValidationError('This question is required', qId);
     }
     if (value === undefined || value === null || value === '') {
@@ -130,6 +406,29 @@ export function validateAnswers(
         case 'date':
           validateDate(value, config);
           break;
+        case 'phone_number':
+          validatePhoneNumber(value);
+          break;
+        case 'email':
+          validateEmail(value);
+          break;
+        case 'number':
+          validateNumber(value);
+          break;
+        case 'url':
+          validateUrl(value);
+          break;
+        case 'rating':
+          validateRating(value, config);
+          break;
+        case 'date_range':
+          validateDateRange(value, config);
+          break;
+        case 'file_upload':
+          validateFileUpload(value);
+          break;
+        case 'section':
+          throw new Error('Section questions cannot have answers');
         default:
           throw new Error(`Unknown question type: ${question.type}`);
       }
@@ -144,8 +443,20 @@ export function validateAnswers(
 
 export function normalizeAnswerValue(
   question: QuestionWithId,
-  value: string | string[] | boolean,
-): string | Date | boolean | Types.ObjectId | Types.ObjectId[] {
+  // Accept unknown from DTO and rely on runtime validation
+  // to ensure the shape matches the question type.
+  value: unknown,
+):
+  | string
+  | number
+  | Date
+  | boolean
+  | Types.ObjectId
+  | Types.ObjectId[]
+  | {
+      start: Date;
+      end: Date;
+    } {
   switch (question.type as QuestionType) {
     case 'date':
       return new Date(value as string);
@@ -153,7 +464,40 @@ export function normalizeAnswerValue(
       return new Types.ObjectId(value as string);
     case 'checkbox_group':
       return (value as string[]).map((id) => new Types.ObjectId(id));
+    case 'rating': {
+      const num =
+        typeof value === 'number'
+          ? value
+          : typeof value === 'string'
+          ? Number(value)
+          : NaN;
+      return num as number;
+    }
+    case 'number':
+      return parseFiniteNumber(value);
+    case 'email': {
+      if (typeof value !== 'string') {
+        throw new Error('Expected string');
+      }
+      return value.trim();
+    }
+    case 'date_range': {
+      const obj = value as { start?: string | Date; end?: string | Date };
+      const start =
+        obj.start instanceof Date ? obj.start : new Date(obj.start as string);
+      const end =
+        obj.end instanceof Date ? obj.end : new Date(obj.end as string);
+      return { start, end };
+    }
+    case 'file_upload': {
+      if (typeof value !== 'string') {
+        throw new Error('Expected URL string');
+      }
+      return value.trim();
+    }
+    case 'section':
+      throw new Error('Section questions cannot have answers');
     default:
-      return value as string | boolean;
+      return value as string | number | boolean;
   }
 }

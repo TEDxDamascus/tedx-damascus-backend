@@ -44,8 +44,60 @@ export class FormTemplate {
   @Prop({ required: false })
   publishedAt?: Date;
 
+  /** Inclusive start of submission window (UTC). */
+  @Prop({ required: false })
+  starts_at?: Date;
+
+  /** Inclusive end of submission window (UTC). */
+  @Prop({ required: false })
+  ends_at?: Date;
+
+  /** After this instant, form is expired (410 on submit). */
+  @Prop({ required: false })
+  expires_at?: Date;
+
+  /** Max total submissions; omit for unlimited. */
+  @Prop({ required: false })
+  max_submissions?: number;
+
+  /** Human-readable URL slugs. Used in shareable URLs. Unique per locale. */
+  @Prop({
+    type: {
+      en: { type: String, default: '' },
+      ar: { type: String, default: '' },
+      _id: false,
+    },
+    required: false,
+  })
+  slug?: { en: string; ar: string };
+
+  /** Full absolute URLs for sharing. Derived from slug; regenerated when slug changes. */
+  @Prop({
+    type: {
+      en: { type: String, default: '' },
+      ar: { type: String, default: '' },
+      _id: false,
+    },
+    required: false,
+  })
+  shareable_url?: { en: string; ar: string };
+
   @Prop({ type: [FormQuestionSchema], default: [] })
   questions: FormQuestion[];
 }
 
 export const FormTemplateSchema = SchemaFactory.createForClass(FormTemplate);
+FormTemplateSchema.index(
+  { 'slug.en': 1 },
+  {
+    unique: true,
+    partialFilterExpression: { 'slug.en': { $exists: true, $ne: '', $type: 'string' } },
+  },
+);
+FormTemplateSchema.index(
+  { 'slug.ar': 1 },
+  {
+    unique: true,
+    partialFilterExpression: { 'slug.ar': { $exists: true, $ne: '', $type: 'string' } },
+  },
+);

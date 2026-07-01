@@ -7,7 +7,7 @@ import {
   ValidatorConstraintInterface,
 } from 'class-validator';
 import { error } from 'console';
-import { StorageService } from 'src/storage/storage.service';
+import { StorageService } from '../../storage/storage.service';
 
 @ValidatorConstraint({ async: true })
 @Injectable()

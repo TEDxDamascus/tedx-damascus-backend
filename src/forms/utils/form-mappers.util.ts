@@ -8,22 +8,25 @@ import {
   FormQuestionResponse,
   FormSubmissionAnswerResponse,
   FormSubmissionResponse,
+  FormTemplateAdminDetailResponse,
   FormTemplateSchemaResponse,
   FormTemplateSummaryResponse,
   QuestionOptionResponse,
 } from '../interfaces/form-responses.interface';
+import {
+  QuestionWithId,
+  sortQuestionsSiblingOrder,
+} from './form-question-tree.util';
 
 function toId(value: Types.ObjectId | undefined | null): string {
   return value ? value.toString() : '';
 }
 
-export function mapQuestionOption(
-  option: {
-    _id?: Types.ObjectId;
-    orderIndex: number;
-    label: { en: string; ar: string };
-  },
-): QuestionOptionResponse {
+export function mapQuestionOption(option: {
+  _id?: Types.ObjectId;
+  orderIndex: number;
+  label: { en: string; ar: string };
+}): QuestionOptionResponse {
   return {
     id: toId(option._id),
     orderIndex: option.orderIndex,
@@ -34,22 +37,21 @@ export function mapQuestionOption(
   };
 }
 
-export function mapFormQuestion(
-  question: {
+export function mapFormQuestion(question: {
+  _id?: Types.ObjectId;
+  orderIndex: number;
+  type: string;
+  parentId?: Types.ObjectId;
+  title: { en: string; ar: string };
+  helpText?: { en: string; ar: string };
+  isRequired: boolean;
+  config: Record<string, unknown>;
+  options?: Array<{
     _id?: Types.ObjectId;
     orderIndex: number;
-    type: string;
-    title: { en: string; ar: string };
-    helpText?: { en: string; ar: string };
-    isRequired: boolean;
-    config: Record<string, unknown>;
-    options?: Array<{
-      _id?: Types.ObjectId;
-      orderIndex: number;
-      label: { en: string; ar: string };
-    }>;
-  },
-): FormQuestionResponse {
+    label: { en: string; ar: string };
+  }>;
+}): FormQuestionResponse {
   const options = (question.options ?? [])
     .slice()
     .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -59,6 +61,7 @@ export function mapFormQuestion(
     id: toId(question._id),
     orderIndex: question.orderIndex,
     type: question.type,
+    parentId: question.parentId ? toId(question.parentId) : null,
     title: {
       en: question.title.en ?? '',
       ar: question.title.ar ?? '',
@@ -73,6 +76,14 @@ export function mapFormQuestion(
     config: question.config ?? {},
     options,
   };
+}
+
+export function mapTemplateQuestions(
+  questions: QuestionWithId[] | undefined,
+): FormQuestionResponse[] {
+  return sortQuestionsSiblingOrder(questions ?? []).map((q) =>
+    mapFormQuestion(q as Parameters<typeof mapFormQuestion>[0]),
+  );
 }
 
 export function mapFormTemplateToSchema(
@@ -92,10 +103,11 @@ export function mapFormTemplateToSchema(
         }
       : undefined,
     targetRole: t.targetRole,
-    questions: (t.questions ?? [])
-      .slice()
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((q) => mapFormQuestion(q as unknown as Parameters<typeof mapFormQuestion>[0])),
+    starts_at: t.starts_at,
+    ends_at: t.ends_at,
+    expires_at: t.expires_at,
+    max_submissions: t.max_submissions,
+    questions: mapTemplateQuestions(t.questions as QuestionWithId[]),
   };
 }
 
@@ -118,17 +130,38 @@ export function mapFormTemplateToSummary(
     targetRole: t.targetRole,
     status: t.status,
     publishedAt: t.publishedAt,
+    starts_at: t.starts_at,
+    ends_at: t.ends_at,
+    expires_at: t.expires_at,
+    max_submissions: t.max_submissions,
+    slug:
+      t.slug && (t.slug.en || t.slug.ar)
+        ? { en: t.slug.en ?? '', ar: t.slug.ar ?? '' }
+        : undefined,
+    shareable_url:
+      t.shareable_url && (t.shareable_url.en || t.shareable_url.ar)
+        ? { en: t.shareable_url.en ?? '', ar: t.shareable_url.ar ?? '' }
+        : undefined,
     createdAt: (t as any).createdAt,
     updatedAt: (t as any).updatedAt,
   };
 }
 
-export function mapSubmissionAnswer(
-  answer: {
-    questionId?: Types.ObjectId;
-    value: unknown;
-  },
-): FormSubmissionAnswerResponse {
+export function mapFormTemplateToAdminDetail(
+  template: FormTemplateDocument,
+): FormTemplateAdminDetailResponse {
+  return {
+    ...mapFormTemplateToSummary(template),
+    questions: mapTemplateQuestions(
+      (template as FormTemplate).questions as QuestionWithId[],
+    ),
+  };
+}
+
+export function mapSubmissionAnswer(answer: {
+  questionId?: Types.ObjectId;
+  value: unknown;
+}): FormSubmissionAnswerResponse {
   return {
     questionId: toId(answer.questionId as Types.ObjectId),
     value: answer.value,
@@ -143,9 +176,8 @@ export function mapFormSubmission(
     id: toId(s._id),
     formTemplateId: toId(s.formTemplateId),
     userId: toId(s.userId),
-    status: s.status,
-    submittedAt: s.submittedAt,
+    status: s.status ?? 'submitted',
+    ...(s.submittedAt != null ? { submittedAt: s.submittedAt } : {}),
     answers: (s.answers ?? []).map((a: any) => mapSubmissionAnswer(a)),
   };
 }
-
