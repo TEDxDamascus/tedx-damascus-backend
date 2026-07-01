@@ -67,11 +67,6 @@ export enum UserPermission {
   WALL_CARDS_BLOCKED_WORDS_MANAGE = 'wall-cards:blocked-words:manage',
 }
 
-const localizedStringSchema = {
-  ar: { type: String, trim: true, default: '' },
-  en: { type: String, trim: true, default: '' },
-};
-
 export const USER_MANAGEMENT_PERMISSIONS: UserPermission[] = [
   UserPermission.USERS_READ,
   UserPermission.USERS_CREATE,

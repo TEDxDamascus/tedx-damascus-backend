@@ -256,7 +256,7 @@ export class BlogsService {
       const blog = new this.blogModel(this.prepareBlogPayload(createBlogDto));
       const savedBlog = await blog.save();
 
-      return this.findOne(savedBlog.id);
+      return this.findOne(savedBlog.id, language);
     } catch (error) {
       this.handleDuplicateSlugError(error);
     }
@@ -286,10 +286,17 @@ export class BlogsService {
       filter[`content.${locale}`] = { $exists: true, $type: 'string', $ne: '' };
     }
 
-    const cleanSearch = search?.trim();
-
-    if (cleanSearch) {
-      filter.$or = this.buildLocalizedSearchFilters(cleanSearch, locale);
+    if (search) {
+      filter.$or = [
+        { 'title.en': { $regex: search, $options: 'i' } },
+        { 'title.ar': { $regex: search, $options: 'i' } },
+        { 'description.en': { $regex: search, $options: 'i' } },
+        { 'description.ar': { $regex: search, $options: 'i' } },
+        { 'slug.en': { $regex: search, $options: 'i' } },
+        { 'slug.ar': { $regex: search, $options: 'i' } },
+        { 'tags.en': { $regex: search, $options: 'i' } },
+        { 'tags.ar': { $regex: search, $options: 'i' } },
+      ];
     }
 
     if (user && user.role !== UserRole.SUPERADMIN) {
@@ -350,12 +357,8 @@ export class BlogsService {
     });
   }
 
-  async findOne(id: string, user?: BlogRequestUser) {
-    if (user) {
-      await this.assertBlogPermission(user, id, 'canRead');
-    }
-
-    return this.findOneByFilter({ _id: id });
+  async findOne(id: string, language?: string) {
+    return this.findOneByFilter({ _id: id }, language);
   }
 
   async findPublishedOne(identifier: string, language?: string) {
@@ -375,6 +378,31 @@ export class BlogsService {
       status: 'published',
       $or: [{ 'slug.en': identifier }, { 'slug.ar': identifier }],
     };
+  async findOne(id: string, user?: BlogRequestUser) {
+    if (user) {
+      await this.assertBlogPermission(user, id, 'canRead');
+    }
+
+    const blog = await this.blogModel
+      .findById(id)
+      .populate('category_id')
+      .populate('blog_image')
+      .populate('og_image')
+      .populate('gallery');
+
+    if (!blog) throw new NotFoundException('Blog not found');
+
+    const [prevBlog, nextBlog] = await this.findSiblingBlogs(blog);
+    const userNamesById = await this.getUserNamesById([blog.user_id]);
+    const referencesByBlogId = await this.getReferencesByBlogId([blog._id]);
+
+    return this.serializeBlog(
+      blog,
+      prevBlog,
+      nextBlog,
+      userNamesById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
+      referencesByBlogId.get(String(blog._id)) || [],
+    );
   }
 
   async update(
@@ -399,7 +427,7 @@ export class BlogsService {
       existingBlog.set(this.prepareBlogPayload(updateBlogDto, existingBlog));
       await existingBlog.save();
 
-      return this.findOne(id, user);
+      return this.findOne(id, language);
     } catch (error) {
       this.handleDuplicateSlugError(error);
     }
