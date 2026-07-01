@@ -35,6 +35,12 @@ import {
   ApiConflictResponse,
 } from '@nestjs/swagger';
 import { FormsService } from './forms.service';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserPermission, UserRole } from '../users/entities/user.entity';
 import { CreateFormTemplateDto } from './dto/create-form-template.dto';
 import { UpdateFormTemplateDto } from './dto/update-form-template.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
@@ -47,7 +53,6 @@ import {
   FormTemplateSummaryResponseDto,
 } from './dto/form-responses.dto';
 import { FormAvailabilityGuard } from './guards/form-availability.guard';
-import { AdminGuard } from './guards/admin.guard';
 import { FormUploadResultDto } from './dto/form-upload-result.dto';
 import { GetFormBySlugQueryDto } from './dto/get-form-by-slug-query.dto';
 import { FormExportService } from './export/form-export.service';
@@ -73,6 +78,9 @@ export class FormsController {
   @ApiCreatedResponse({ type: FormTemplateSummaryResponseDto })
   @ApiBadRequestResponse({ description: 'Validation error' })
   @ApiConflictResponse({ description: 'A form with this slug already exists' })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_CREATE)
   create(@Body() dto: CreateFormTemplateDto) {
     return this.formsService.create(dto);
   }
@@ -97,6 +105,9 @@ export class FormsController {
   @Get()
   @ApiOperation({ summary: 'Admin: List all form templates' })
   @ApiOkResponse({ type: [FormTemplateSummaryResponseDto] })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_READ)
   findAll() {
     return this.formsService.findAll();
   }
@@ -122,6 +133,9 @@ export class FormsController {
   @ApiOperation({ summary: 'Admin: Get form template by ID' })
   @ApiOkResponse({ type: FormTemplateSummaryResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid form template ID' })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_READ)
   findOne(@Param('id') id: string) {
     return this.formsService.findOneForAdmin(id);
   }
@@ -150,6 +164,9 @@ export class FormsController {
       'Cannot modify a published form or invalid form template ID.',
   })
   @ApiConflictResponse({ description: 'A form with this slug already exists' })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_UPDATE)
   update(@Param('id') id: string, @Body() dto: UpdateFormTemplateDto) {
     return this.formsService.update(id, dto);
   }
@@ -164,6 +181,9 @@ export class FormsController {
     description:
       'Cannot modify a published form or invalid form template ID.',
   })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_DELETE)
   remove(@Param('id') id: string) {
     return this.formsService.remove(id);
   }
@@ -179,6 +199,9 @@ export class FormsController {
     description:
       'Form template is not Draft, invalid form ID, or invalid question payload.',
   })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_UPDATE)
   addQuestion(@Param('id') formId: string, @Body() dto: CreateQuestionDto) {
     return this.formsService.addQuestion(formId, dto);
   }
@@ -194,6 +217,9 @@ export class FormsController {
     description:
       'Form template is not Draft, invalid IDs, or invalid question payload.',
   })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_UPDATE)
   updateQuestion(
     @Param('id') formId: string,
     @Param('questionId') questionId: string,
@@ -211,6 +237,9 @@ export class FormsController {
   @ApiBadRequestResponse({
     description: 'Form template is not Draft or invalid IDs.',
   })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_UPDATE)
   removeQuestion(
     @Param('id') formId: string,
     @Param('questionId') questionId: string,
@@ -228,6 +257,9 @@ export class FormsController {
   @ApiBadRequestResponse({
     description: 'Form is already published or ID is invalid.',
   })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_PUBLISH)
   publish(@Param('id') id: string) {
     return this.formsService.publish(id);
   }
@@ -242,6 +274,9 @@ export class FormsController {
   @ApiBadRequestResponse({
     description: 'Form is not published or ID is invalid.',
   })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_PUBLISH)
   unpublish(@Param('id') id: string) {
     return this.formsService.unpublish(id);
   }
@@ -336,6 +371,9 @@ export class FormsController {
     description:
       'Paginated list of submissions for the form. items is an array of FormSubmissionResponseDto.',
   })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_SUBMISSIONS_READ)
   listSubmissions(
     @Param('id') formId: string,
     @Query() pagination: OffsetPaginationDto,
@@ -351,6 +389,9 @@ export class FormsController {
     description:
       'Returns the form schema and a single submission mapped as FormSubmissionResponseDto.',
   })
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_SUBMISSIONS_READ)
   getSubmission(
     @Param('id') formId: string,
     @Param('submissionId') submissionId: string,
@@ -360,7 +401,9 @@ export class FormsController {
 
   @Post(':id/submissions/export/pdf')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AdminGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.FORMS_SUBMISSIONS_EXPORT)
   @ApiOperation({
     summary: 'Admin: Export submission as PDF',
     description:

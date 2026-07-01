@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,8 +9,17 @@ import { InjectModel } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
 import { Model, Types } from 'mongoose';
 import { Blog, BlogDocument } from './entities/blog.entity';
+import {
+  BlogPermission,
+  BlogPermissionDocument,
+} from './entities/blog-permission.entity';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
+import {
+  BlogPermissionQueryDto,
+  CreateBlogPermissionDto,
+  UpdateBlogPermissionDto,
+} from './dto/blog-permission.dto';
 import { buildLocalizedSlug, generateLocaleSlug } from './utils/blog-slug.util';
 import {
   Category,
@@ -18,6 +29,7 @@ import {
   BlogReference,
   BlogReferenceDocument,
 } from '../blog-references/entities/blog-reference.entity';
+import { UserRole } from '../users/entities/user.entity';
 
 type Locale = 'ar' | 'en';
 
@@ -35,6 +47,19 @@ type LocalizedTextListInput = {
   ar?: string | string[];
   en?: string | string[];
 };
+
+type BlogRequestUser = {
+  id: string;
+  email?: string;
+  role: string;
+};
+
+type BlogPermissionAction =
+  | 'canRead'
+  | 'canWrite'
+  | 'canCreate'
+  | 'canUpdate'
+  | 'canDelete';
 
 type AuthorResponse = {
   name: string | null;
@@ -141,6 +166,8 @@ export class BlogsService {
   constructor(
     @InjectModel(Blog.name)
     private blogModel: Model<BlogDocument>,
+    @InjectModel(BlogPermission.name)
+    private readonly blogPermissionModel: Model<BlogPermissionDocument>,
     @InjectModel(Category.name)
     private readonly categoryModel: Model<CategoryDocument>,
     @InjectModel(BlogReference.name)
@@ -148,7 +175,80 @@ export class BlogsService {
     private readonly configService: ConfigService,
   ) {}
 
-  async create(createBlogDto: CreateBlogDto, language?: string) {
+  async createBlogPermission(dto: CreateBlogPermissionDto) {
+    await this.assertBlogExists(dto.blogId);
+    await this.assertAdminUserExists(dto.adminId);
+
+    try {
+      const permission = await this.blogPermissionModel.create({
+        adminId: new Types.ObjectId(dto.adminId),
+        blogId: new Types.ObjectId(dto.blogId),
+        canRead: dto.canRead ?? false,
+        canWrite: dto.canWrite ?? false,
+        canCreate: dto.canCreate ?? false,
+        canUpdate: dto.canUpdate ?? false,
+        canDelete: dto.canDelete ?? false,
+      });
+
+      return this.serializeBlogPermission(permission);
+    } catch (error) {
+      this.handleDuplicateBlogPermissionError(error);
+    }
+  }
+
+  async updateBlogPermission(
+    permissionId: string,
+    dto: UpdateBlogPermissionDto,
+  ) {
+    this.assertValidObjectId(permissionId, 'Invalid blog permission ID');
+
+    const permission = await this.blogPermissionModel
+      .findByIdAndUpdate(permissionId, dto, { new: true })
+      .exec();
+
+    if (!permission) {
+      throw new NotFoundException('Blog permission not found');
+    }
+
+    return this.serializeBlogPermission(permission);
+  }
+
+  async removeBlogPermission(permissionId: string) {
+    this.assertValidObjectId(permissionId, 'Invalid blog permission ID');
+
+    const permission = await this.blogPermissionModel
+      .findByIdAndDelete(permissionId)
+      .exec();
+
+    if (!permission) {
+      throw new NotFoundException('Blog permission not found');
+    }
+
+    return { message: 'Blog permission deleted successfully' };
+  }
+
+  async listBlogPermissions(query: BlogPermissionQueryDto) {
+    const filter: Record<string, unknown> = {};
+
+    if (query.adminId) {
+      filter.adminId = new Types.ObjectId(query.adminId);
+    }
+
+    if (query.blogId) {
+      filter.blogId = new Types.ObjectId(query.blogId);
+    }
+
+    const permissions = await this.blogPermissionModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .exec();
+
+    return permissions.map((permission) =>
+      this.serializeBlogPermission(permission),
+    );
+  }
+
+  async create(createBlogDto: CreateBlogDto) {
     await this.assertCategoryExists(createBlogDto.category_id);
     await this.assertRelatedBlogsExist(createBlogDto.related_blogs_ids);
 
@@ -156,13 +256,13 @@ export class BlogsService {
       const blog = new this.blogModel(this.prepareBlogPayload(createBlogDto));
       const savedBlog = await blog.save();
 
-      return this.findOne(savedBlog.id, language);
+      return this.findOne(savedBlog.id);
     } catch (error) {
       this.handleDuplicateSlugError(error);
     }
   }
 
-  async findAll(query: BlogsQuery) {
+  async findAll(query: BlogsQuery, user?: BlogRequestUser) {
     const {
       page = 1,
       limit = 10,
@@ -190,6 +290,21 @@ export class BlogsService {
 
     if (cleanSearch) {
       filter.$or = this.buildLocalizedSearchFilters(cleanSearch, locale);
+    }
+
+    if (user && user.role !== UserRole.SUPERADMIN) {
+      const allowedBlogIds = await this.getAllowedBlogIds(user.id, 'canRead');
+
+      if (!allowedBlogIds.length) {
+        return {
+          data: [],
+          total: 0,
+          page: Number(page),
+          lastPage: 0,
+        };
+      }
+
+      filter._id = { $in: allowedBlogIds };
     }
 
     const blogs = await this.blogModel
@@ -235,8 +350,12 @@ export class BlogsService {
     });
   }
 
-  async findOne(id: string, language?: string) {
-    return this.findOneByFilter({ _id: id }, language);
+  async findOne(id: string, user?: BlogRequestUser) {
+    if (user) {
+      await this.assertBlogPermission(user, id, 'canRead');
+    }
+
+    return this.findOneByFilter({ _id: id });
   }
 
   async findPublishedOne(identifier: string, language?: string) {
@@ -258,7 +377,15 @@ export class BlogsService {
     };
   }
 
-  async update(id: string, updateBlogDto: UpdateBlogDto, language?: string) {
+  async update(
+    id: string,
+    updateBlogDto: UpdateBlogDto,
+    user?: BlogRequestUser,
+  ) {
+    if (user) {
+      await this.assertBlogPermission(user, id, 'canUpdate');
+    }
+
     const existingBlog = await this.blogModel.findById(id);
 
     if (!existingBlog) {
@@ -272,13 +399,17 @@ export class BlogsService {
       existingBlog.set(this.prepareBlogPayload(updateBlogDto, existingBlog));
       await existingBlog.save();
 
-      return this.findOne(id, language);
+      return this.findOne(id, user);
     } catch (error) {
       this.handleDuplicateSlugError(error);
     }
   }
 
-  async remove(id: string) {
+  async remove(id: string, user?: BlogRequestUser) {
+    if (user) {
+      await this.assertBlogPermission(user, id, 'canDelete');
+    }
+
     const blog = await this.blogModel.findByIdAndDelete(id);
 
     if (!blog) throw new NotFoundException('Blog not found');
@@ -313,6 +444,108 @@ export class BlogsService {
       referencesByBlogId.get(String(blog._id)) || [],
       locale,
     );
+  }
+
+  private async assertBlogPermission(
+    user: BlogRequestUser,
+    blogId: string,
+    action: BlogPermissionAction,
+  ) {
+    if (user.role === UserRole.SUPERADMIN) {
+      return;
+    }
+
+    this.assertValidObjectId(blogId, 'Invalid blog ID');
+    this.assertValidObjectId(user.id, 'Invalid admin ID');
+
+    const permission = await this.blogPermissionModel
+      .findOne({
+        adminId: new Types.ObjectId(user.id),
+        blogId: new Types.ObjectId(blogId),
+      })
+      .lean()
+      .exec();
+
+    const allowed =
+      action === 'canWrite'
+        ? Boolean(permission?.canWrite || permission?.canCreate)
+        : Boolean(permission?.[action]);
+
+    if (!allowed) {
+      throw new ForbiddenException('You do not have permission for this blog');
+    }
+  }
+
+  private async getAllowedBlogIds(
+    adminId: string,
+    action: BlogPermissionAction,
+  ) {
+    this.assertValidObjectId(adminId, 'Invalid admin ID');
+
+    const filter =
+      action === 'canWrite'
+        ? {
+            adminId: new Types.ObjectId(adminId),
+            $or: [{ canWrite: true }, { canCreate: true }],
+          }
+        : {
+            adminId: new Types.ObjectId(adminId),
+            [action]: true,
+          };
+
+    const permissions = await this.blogPermissionModel
+      .find(filter)
+      .select('blogId')
+      .lean()
+      .exec();
+
+    return permissions.map((permission) => permission.blogId);
+  }
+
+  private async assertBlogExists(blogId: string) {
+    this.assertValidObjectId(blogId, 'Invalid blog ID');
+
+    const exists = await this.blogModel.exists({ _id: blogId });
+
+    if (!exists) {
+      throw new NotFoundException('Blog not found');
+    }
+  }
+
+  private async assertAdminUserExists(adminId: string) {
+    this.assertValidObjectId(adminId, 'Invalid admin ID');
+
+    const admin = await this.blogModel.db.collection('users').findOne({
+      _id: new Types.ObjectId(adminId),
+      role: UserRole.ADMIN,
+    });
+
+    if (!admin) {
+      throw new NotFoundException('Admin not found');
+    }
+  }
+
+  private assertValidObjectId(value: string, message: string) {
+    if (!Types.ObjectId.isValid(value)) {
+      throw new BadRequestException(message);
+    }
+  }
+
+  private serializeBlogPermission(permission: BlogPermissionDocument) {
+    const value = permission.toObject();
+
+    return {
+      id: String(value._id),
+      adminId: String(value.adminId),
+      blogId: String(value.blogId),
+      canRead: value.canRead,
+      canWrite: value.canWrite,
+      canCreate: value.canCreate,
+      canUpdate: value.canUpdate,
+      canDelete: value.canDelete,
+      createdAt: value.createdAt,
+      updatedAt: value.updatedAt,
+    };
   }
 
   private prepareBlogPayload(
@@ -1014,6 +1247,21 @@ export class BlogsService {
     ) {
       throw new ConflictException(
         'Slug must be unique for both Arabic and English locales',
+      );
+    }
+
+    throw error;
+  }
+
+  private handleDuplicateBlogPermissionError(error: unknown): never {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 11000
+    ) {
+      throw new ConflictException(
+        'This admin already has permissions for this blog',
       );
     }
 

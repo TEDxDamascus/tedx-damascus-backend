@@ -3,6 +3,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
 import { BlogsService } from './blogs.service';
 import { Blog } from './entities/blog.entity';
+import { BlogPermission } from './entities/blog-permission.entity';
 import { Category } from '../categories/entities/category.entity';
 import { BlogReference } from '../blog-references/entities/blog-reference.entity';
 
@@ -15,6 +16,10 @@ describe('BlogsService', () => {
         BlogsService,
         {
           provide: getModelToken(Blog.name),
+          useValue: {},
+        },
+        {
+          provide: getModelToken(BlogPermission.name),
           useValue: {},
         },
         {

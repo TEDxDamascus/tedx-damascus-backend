@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -20,6 +21,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserPermission, UserRole } from './entities/user.entity';
 import { CreateUserGuard } from './guards/create-user.guard';
 import { UsersService } from './users.service';
+import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
 
 @Controller('admin/users')
 @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
@@ -30,14 +32,17 @@ export class AdminUsersController {
   @Post()
   @Permissions(UserPermission.USERS_CREATE)
   @UseGuards(CreateUserGuard)
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  create(
+    @Body() createUserDto: CreateUserDto,
+    @Req() req: { user: { id: string; role: string } },
+  ) {
+    return this.usersService.create(createUserDto, req.user);
   }
 
   @Get()
   @Permissions(UserPermission.USERS_READ)
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Query() pagination: OffsetPaginationDto) {
+    return this.usersService.findAll(pagination);
   }
 
   @Get(':id')
@@ -57,12 +62,18 @@ export class AdminUsersController {
   }
 
   @Patch(':id/permissions')
+  @Roles(UserRole.SUPERADMIN)
   @Permissions(UserPermission.USERS_UPDATE)
   updatePermissions(
     @Param('id') id: string,
     @Body() updateUserPermissionsDto: UpdateUserPermissionsDto,
+    @Req() req: { user: { id: string; role: string } },
   ) {
-    return this.usersService.updatePermissions(id, updateUserPermissionsDto);
+    return this.usersService.updatePermissions(
+      id,
+      updateUserPermissionsDto,
+      req.user,
+    );
   }
 
   @Patch(':id/disable')
@@ -87,7 +98,10 @@ export class AdminUsersController {
 
   @Delete(':id')
   @Permissions(UserPermission.USERS_DELETE)
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Req() req: { user: { id: string; role: string } },
+  ) {
+    return this.usersService.remove(id, req.user);
   }
 }

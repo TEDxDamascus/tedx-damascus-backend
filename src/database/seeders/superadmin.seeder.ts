@@ -2,7 +2,7 @@ import 'dotenv/config';
 import * as bcrypt from 'bcryptjs';
 import { connect, model, disconnect } from 'mongoose';
 import {
-  ADMIN_DEFAULT_PERMISSIONS,
+  SUPERADMIN_DEFAULT_PERMISSIONS,
   User,
   UserRole,
   UserSchema,
@@ -33,7 +33,7 @@ async function seedSuperAdmin() {
             role: UserRole.SUPERADMIN,
             is_active: true,
             password: hashedPassword,
-            permissions: ADMIN_DEFAULT_PERMISSIONS,
+            permissions: SUPERADMIN_DEFAULT_PERMISSIONS,
           },
         },
       );
@@ -46,7 +46,7 @@ async function seedSuperAdmin() {
       password: hashedPassword,
       role: UserRole.SUPERADMIN,
       is_active: true,
-      permissions: ADMIN_DEFAULT_PERMISSIONS,
+      permissions: SUPERADMIN_DEFAULT_PERMISSIONS,
     });
 
     console.log(`Superadmin created: ${email}`);

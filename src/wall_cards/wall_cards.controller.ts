@@ -9,12 +9,19 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { I18n, I18nContext } from 'nestjs-i18n';
+import { Permissions } from '../auth/decorators/permissions.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { ParseIdPipe } from '../common/pipes/parse-id.pipe';
 import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.dto';
 import { WallHistoryAnswerQueryDto } from './dto/wall-history-answer-query.dto';
+import { UserPermission, UserRole } from '../users/entities/user.entity';
 import { resolveWallCardsAdminUserId } from './constants/wall-cards-dev-admin.constant';
 import { BlockedWordResponseDto } from './dto/blocked-word-response.dto';
 import { CreateBlockedWordDto } from './dto/create-blocked-word.dto';
@@ -38,8 +45,7 @@ import {
 import { WallCardsService } from './wall_cards.service';
 
 /**
- * TESTING: All routes are public (no JWT / roles).
- * Restore JwtAuthGuard + RolesGuard on admin routes before production.
+ * Public wall-card routes remain open; admin moderation routes require roles and permissions.
  */
 @ApiTags('wall-cards')
 @Controller('wall-cards')
@@ -91,6 +97,9 @@ export class WallCardsController {
   }
 
   @Put('questions/active/featured-answers')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_UPDATE)
   @ApiOperation({ summary: 'Set up to 4 featured public answers' })
   setFeaturedAnswers(
     @I18n() i18n: I18nContext,
@@ -100,6 +109,9 @@ export class WallCardsController {
   }
 
   @Get('blocked-words')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_BLOCKED_WORDS_MANAGE)
   @ApiOperation({ summary: 'List blocked words' })
   @ApiOkResponse({ type: [BlockedWordResponseDto] })
   listBlockedWords() {
@@ -107,6 +119,9 @@ export class WallCardsController {
   }
 
   @Post('blocked-words')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_BLOCKED_WORDS_MANAGE)
   @ApiOperation({ summary: 'Add a blocked word' })
   @ApiOkResponse({ type: BlockedWordResponseDto })
   addBlockedWord(@Body() dto: CreateBlockedWordDto) {
@@ -124,12 +139,18 @@ export class WallCardsController {
   }
 
   @Delete('blocked-words/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_BLOCKED_WORDS_MANAGE)
   @ApiOperation({ summary: 'Remove a blocked word' })
   removeBlockedWord(@Param('id', ParseIdPipe) id: string) {
     return this.wallCardsService.removeBlockedWord(id);
   }
 
   @Post('questions/publish')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_UPDATE)
   @ApiOperation({ summary: 'Publish a new question (replaces active)' })
   @ApiOkResponse({ type: WallQuestionResponseDto })
   publishQuestion(
@@ -145,6 +166,9 @@ export class WallCardsController {
   }
 
   @Get('questions')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_READ)
   @ApiOperation({ summary: 'List all questions with filters' })
   listQuestionsAdmin(
     @I18n() i18n: I18nContext,
@@ -154,6 +178,9 @@ export class WallCardsController {
   }
 
   @Get('questions/:questionId/answers')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_READ)
   @ApiOperation({ summary: 'List answers for a question' })
   @ApiOkResponse({ type: WallQuestionAnswersResponseDto })
   listAnswersAdmin(
@@ -185,12 +212,18 @@ export class WallCardsController {
   }
 
   @Get('answers/pending')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_MODERATE)
   @ApiOperation({ summary: 'Global pending answers queue' })
   listPendingAnswers(@Query() pagination: OffsetPaginationDto) {
     return this.wallCardsService.listPendingAnswers(pagination);
   }
 
   @Patch('answers/:id/moderate')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_MODERATE)
   @ApiOperation({ summary: 'Moderate a pending answer (approve/decline)' })
   @ApiOkResponse({ type: WallAnswerResponseDto })
   moderateAnswer(
