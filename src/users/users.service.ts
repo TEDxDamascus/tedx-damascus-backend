@@ -9,6 +9,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model, Types } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
+import { AdminUsersQueryDto } from './dto/admin-users-query.dto';
 import { UpdateCurrentUserDto } from './dto/update-current-user.dto';
 import { UpdateUserPermissionsDto } from './dto/update-user-permissions.dto';
 import {
@@ -25,7 +26,8 @@ import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.
 @Injectable()
 export class UsersService {
   private readonly publicUserSelection =
-    'name description email role permissions is_active createdAt updatedAt';
+    'name email role permissions is_active createdAt updatedAt';
+  private readonly adminUserSelection = 'name email role is_active createdAt';
 
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
@@ -91,6 +93,50 @@ export class UsersService {
       message: 'Users fetched successfully',
       data: users.map((user) =>
         this.toPublicUser(user as unknown as Record<string, unknown>),
+      ),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
+  async findAdmins(query: AdminUsersQueryDto) {
+    const page = query.page ?? 1;
+    const limit = Math.min(query.limit ?? 10, 100);
+    const filter: Record<string, unknown> = { role: UserRole.ADMIN };
+    const search = query.search?.trim();
+
+    if (search) {
+      const escapedSearch = this.escapeRegex(search);
+      filter.$or = [
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { email: { $regex: escapedSearch, $options: 'i' } },
+      ];
+    }
+
+    const [admins, total] = await Promise.all([
+      this.userModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .select(this.adminUserSelection)
+        .lean(),
+      this.userModel.countDocuments(filter),
+    ]);
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'Admin users fetched successfully',
+      data: admins.map((admin) =>
+        this.toAdminUser(admin as unknown as Record<string, unknown>),
       ),
       meta: {
         page,
@@ -321,6 +367,25 @@ export class UsersService {
     return { id, ...rest };
   }
 
+  private toAdminUser(user: Record<string, unknown>) {
+    const { _id, name, email, role, is_active, createdAt } = user;
+    const id =
+      _id instanceof Types.ObjectId ? _id.toHexString() : String(_id ?? '');
+
+    return {
+      id,
+      name,
+      email,
+      role,
+      isActive: is_active,
+      createdAt,
+    };
+  }
+
+  private escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   private resolvePermissions(
     role: UserRole,
     requestedPermissions?: UserPermission[],
@@ -381,9 +446,7 @@ export class UsersService {
     }
 
     if (
-      [UserRole.ADMIN, UserRole.SUPERADMIN].includes(
-        payload.role as UserRole,
-      )
+      [UserRole.ADMIN, UserRole.SUPERADMIN].includes(payload.role as UserRole)
     ) {
       throw new ForbiddenException(
         'Only superadmin can create admin and superadmin accounts',
