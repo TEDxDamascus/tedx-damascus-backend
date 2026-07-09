@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { BlogFont } from '../enums/blog-font.enum';
 
 export type BlogDocument = Blog &
   Document & {
@@ -36,6 +37,9 @@ export class Blog {
 
   @Prop({ type: localizedStringSchema, required: true })
   content: { ar: string; en: string };
+
+  @Prop({ enum: BlogFont, default: BlogFont.CAIRO })
+  content_font: BlogFont;
 
   @Prop({
     type: localizedStringArraySchema,

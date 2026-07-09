@@ -15,6 +15,12 @@ export class PublicBlogsController {
     return this.blogsService.findPublishedAll(query);
   }
 
+  @ApiOperation({ summary: 'Get available blog content font options' })
+  @Get('fonts')
+  getFontOptions() {
+    return this.blogsService.getFontOptions();
+  }
+
   @ApiOperation({ summary: 'Get Published Blog By ID Or Slug For Website' })
   @Get(':identifier')
   findOne(

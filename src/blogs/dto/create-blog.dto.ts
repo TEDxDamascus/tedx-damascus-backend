@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsDateString,
+  IsEnum,
   IsMongoId,
   IsNumber,
   IsObject,
@@ -9,10 +10,12 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   LocalizedStringArrayDto,
   LocalizedStringDto,
 } from './localized-string.dto';
+import { BlogFont } from '../enums/blog-font.enum';
 
 export class CreateBlogDto {
   @IsObject()
@@ -44,6 +47,13 @@ export class CreateBlogDto {
   @ValidateNested()
   @Type(() => LocalizedStringDto)
   content: LocalizedStringDto;
+
+  @IsOptional()
+  @IsEnum(BlogFont, {
+    message: `content_font must be one of: [${Object.values(BlogFont).join(', ')}]`,
+  })
+  @ApiProperty({ enum: BlogFont, required: false, default: BlogFont.CAIRO })
+  content_font?: BlogFont;
 
   @IsOptional()
   @IsObject()

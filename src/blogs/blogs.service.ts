@@ -30,6 +30,11 @@ import {
   BlogReferenceDocument,
 } from '../blog-references/entities/blog-reference.entity';
 import { UserRole } from '../users/entities/user.entity';
+import {
+  BlogFont,
+  BLOG_FONT_DEFAULT,
+  BLOG_FONT_LABELS,
+} from './enums/blog-font.enum';
 
 type Locale = 'ar' | 'en';
 
@@ -246,6 +251,16 @@ export class BlogsService {
     return permissions.map((permission) =>
       this.serializeBlogPermission(permission),
     );
+  }
+
+  getFontOptions() {
+    return {
+      default: BLOG_FONT_DEFAULT,
+      options: Object.values(BlogFont).map((value) => ({
+        value,
+        label: BLOG_FONT_LABELS[value],
+      })),
+    };
   }
 
   async create(createBlogDto: CreateBlogDto) {
@@ -757,6 +772,7 @@ export class BlogsService {
 
     const response = {
       ...blog.toObject(),
+      content_font: blog.content_font ?? BLOG_FONT_DEFAULT,
       user_name: author?.name ?? null,
       author,
       references,
