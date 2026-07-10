@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -143,6 +143,9 @@ export class User {
 
   @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
   description: { ar: string; en: string };
+
+  @Prop({ type: Types.ObjectId, ref: 'Media' })
+  profile_image?: Types.ObjectId;
 
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
   email: string;

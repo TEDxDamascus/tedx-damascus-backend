@@ -49,7 +49,7 @@ describe('UsersService', () => {
 
     expect(userModel.find).toHaveBeenCalledWith({ role: UserRole.ADMIN });
     expect(query.select).toHaveBeenCalledWith(
-      'name email role is_active createdAt',
+      'name email role is_active description profile_image createdAt',
     );
     expect(result.data).toEqual([
       {

@@ -26,8 +26,9 @@ import { OffsetPaginationDto } from '../common/pagination/dto/offset-pagination.
 @Injectable()
 export class UsersService {
   private readonly publicUserSelection =
-    'name email role permissions is_active createdAt updatedAt';
-  private readonly adminUserSelection = 'name email role is_active createdAt';
+    'name email role permissions is_active description profile_image createdAt updatedAt';
+  private readonly adminUserSelection =
+    'name email role is_active description profile_image createdAt';
 
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
@@ -147,6 +148,33 @@ export class UsersService {
         hasPreviousPage: page > 1,
       },
     };
+  }
+
+  async findAuthorCandidates() {
+    const users = await this.userModel
+      .find({
+        role: { $in: [UserRole.ADMIN, UserRole.SUPERADMIN] },
+        is_active: true,
+      })
+      .select('name description profile_image')
+      .populate('profile_image')
+      .sort({ name: 1 })
+      .lean();
+
+    return users.map((user) => {
+      const record = user as unknown as Record<string, unknown>;
+      const id =
+        record._id instanceof Types.ObjectId
+          ? record._id.toHexString()
+          : String(record._id ?? '');
+
+      return {
+        id,
+        name: record.name ?? null,
+        description: record.description ?? { ar: '', en: '' },
+        image: record.profile_image ?? null,
+      };
+    });
   }
 
   async findOne(id: string) {
@@ -478,6 +506,7 @@ export class UsersService {
     const user = await this.userModel
       .findById(id)
       .select(this.publicUserSelection)
+      .populate('profile_image')
       .lean();
 
     if (!user) {

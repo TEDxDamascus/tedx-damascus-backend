@@ -84,6 +84,14 @@ export class BlogsController {
     return this.blogsService.removeBlogPermission(permissionId);
   }
 
+  @ApiOperation({ summary: 'Get admin users available as blog authors' })
+  @Get('author-options')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  getAuthorOptions() {
+    return this.blogsService.getAuthorOptions();
+  }
+
   @ApiOperation({ summary: 'Get Blog By Id' })
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)

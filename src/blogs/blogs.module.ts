@@ -17,15 +17,19 @@ import {
   BlogReferenceSchema,
 } from '../blog-references/entities/blog-reference.entity';
 import { Media, MediaSchema } from '../storage/entities/media.entity';
+import { User, UserSchema } from '../users/entities/user.entity';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
+    UsersModule,
     MongooseModule.forFeature([
       { name: Blog.name, schema: BlogSchema },
       { name: BlogPermission.name, schema: BlogPermissionSchema },
       { name: Category.name, schema: CategorySchema },
       { name: BlogReference.name, schema: BlogReferenceSchema },
       { name: Media.name, schema: MediaSchema },
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   controllers: [BlogsController, PublicBlogsController],

@@ -30,11 +30,15 @@ import {
   BlogReferenceDocument,
 } from '../blog-references/entities/blog-reference.entity';
 import { UserRole } from '../users/entities/user.entity';
+import { User, UserDocument } from '../users/entities/user.entity';
+import { UsersService } from '../users/users.service';
+import { Media, MediaDocument } from '../storage/entities/media.entity';
 import {
   BlogFont,
   BLOG_FONT_DEFAULT,
   BLOG_FONT_LABELS,
 } from './enums/blog-font.enum';
+import { BlogAuthorType } from './enums/blog-author-type.enum';
 
 type Locale = 'ar' | 'en';
 
@@ -67,13 +71,19 @@ type BlogPermissionAction =
   | 'canDelete';
 
 type AuthorResponse = {
-  name: string | null;
+  type?: BlogAuthorType;
+  user_id?: string;
+  name: Partial<LocalizedText> | string | null;
   description: LocalizedText;
+  image: unknown;
 };
 
 type LocalizedAuthorResponse = {
+  type?: BlogAuthorType;
+  user_id?: string;
   name: string | null;
   description: string;
+  image: unknown;
 };
 
 type BlogSiblingResponse = {
@@ -107,7 +117,6 @@ type LocalizedBlogSeoResponse = {
 };
 
 type BlogResponse = BlogDocument & {
-  user_name?: string | null;
   author?: AuthorResponse | null;
   references?: BlogReferenceDocument[];
   prev_blog?: BlogSiblingResponse | null;
@@ -133,7 +142,6 @@ type LocalizedBlogResponse = Omit<
   _id: unknown;
   createdAt: Date;
   updatedAt: Date;
-  user_name?: string | null;
   author?: LocalizedAuthorResponse | null;
   references?: BlogReferenceDocument[];
   prev_blog?: LocalizedBlogSiblingResponse | null;
@@ -177,6 +185,11 @@ export class BlogsService {
     private readonly categoryModel: Model<CategoryDocument>,
     @InjectModel(BlogReference.name)
     private readonly blogReferenceModel: Model<BlogReferenceDocument>,
+    @InjectModel(Media.name)
+    private readonly mediaModel: Model<MediaDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
+    private readonly usersService: UsersService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -263,12 +276,26 @@ export class BlogsService {
     };
   }
 
+  async getAuthorOptions() {
+    const candidates = await this.usersService.findAuthorCandidates();
+
+    return {
+      data: candidates.map((candidate) => ({
+        ...candidate,
+        image: this.resolveMedia(candidate.image),
+      })),
+    };
+  }
+
   async create(createBlogDto: CreateBlogDto) {
     await this.assertCategoryExists(createBlogDto.category_id);
     await this.assertRelatedBlogsExist(createBlogDto.related_blogs_ids);
+    this.assertMutuallyExclusiveAuthorImages(createBlogDto);
 
     try {
-      const blog = new this.blogModel(this.prepareBlogPayload(createBlogDto));
+      const prepared = await this.prepareBlogPayload(createBlogDto);
+      this.assertAuthorComplete(prepared);
+      const blog = new this.blogModel(prepared);
       const savedBlog = await blog.save();
 
       return this.findOne(savedBlog.id);
@@ -335,14 +362,17 @@ export class BlogsService {
       .populate('blog_image')
       .populate('og_image')
       .populate('gallery')
+      .populate('author_image')
       .sort({ [sort]: order === 'desc' ? -1 : 1 })
       .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit));
 
     const total = await this.blogModel.countDocuments(filter);
 
-    const authorsById = await this.getAuthorsById(
-      blogs.map((blog) => blog.user_id),
+    const legacyAuthorsById = await this.getLegacyAuthorsById(
+      blogs
+        .filter((blog) => !blog.author_type && blog.user_id)
+        .map((blog) => blog.user_id),
     );
     const referencesByBlogId = await this.getReferencesByBlogId(
       blogs.map((blog) => blog._id),
@@ -354,7 +384,11 @@ export class BlogsService {
           blog,
           undefined,
           undefined,
-          authorsById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
+          !blog.author_type && blog.user_id
+            ? legacyAuthorsById.get(
+                this.getObjectIdString(blog.user_id) || '',
+              ) ?? null
+            : null,
           referencesByBlogId.get(String(blog._id)) || [],
           locale,
         ),
@@ -416,9 +450,14 @@ export class BlogsService {
 
     await this.assertCategoryExists(updateBlogDto.category_id);
     await this.assertRelatedBlogsExist(updateBlogDto.related_blogs_ids);
+    this.assertMutuallyExclusiveAuthorImages(updateBlogDto);
 
     try {
-      existingBlog.set(this.prepareBlogPayload(updateBlogDto, existingBlog));
+      const prepared = await this.prepareBlogPayload(updateBlogDto, existingBlog);
+      existingBlog.set(prepared);
+      this.assertAuthorComplete(
+        existingBlog.toObject() as unknown as Record<string, unknown>,
+      );
       await existingBlog.save();
 
       return this.findOne(id, user);
@@ -449,12 +488,15 @@ export class BlogsService {
       .populate('category_id')
       .populate('blog_image')
       .populate('og_image')
-      .populate('gallery');
+      .populate('gallery')
+      .populate('author_image');
 
     if (!blog) throw new NotFoundException(notFoundMessage);
 
     const [prevBlog, nextBlog] = await this.findSiblingBlogs(blog);
-    const authorsById = await this.getAuthorsById([blog.user_id]);
+    const legacyAuthorsById = await this.getLegacyAuthorsById(
+      !blog.author_type && blog.user_id ? [blog.user_id] : [],
+    );
     const referencesByBlogId = await this.getReferencesByBlogId([blog._id]);
     const locale = this.resolveLocaleFilter(language);
 
@@ -462,7 +504,10 @@ export class BlogsService {
       blog,
       prevBlog,
       nextBlog,
-      authorsById.get(this.getObjectIdString(blog.user_id) || '') ?? null,
+      !blog.author_type && blog.user_id
+        ? legacyAuthorsById.get(this.getObjectIdString(blog.user_id) || '') ??
+          null
+        : null,
       referencesByBlogId.get(String(blog._id)) || [],
       locale,
     );
@@ -570,7 +615,7 @@ export class BlogsService {
     };
   }
 
-  private prepareBlogPayload(
+  private async prepareBlogPayload(
     payload: Partial<CreateBlogDto>,
     existingBlog?: BlogDocument,
   ) {
@@ -583,12 +628,16 @@ export class BlogsService {
       existingBlog?.content,
       payload.content,
     );
+    const authorFields = await this.resolveAuthorPayload(payload, existingBlog);
+    const status = payload.status ?? existingBlog?.status ?? 'draft';
 
-    return {
+    const prepared: Record<string, unknown> = {
       ...payload,
+      ...authorFields,
       title,
       description,
       content,
+      status,
       tags: this.mergeLocalizedStringArray(existingBlog?.tags, payload.tags),
       publishedAt: this.resolvePublishedAt(payload, existingBlog),
       slug: this.resolveSlugPayload(existingBlog, payload, title),
@@ -613,6 +662,229 @@ export class BlogsService {
         payload.og_description,
       ),
     };
+
+    if (authorFields.author_type) {
+      prepared.user_id = undefined;
+    }
+
+    return prepared;
+  }
+
+  private async resolveAuthorPayload(
+    payload: Partial<CreateBlogDto>,
+    existingBlog?: BlogDocument,
+  ) {
+    const hasAuthorInput =
+      payload.author_type !== undefined ||
+      payload.author_user_id !== undefined ||
+      payload.author_name !== undefined ||
+      payload.author_description !== undefined ||
+      payload.author_image !== undefined ||
+      payload.author_image_url !== undefined;
+
+    if (!hasAuthorInput) {
+      return {};
+    }
+
+    const authorType = payload.author_type ?? existingBlog?.author_type;
+
+    if (!authorType) {
+      throw new BadRequestException('author_type is required when setting author fields');
+    }
+
+    if (authorType === BlogAuthorType.ADMIN) {
+      return this.resolveAdminAuthorPayload(payload, existingBlog);
+    }
+
+    if (authorType === BlogAuthorType.EXTERNAL) {
+      return this.resolveExternalAuthorPayload(payload, existingBlog);
+    }
+
+    throw new BadRequestException('Invalid author_type');
+  }
+
+  private async resolveAdminAuthorPayload(
+    payload: Partial<CreateBlogDto>,
+    existingBlog?: BlogDocument,
+  ) {
+    const userId =
+      payload.author_user_id ??
+      this.getObjectIdString(existingBlog?.author_user_id);
+
+    if (!userId) {
+      throw new BadRequestException(
+        'author_user_id is required for admin author',
+      );
+    }
+
+    const user = await this.findAuthorAdminUser(userId);
+
+    return {
+      author_type: BlogAuthorType.ADMIN,
+      author_user_id: new Types.ObjectId(userId),
+      author_name: this.snapshotUserName(user),
+      author_description: this.resolveUserDescription(user),
+      author_image: this.getObjectIdFromValue(user.profile_image) ?? undefined,
+      author_image_url: undefined,
+      user_id: undefined,
+    };
+  }
+
+  private async resolveExternalAuthorPayload(
+    payload: Partial<CreateBlogDto>,
+    existingBlog?: BlogDocument,
+  ) {
+    const result: Record<string, unknown> = {
+      author_type: BlogAuthorType.EXTERNAL,
+      author_user_id: undefined,
+      author_name: this.mergeOptionalLocalizedName(
+        existingBlog?.author_name,
+        payload.author_name,
+      ),
+      author_description: this.mergeLocalizedField(
+        existingBlog?.author_description,
+        payload.author_description,
+      ),
+      user_id: undefined,
+    };
+
+    if (payload.author_image !== undefined) {
+      if (payload.author_image) {
+        await this.assertMediaExists(payload.author_image);
+        result.author_image = new Types.ObjectId(payload.author_image);
+      } else {
+        result.author_image = undefined;
+      }
+      result.author_image_url = undefined;
+    } else if (payload.author_image_url !== undefined) {
+      const imageUrl = payload.author_image_url?.trim();
+
+      if (imageUrl && !this.isAbsoluteUrl(imageUrl)) {
+        throw new BadRequestException(
+          'author_image_url must be an absolute URL',
+        );
+      }
+
+      result.author_image_url = imageUrl || undefined;
+      result.author_image = undefined;
+    }
+
+    return result;
+  }
+
+  private async findAuthorAdminUser(userId: string) {
+    this.assertValidObjectId(userId, 'Invalid author user ID');
+
+    const user = await this.userModel
+      .findById(userId)
+      .select('name description profile_image role is_active')
+      .populate('profile_image')
+      .lean();
+
+    if (!user || !user.is_active) {
+      throw new NotFoundException('Author admin user not found');
+    }
+
+    if (![UserRole.ADMIN, UserRole.SUPERADMIN].includes(user.role)) {
+      throw new BadRequestException(
+        'Author must be an active admin or superadmin user',
+      );
+    }
+
+    return user as unknown as Record<string, unknown> & {
+      description: LocalizedText;
+      profile_image?: unknown;
+    };
+  }
+
+  private snapshotUserName(
+    user: Record<string, unknown>,
+  ): { ar?: string; en?: string } {
+    const resolvedName = this.resolveUserName(user);
+
+    if (!resolvedName) {
+      return {};
+    }
+
+    return { en: resolvedName };
+  }
+
+  private mergeOptionalLocalizedName(
+    currentValue?: { ar?: string; en?: string },
+    nextValue?: Partial<LocalizedText>,
+  ): { ar?: string; en?: string } {
+    const merged = {
+      ar: nextValue?.ar ?? currentValue?.ar,
+      en: nextValue?.en ?? currentValue?.en,
+    };
+
+    const result: { ar?: string; en?: string } = {};
+
+    if (merged.ar?.trim()) {
+      result.ar = merged.ar.trim();
+    }
+
+    if (merged.en?.trim()) {
+      result.en = merged.en.trim();
+    }
+
+    return result;
+  }
+
+  private assertMutuallyExclusiveAuthorImages(
+    payload: Partial<CreateBlogDto>,
+  ) {
+    if (payload.author_image && payload.author_image_url) {
+      throw new BadRequestException(
+        'Provide author_image or author_image_url, not both',
+      );
+    }
+  }
+
+  private assertAuthorComplete(blog: Record<string, unknown>) {
+    if (blog.status !== 'published') {
+      return;
+    }
+
+    if (!blog.author_type) {
+      throw new BadRequestException('Author is required when publishing a blog');
+    }
+
+    const description = blog.author_description as Partial<LocalizedText> | undefined;
+
+    if (
+      !description ||
+      (!description.ar?.trim() && !description.en?.trim())
+    ) {
+      throw new BadRequestException(
+        'Author description is required when publishing a blog',
+      );
+    }
+
+    if (
+      blog.author_type === BlogAuthorType.ADMIN &&
+      !this.getObjectIdString(blog.author_user_id)
+    ) {
+      throw new BadRequestException(
+        'author_user_id is required for admin author when publishing',
+      );
+    }
+  }
+
+  private async assertMediaExists(mediaId: string) {
+    this.assertValidObjectId(mediaId, 'Invalid author image ID');
+
+    const mediaExists = await this.mediaModel.exists({ _id: mediaId });
+
+    if (!mediaExists) {
+      throw new NotFoundException('Author image not found');
+    }
+  }
+
+  private getObjectIdFromValue(value: unknown): Types.ObjectId | null {
+    const id = this.getObjectIdString(value);
+
+    return id ? new Types.ObjectId(id) : null;
   }
 
   private async assertCategoryExists(categoryId?: string) {
@@ -745,7 +1017,7 @@ export class BlogsService {
     blog: BlogDocument,
     prevBlog?: BlogDocument | null,
     nextBlog?: BlogDocument | null,
-    author?: AuthorResponse | null,
+    legacyAuthor?: AuthorResponse | null,
     references: BlogReferenceDocument[] = [],
     locale?: Locale | null,
   ): BlogResponse | LocalizedBlogResponse {
@@ -769,11 +1041,19 @@ export class BlogsService {
       blog.canonical_url || this.buildCanonicalUrl(blog.slug.en);
     const blogImage = this.resolveMedia(blog.blog_image);
     const ogImage = this.resolveMedia(blog.og_image || blog.blog_image || null);
+    const author =
+      this.buildEmbeddedAuthorResponse(blog) ??
+      (legacyAuthor
+        ? {
+            ...legacyAuthor,
+            image: legacyAuthor.image ?? null,
+          }
+        : null);
+    const authorImage = author?.image ?? null;
 
     const response = {
       ...blog.toObject(),
       content_font: blog.content_font ?? BLOG_FONT_DEFAULT,
-      user_name: author?.name ?? null,
       author,
       references,
       blog_image: blogImage,
@@ -790,12 +1070,60 @@ export class BlogsService {
         og_description: resolvedOgDescription,
       },
       json_ld: {
-        ar: this.buildJsonLd(blog, 'ar', ogImage),
-        en: this.buildJsonLd(blog, 'en', ogImage),
+        ar: this.buildJsonLd(blog, 'ar', ogImage, author, authorImage),
+        en: this.buildJsonLd(blog, 'en', ogImage, author, authorImage),
       },
     } as BlogResponse;
 
     return locale ? this.localizeBlogResponse(response, locale) : response;
+  }
+
+  private buildEmbeddedAuthorResponse(
+    blog: BlogDocument,
+  ): AuthorResponse | null {
+    if (!blog.author_type) {
+      return null;
+    }
+
+    return {
+      type: blog.author_type,
+      user_id: blog.author_user_id
+        ? String(blog.author_user_id)
+        : undefined,
+      name: blog.author_name ?? {},
+      description: this.mergeLocalizedField(blog.author_description),
+      image: this.resolveAuthorImage(blog.author_image, blog.author_image_url),
+    };
+  }
+
+  private resolveAuthorImage(
+    authorImage?: unknown,
+    authorImageUrl?: string,
+  ): unknown {
+    if (authorImage) {
+      return this.resolveMedia(authorImage);
+    }
+
+    if (authorImageUrl?.trim()) {
+      return { url: authorImageUrl.trim() };
+    }
+
+    return null;
+  }
+
+  private resolveAuthorNameForLocale(
+    author: AuthorResponse | null | undefined,
+    locale: Locale,
+  ): string {
+    if (!author) {
+      return '';
+    }
+
+    if (typeof author.name === 'string') {
+      return author.name;
+    }
+
+    return this.translateLocalizedText(author.name ?? undefined, locale);
   }
 
   private resolveLocaleFilter(language?: unknown): Locale | null {
@@ -838,6 +1166,13 @@ export class BlogsService {
       author: blog.author
         ? {
             ...blog.author,
+            name:
+              typeof blog.author.name === 'string'
+                ? blog.author.name
+                : this.translateLocalizedText(
+                    blog.author.name ?? undefined,
+                    locale,
+                  ),
             description: this.translateLocalizedText(
               blog.author.description,
               locale,
@@ -949,7 +1284,7 @@ export class BlogsService {
     }, new Map<string, BlogReferenceDocument[]>());
   }
 
-  private async getAuthorsById(userIds: unknown[]) {
+  private async getLegacyAuthorsById(userIds: unknown[]) {
     const uniqueUserIds = [
       ...new Set(
         userIds.map((userId) => this.getObjectIdString(userId)).filter(Boolean),
@@ -982,6 +1317,7 @@ export class BlogsService {
         {
           name: this.resolveUserName(user),
           description: this.resolveUserDescription(user),
+          image: null,
         },
       ]),
     );
@@ -1102,7 +1438,15 @@ export class BlogsService {
     return `${websiteUrl.replace(/\/$/, '')}/blogs/${slug}`;
   }
 
-  private buildJsonLd(blog: BlogDocument, locale: Locale, image: unknown) {
+  private buildJsonLd(
+    blog: BlogDocument,
+    locale: Locale,
+    image: unknown,
+    author?: AuthorResponse | null,
+    authorImage?: unknown,
+  ) {
+    const authorName = this.resolveAuthorNameForLocale(author, locale);
+
     return {
       '@context': 'https://schema.org',
       '@type': 'Article',
@@ -1117,9 +1461,12 @@ export class BlogsService {
       )[locale],
       image: this.extractImageUrl(image),
       author: {
-        '@type': 'Organization',
+        '@type': 'Person',
         name:
-          this.configService.get<string>('BLOG_AUTHOR_NAME') || 'TEDx Damascus',
+          authorName ||
+          this.configService.get<string>('BLOG_AUTHOR_NAME') ||
+          'TEDx Damascus',
+        image: this.extractImageUrl(authorImage),
       },
       datePublished: blog.publishedAt || blog.createdAt,
       dateModified: blog.updatedAt,
@@ -1127,6 +1474,10 @@ export class BlogsService {
   }
 
   private extractImageUrl(image: unknown): string | null {
+    if (typeof image === 'string' && this.isAbsoluteUrl(image)) {
+      return image;
+    }
+
     if (!image || typeof image !== 'object') {
       return null;
     }

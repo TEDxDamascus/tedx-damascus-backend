@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsEmail,
   IsEnum,
+  IsMongoId,
   IsObject,
   IsOptional,
   IsString,
@@ -23,6 +24,10 @@ export class CreateUserDto {
   @ValidateNested()
   @Type(() => LocalizedStringDto)
   description?: LocalizedStringDto;
+
+  @IsOptional()
+  @IsMongoId()
+  profile_image?: string;
 
   @IsEmail()
   email: string;

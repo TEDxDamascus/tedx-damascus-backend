@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsMongoId,
   IsObject,
   IsOptional,
   IsString,
@@ -19,6 +20,10 @@ export class UpdateCurrentUserDto {
   @ValidateNested()
   @Type(() => LocalizedStringDto)
   description?: LocalizedStringDto;
+
+  @IsOptional()
+  @IsMongoId()
+  profile_image?: string;
 
   @IsOptional()
   @IsEmail()
