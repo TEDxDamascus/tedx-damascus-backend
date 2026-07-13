@@ -6,37 +6,37 @@ import {
   ValidationArguments,
 } from 'class-validator';
 import { Injectable } from '@nestjs/common';
-import { SpeakersService } from '../../speakers/speakers.service';
+import { TeamService } from '../../team/team.service';
 import { Types } from 'mongoose';
 
 @ValidatorConstraint({ async: true })
 @Injectable()
-export class IsExistingSpeakerConstrain implements ValidatorConstraintInterface {
-  constructor(private readonly speakerService: SpeakersService) {}
+export class IsExistingTeamConstrain implements ValidatorConstraintInterface {
+  constructor(private readonly teamService: TeamService) {}
 
   async validate(id: string) {
     if (!Types.ObjectId.isValid(id)) return false;
 
     try {
-      const speaker = await this.speakerService.findOne(id, 'en');
-      return !!speaker;
+      const teamMember = await this.teamService.findOne(id, 'en');
+      return !!teamMember;
     } catch {
       return false;
     }
   }
 
   defaultMessage(args: ValidationArguments) {
-    return `Speaker with id "${args.value}" does not exist`;
+    return `Team member with id "${args.value}" does not exist`;
   }
 }
 
-export function IsExistingSpeaker(validationOptions?: ValidationOptions) {
+export function IsExistingTeam(validationOptions?: ValidationOptions) {
   return function (object: Object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName,
       options: validationOptions,
-      validator: IsExistingSpeakerConstrain,
+      validator: IsExistingTeamConstrain,
     });
   };
 }

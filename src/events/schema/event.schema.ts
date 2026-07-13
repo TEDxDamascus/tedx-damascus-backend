@@ -5,6 +5,7 @@ import { EventType } from '../enums/event-type.enum';
 import type { TranslationField } from '../../common/type/translation-field';
 import { translationSchema } from '../../common/utils/translation.schema';
 import { Speaker } from '../../speakers/schemas/speaker.schema';
+import { Team } from '../../team/schema/team.schema';
 import { Media } from '../../storage/entities/media.entity';
 import { Type } from 'class-transformer';
 import {
@@ -106,10 +107,17 @@ export class Event {
 
   //! Speakers
   @Prop({
-    required: false, //! Change to true
-    // type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Speaker' }], //TODO UNCOMMENT
+    required: true,
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Speaker' }],
   })
   speakers: Speaker[];
+
+  //! Team Members
+  @Prop({
+    required: true,
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Team' }],
+  })
+  team_members: Team[];
 
   @Prop({ required: true })
   @Type(() => Number)

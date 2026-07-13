@@ -83,22 +83,10 @@ export class EventsService {
       .limit(limit)
       .populate('event_image', 'url -_id')
       .populate('gallery', 'url -_id')
-      .populate({
-        path: 'speakers',
-        populate: [
-          {
-            path: 'speaker_image',
-            select: 'url -_id',
-          },
-          {
-            path: 'gallery',
-            select: 'url -_id',
-          },
-        ],
-      })
+      .populate('speakers', 'name bio')
+      .populate('team_members', 'name bio')
       .lean()
       .exec();
-    //! remove gallery of the speaker
     return events.map((event) => ({
       ...event,
       title: translateFieldHelper(event.title, lang),
@@ -111,13 +99,18 @@ export class EventsService {
       ),
       event_image: event.event_image?.url,
       speaker_count: event.speakers?.length ?? 0,
-      gallery: event.gallery?.map((img) => img.url), //TODO UNCOMMENT
-      // speakers: event.speakers.map((speaker) => ({
-      //   name: translateFieldHelper(speaker.name, lang),
-      //   bio: translateFieldHelper(speaker.bio, lang),
-      //   description: translateFieldHelper(speaker.description, lang),
-      //   speaker_image: speaker.speaker_image.url,
-      // })),
+      team_count: event.team_members?.length ?? 0,
+      gallery: event.gallery?.map((img) => img.url),
+      speakers:
+        event.speakers?.map((speaker) => ({
+          name: translateFieldHelper(speaker.name, lang),
+          bio: translateFieldHelper(speaker.bio, lang),
+        })) ?? [],
+      team_members:
+        event.team_members?.map((member) => ({
+          name: translateFieldHelper(member.name, lang),
+          bio: translateFieldHelper(member.bio, lang),
+        })) ?? [],
     }));
   }
   //! Get Event By Id
@@ -126,15 +119,8 @@ export class EventsService {
       .findById(id)
       .populate('event_image', 'url -_id')
       .populate('gallery', 'url -_id')
-      .populate({
-        path: 'speakers',
-        populate: [
-          {
-            path: 'speaker_image',
-            select: 'url -_id',
-          },
-        ],
-      })
+      .populate('speakers', 'name bio')
+      .populate('team_members', 'name bio')
       .lean()
       .exec();
     if (!event)
@@ -151,12 +137,18 @@ export class EventsService {
       ),
       event_image: event.event_image?.url,
       speaker_count: event.speakers?.length ?? 0,
-      gallery: event.gallery?.map((gall) => gall.url), //TODO UNCOMMENT
-      // speakers: event.speakers.map((speaker) => ({
-      //   name: translateFieldHelper(speaker.name, lang),
-      //   bio: translateFieldHelper(speaker.bio, lang),
-      //   speaker_image: speaker.speaker_image.url,
-      // })),
+      team_count: event.team_members?.length ?? 0,
+      gallery: event.gallery?.map((gall) => gall.url),
+      speakers:
+        event.speakers?.map((speaker) => ({
+          name: translateFieldHelper(speaker.name, lang),
+          bio: translateFieldHelper(speaker.bio, lang),
+        })) ?? [],
+      team_members:
+        event.team_members?.map((member) => ({
+          name: translateFieldHelper(member.name, lang),
+          bio: translateFieldHelper(member.bio, lang),
+        })) ?? [],
     };
   }
   //! Update Event By Id

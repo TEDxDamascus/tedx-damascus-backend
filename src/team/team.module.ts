@@ -17,5 +17,6 @@ import { StorageModule } from 'src/storage/storage.module';
   ],
   controllers: [TeamController],
   providers: [TeamService, IsExistingMediaConstrain],
+  exports: [TeamService],
 })
 export class TeamModule {}
