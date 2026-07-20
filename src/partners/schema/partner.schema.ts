@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import type { TranslationField } from 'src/common/type/translation-field';
 import { translationSchema } from 'src/common/utils/translation.schema';
 import { Media } from 'src/storage/entities/media.entity';
+import { CardSizeEnum } from './partner.card.size.enum';
 
 //! PARTNER SERVICE SCHEMA
 @Schema({ _id: false })
@@ -16,12 +17,25 @@ export class PartnerService {
 export const PartnerServiceSchema =
   SchemaFactory.createForClass(PartnerService);
 
-//! PARTNER SCHEMA
+//! ====================== PARTNER SCHEMA
+
 @Schema({ timestamps: true })
 export class Partner {
   //! name
   @Prop({ required: true, _id: false, type: translationSchema })
   name!: TranslationField;
+
+  //! year
+  @Prop({ required: true })
+  year!: number;
+
+  //! custom card size
+  @Prop({ required: false, enum: CardSizeEnum })
+  custom_card_size!: CardSizeEnum;
+
+  //! partnership type
+  @Prop({ required: true })
+  partner_ship_type!: string;
 
   //! image
   @Prop({ required: false, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
@@ -30,10 +44,6 @@ export class Partner {
   //! Slug
   @Prop({ required: true, _id: false, type: translationSchema })
   slug!: TranslationField;
-
-  //! partnership type
-  @Prop({ required: true })
-  partnership_type!: string; //TODO make enum type for it
 
   //! description
   @Prop({ required: true, _id: false, type: translationSchema })

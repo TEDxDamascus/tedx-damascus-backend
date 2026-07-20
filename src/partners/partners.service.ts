@@ -30,17 +30,22 @@ export class PartnersService {
   }
 
   //! return all partners + language
+
   async findAll(
     lang: string,
     paginationQueryDto: PaginationQueryDto,
     partnerQuery: PartnerQueryDto, //TODO filter by name and partnership type
   ) {
     const { limit, offset } = paginationQueryDto;
-    const { name } = partnerQuery;
+    const { name, year } = partnerQuery;
 
     const filter: any = {};
     if (name) {
       filter[`name.${lang}`] = { $regex: `^${name}`, $options: 'i' };
+    }
+
+    if (year) {
+      filter.year = Number(year);
     }
 
     const partners = await this.partnerModel
