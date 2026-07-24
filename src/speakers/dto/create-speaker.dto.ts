@@ -22,6 +22,18 @@ export class CreateSpeakerDto {
   bio!: string;
 
   @IsDefined()
+  @ValidateNested({ message: 'brief must contain both en and ar translations' })
+  @Type(() => TranslationDto)
+  brief!: string;
+
+  @IsDefined()
+  @ValidateNested({
+    message: 'experience must contain both en and ar translations',
+  })
+  @Type(() => TranslationDto)
+  experience!: string;
+
+  @IsDefined()
   @ValidateNested({
     message: 'description must contain both en and ar translations',
   })
@@ -50,7 +62,8 @@ export class CreateSpeakerDto {
   gallery!: string[];
 
   @IsDefined()
-  @IsNotEmpty()
-  @IsUrl()
-  video_link!: string;
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUrl({}, { each: true })
+  video_link!: string[];
 }
