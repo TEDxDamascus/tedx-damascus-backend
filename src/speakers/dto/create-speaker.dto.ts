@@ -3,7 +3,9 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsDefined,
+  IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsUrl,
   ValidateNested,
 } from 'class-validator';
@@ -20,6 +22,11 @@ export class CreateSpeakerDto {
   @ValidateNested({ message: 'bio must contain both en and ar translations' })
   @Type(() => TranslationDto)
   bio!: string;
+
+  @IsDefined()
+  @ValidateNested({ message: 'slug must contain both en and ar translations' })
+  @Type(() => TranslationDto)
+  slug!: string;
 
   @IsDefined()
   @ValidateNested({ message: 'brief must contain both en and ar translations' })
@@ -45,6 +52,11 @@ export class CreateSpeakerDto {
   @IsNotEmpty()
   @IsExistingMedia()
   speaker_image!: string;
+
+  @IsOptional()
+  @IsEmail()
+  @IsNotEmpty()
+  speaker_email!: string;
 
   @IsDefined()
   @IsArray()

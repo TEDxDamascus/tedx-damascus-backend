@@ -43,8 +43,8 @@ export class OrganizerService {
       .exec();
     return data.map((org) => ({
       ...org,
-      name: translateFieldHelper(org.name, lang),
-      bio: translateFieldHelper(org.bio, lang),
+      // name: translateFieldHelper(org.name, lang),
+      // bio: translateFieldHelper(org.bio, lang),
     }));
   }
 
@@ -60,8 +60,8 @@ export class OrganizerService {
 
     return {
       ...data,
-      name: translateFieldHelper(data.name, lang),
-      bio: translateFieldHelper(data.bio, lang),
+      // name: translateFieldHelper(data.name, lang),
+      // bio: translateFieldHelper(data.bio, lang),
     };
   }
 

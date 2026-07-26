@@ -14,6 +14,10 @@ export class Speaker {
   })
   name!: TranslationField;
 
+  //! SPEAKER EMAIL (optional field )
+  @Prop({ required: false })
+  speaker_email!: string;
+
   //! Bio
   @Prop({
     required: true,
@@ -21,6 +25,14 @@ export class Speaker {
     _id: false,
   })
   bio!: TranslationField;
+  
+  //! slug
+  @Prop({
+    required: true,
+    type: translationSchema,
+    _id: false,
+  })
+  slug!: TranslationField;
 
   //! Breif
   @Prop({

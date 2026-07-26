@@ -49,11 +49,12 @@ export class SpeakersService {
       .exec();
     return speakers.map((speaker) => ({
       ...speaker,
-      name: translateFieldHelper(speaker.name, lang),
-      bio: translateFieldHelper(speaker.bio, lang),
-      brief: translateFieldHelper(speaker.brief, lang),
-      experience: translateFieldHelper(speaker.experience, lang),
-      description: translateFieldHelper(speaker.description, lang),
+      // name: translateFieldHelper(speaker.name, lang),
+      // bio: translateFieldHelper(speaker.bio, lang),
+      // slug: translateFieldHelper(speaker.slug, lang),
+      // brief: translateFieldHelper(speaker.brief, lang),
+      // experience: translateFieldHelper(speaker.experience, lang),
+      // description: translateFieldHelper(speaker.description, lang),
       speaker_image: speaker.speaker_image.url,
       gallery: speaker.gallery.map((gall) => gall.url),
     }));
@@ -70,11 +71,12 @@ export class SpeakersService {
       throw new NotFoundException(`Speaker with id ${id} was not found`);
     return {
       ...speaker,
-      name: translateFieldHelper(speaker.name, lang),
-      bio: translateFieldHelper(speaker.bio, lang),
-      brief: translateFieldHelper(speaker.brief, lang),
-      experience: translateFieldHelper(speaker.experience, lang),
-      description: translateFieldHelper(speaker.description, lang),
+      // name: translateFieldHelper(speaker.name, lang),
+      // bio: translateFieldHelper(speaker.bio, lang),
+      // slug: translateFieldHelper(speaker.slug, lang),
+      // brief: translateFieldHelper(speaker.brief, lang),
+      // experience: translateFieldHelper(speaker.experience, lang),
+      // description: translateFieldHelper(speaker.description, lang),
       speaker_image: speaker.speaker_image.url,
       gallery: speaker.gallery.map((gall) => gall.url),
     };

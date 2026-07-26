@@ -89,28 +89,25 @@ export class EventsService {
       .exec();
     return events.map((event) => ({
       ...event,
-      title: translateFieldHelper(event.title, lang),
-      description: translateFieldHelper(event.description, lang),
-      brief: translateFieldHelper(event.brief, lang),
-      location: translateFieldHelper(event.location, lang),
-      location_description: translateFieldHelper(
-        event.location_description,
-        lang,
-      ),
+      //! removed translations
+      // title: translateFieldHelper(event.title, lang),
+      // description: translateFieldHelper(event.description, lang),
+      // brief: translateFieldHelper(event.brief, lang),
+      // location: translateFieldHelper(event.location, lang),
+      // location_description: translateFieldHelper(
+      //   event.location_description,
+      //   lang,
+      // ),
       event_image: event.event_image?.url,
       speaker_count: event.speakers?.length ?? 0,
       team_count: event.team_members?.length ?? 0,
       gallery: event.gallery?.map((img) => img.url),
-      speakers:
-        event.speakers?.map((speaker) => ({
-          name: translateFieldHelper(speaker.name, lang),
-          bio: translateFieldHelper(speaker.bio, lang),
-        })) ?? [],
-      team_members:
-        event.team_members?.map((member) => ({
-          name: translateFieldHelper(member.name, lang),
-          bio: translateFieldHelper(member.bio, lang),
-        })) ?? [],
+      speakers: event.speakers ?? [],
+      // ?.map((speaker) => ({
+      //   name: translateFieldHelper(speaker.name, lang),
+      //   bio: translateFieldHelper(speaker.bio, lang),
+      // }))
+      team_members: event.team_members ?? [],
     }));
   }
   //! Get Event By Id
@@ -127,28 +124,21 @@ export class EventsService {
       throw new NotFoundException(`Event with id ${id} was not found`);
     return {
       ...event,
-      title: translateFieldHelper(event.title, lang),
-      description: translateFieldHelper(event.description, lang),
-      brief: event.brief ? translateFieldHelper(event.brief, lang) : undefined,
-      location: translateFieldHelper(event.location, lang),
-      location_description: translateFieldHelper(
-        event.location_description,
-        lang,
-      ),
+      //! removed translations
+      // title: translateFieldHelper(event.title, lang),
+      // description: translateFieldHelper(event.description, lang),
+      // brief: event.brief ? translateFieldHelper(event.brief, lang) : undefined,
+      // location: translateFieldHelper(event.location, lang),
+      // location_description: translateFieldHelper(
+      //   event.location_description,
+      //   lang,
+      // ),
       event_image: event.event_image?.url,
       speaker_count: event.speakers?.length ?? 0,
       team_count: event.team_members?.length ?? 0,
       gallery: event.gallery?.map((gall) => gall.url),
-      speakers:
-        event.speakers?.map((speaker) => ({
-          name: translateFieldHelper(speaker.name, lang),
-          bio: translateFieldHelper(speaker.bio, lang),
-        })) ?? [],
-      team_members:
-        event.team_members?.map((member) => ({
-          name: translateFieldHelper(member.name, lang),
-          bio: translateFieldHelper(member.bio, lang),
-        })) ?? [],
+      speakers: event.speakers ?? [],
+      team_members: event.team_members ?? [],
     };
   }
   //! Update Event By Id

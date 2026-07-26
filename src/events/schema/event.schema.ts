@@ -24,11 +24,11 @@ export class Event {
     type: translationSchema,
     _id: false,
   })
-  title: TranslationField;
+  title!: TranslationField;
 
   //! Event_Type
   @Prop({ required: true, enum: EventType })
-  event_type: EventType;
+  event_type!: EventType;
 
   //! Event Image (optional)
   @Prop({ required: false, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
@@ -36,7 +36,7 @@ export class Event {
 
   //! Event_Status
   @Prop({ required: true, enum: EventStatus })
-  status: EventStatus;
+  status!: EventStatus;
 
   //! Description
   @Prop({
@@ -44,7 +44,7 @@ export class Event {
     _id: false,
     type: translationSchema,
   })
-  description: TranslationField;
+  description!: TranslationField;
 
   //! Brief(optional)
   @Prop({
@@ -52,7 +52,7 @@ export class Event {
     type: translationSchema,
     _id: false,
   })
-  brief: TranslationField;
+  brief!: TranslationField;
 
   //! Location
   @Prop({
@@ -60,7 +60,7 @@ export class Event {
     type: translationSchema,
     _id: false,
   })
-  location: TranslationField;
+  location!: TranslationField;
 
   //! Location Description
   @Prop({
@@ -68,35 +68,35 @@ export class Event {
     type: translationSchema,
     _id: false,
   })
-  location_description: TranslationField;
+  location_description!: TranslationField;
 
   //! Location Email
   @Prop({ required: true })
   @IsEmail()
-  location_email: string;
+  location_email!: string;
 
   //! Location PhoneNumber
   @Prop({ required: true })
   @IsPhoneNumber()
-  location_phone: string;
+  location_phone!: string;
 
   //! longitude, latitude (order matter)
   @Prop({
     type: [Number],
     required: true,
   })
-  coordinates: [number, number];
+  coordinates!: [number, number];
 
   @Prop({ required: true })
-  start_time: string;
+  start_time!: string;
 
   //! End Time (e.g. "22:00")
   @Prop({ required: true })
-  end_time: string;
+  end_time!: string;
 
   //! Date
   @Prop({ required: true })
-  date: Date;
+  date!: Date;
 
   //! Gallery (optional)
   @Prop({
@@ -110,11 +110,11 @@ export class Event {
     required: true,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Speaker' }],
   })
-  speakers: Speaker[];
+  speakers!: Speaker[];
 
   //! Team Members
   @Prop({
-    required: true,
+    required: false,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Team' }],
   })
   team_members: Team[];
@@ -127,7 +127,7 @@ export class Event {
 
   //! Is_deleted
   @Prop({ required: false, default: false })
-  is_deleted: boolean;
+  is_deleted?: boolean;
 }
 
 export const EventSchema = SchemaFactory.createForClass(Event);
