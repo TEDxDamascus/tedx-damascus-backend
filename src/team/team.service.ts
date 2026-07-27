@@ -62,8 +62,8 @@ export class TeamService {
       .exec();
     return team.map((teamMember) => ({
       ...teamMember,
-      name: translateFieldHelper(teamMember.name, lang),
-      bio: translateFieldHelper(teamMember.bio, lang),
+      // name: translateFieldHelper(teamMember.name, lang),
+      // bio: translateFieldHelper(teamMember.bio, lang),
     }));
   }
 
@@ -78,8 +78,8 @@ export class TeamService {
       throw new NotFoundException(`Team Member with id ${id} was not found`);
     return {
       ...teamMember,
-      name: translateFieldHelper(teamMember.name, lang),
-      bio: translateFieldHelper(teamMember.bio, lang),
+      // name: translateFieldHelper(teamMember.name, lang),
+      // bio: translateFieldHelper(teamMember.bio, lang),
     };
   }
 

@@ -8,8 +8,8 @@ import { CardSizeEnum } from './partner.card.size.enum';
 //! PARTNER SERVICE SCHEMA
 @Schema({ _id: false })
 export class PartnerService {
-  @Prop({ required: true })
-  title!: string;
+  @Prop({ required: true, _id: false, type: translationSchema })
+  title!: TranslationField;
 
   @Prop({ required: true, _id: false, type: translationSchema })
   description!: TranslationField;
@@ -61,6 +61,7 @@ export class Partner {
     required: true,
     _id: false,
     type: {
+      //TODO make this translated also
       address: translationSchema,
       phone: { type: String, required: true },
       email: { type: String, required: true },
