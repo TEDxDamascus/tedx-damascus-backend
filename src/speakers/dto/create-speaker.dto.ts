@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { TranslationDto } from '../../common/dto/translation.dto';
 import { IsExistingMedia } from '../../common/decorators/is-existing-media.decorator';
+import { ContactInfoDto } from 'src/partners/dto/contact-info.dto';
 
 export class CreateSpeakerDto {
   @IsDefined()
@@ -53,10 +54,16 @@ export class CreateSpeakerDto {
   @IsExistingMedia()
   speaker_image!: string;
 
-  @IsOptional()
-  @IsEmail()
-  @IsNotEmpty()
-  speaker_email!: string;
+  // @IsOptional()
+  // @IsEmail()
+  // @IsNotEmpty()
+  // speaker_email!: string;
+
+  //! contact info
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => ContactInfoDto)
+  contact_info!: ContactInfoDto;
 
   @IsDefined()
   @IsArray()

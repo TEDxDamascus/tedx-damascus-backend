@@ -83,18 +83,45 @@ export class SpeakersService {
   }
   //! Update Speaker By Id
   async update(id: string, updateSpeakerDto: UpdateSpeakerDto) {
-    const speaker = await this.speakerModel.findByIdAndUpdate(
-      id,
-      updateSpeakerDto,
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
-    if (!speaker)
+    const { speaker_image, gallery, ...rest } = updateSpeakerDto;
+    const payload: Record<string, unknown> = { ...rest };
+
+    if (speaker_image) {
+      const media = await this.storageservice.findOneByURL(speaker_image);
+      if (!media) {
+        throw new NotFoundException(
+          `Media with URL "${speaker_image}" not found`,
+        );
+      }
+      payload.speaker_image = media._id;
+    }
+
+    if (gallery?.length) {
+      const galleryDocs = await Promise.all(
+        gallery.map((url) => this.storageservice.findOneByURL(url)),
+      );
+      const missingIndex = galleryDocs.findIndex((g) => !g);
+      if (missingIndex !== -1) {
+        throw new NotFoundException(
+          `Media with URL "${gallery[missingIndex]}" not found`,
+        );
+      }
+      payload.gallery = galleryDocs.map((g) => g._id);
+    }
+
+    const speaker = await this.speakerModel.findByIdAndUpdate(id, payload, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!speaker) {
       throw new NotFoundException(`Speaker with id ${id} was not found`);
+    }
+
     return speaker;
   }
+
+  
   //! Delete Speaker By Id
   async remove(id: string) {
     const speaker = await this.speakerModel.findByIdAndDelete(id);

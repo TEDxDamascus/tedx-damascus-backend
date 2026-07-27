@@ -16,7 +16,7 @@ export class Organizer {
   })
   image!: Media;
 
-  @Prop({ required: true, type: translationSchema, _id: true })
+  @Prop({ required: true, type: translationSchema, _id: false })
   bio!: TranslationField;
 
   @Prop({ type: [String], default: [] })

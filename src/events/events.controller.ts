@@ -31,9 +31,9 @@ export class EventsController {
   //! Create New Event
   @ApiOperation({ summary: 'Create new Event' })
   @Post()
-  // @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  // @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
-  // @Permissions(UserPermission.EVENTS_CREATE)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.EVENTS_CREATE)
   create(@Body() createEventDto: CreateEventDto) {
     return this.eventsService.create(createEventDto);
   }
