@@ -14,9 +14,6 @@ export class Speaker {
   })
   name!: TranslationField;
 
-  //! SPEAKER EMAIL (optional field )
-  @Prop({ required: false })
-  speaker_email!: string;
 
   //! Bio
   @Prop({
@@ -25,7 +22,7 @@ export class Speaker {
     _id: false,
   })
   bio!: TranslationField;
-  
+
   //! slug
   @Prop({
     required: true,
@@ -69,6 +66,22 @@ export class Speaker {
   //! Social Link
   @Prop({ required: true })
   social_links!: string[];
+
+  //! Contact info
+  @Prop({
+    required: true,
+    _id: false,
+    type: {
+      address: translationSchema,
+      phone: { type: String, required: true },
+      email: { type: String, required: true },
+    },
+  })
+  contact_info!: {
+    address: TranslationField;
+    phone: string;
+    email: string;
+  };
 
   //! Gallery
   @Prop({

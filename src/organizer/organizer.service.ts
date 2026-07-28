@@ -66,22 +66,43 @@ export class OrganizerService {
   }
 
   //! update org details by id
-  async update(id: string, updateOrganizerDto: UpdateOrganizerDto) {
-    const org = await this.organizerModel.findByIdAndUpdate(
-      id,
-      updateOrganizerDto,
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
+//! update org details by id
+async update(id: string, updateOrganizerDto: UpdateOrganizerDto) {
+  const { image, gallery, ...rest } = updateOrganizerDto;
+  const payload: Record<string, unknown> = { ...rest };
 
-    if (!org) {
-      throw new NotFoundException(`org with id ${id} was not found`);
+  if (image) {
+    const orgImage = await this.storageservice.findOneByURL(image);
+    if (!orgImage) {
+      throw new NotFoundException(`Media with URL "${image}" not found`);
     }
-
-    return org;
+    payload.image = orgImage._id;
   }
+
+  if (gallery?.length) {
+    const orgGallery = await Promise.all(
+      gallery.map((url) => this.storageservice.findOneByURL(url)),
+    );
+    const missingIndex = orgGallery.findIndex((g) => !g);
+    if (missingIndex !== -1) {
+      throw new NotFoundException(
+        `Media with URL "${gallery[missingIndex]}" not found`,
+      );
+    }
+    payload.gallery = orgGallery.map((g) => g._id);
+  }
+
+  const org = await this.organizerModel.findByIdAndUpdate(id, payload, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!org) {
+    throw new NotFoundException(`org with id ${id} was not found`);
+  }
+
+  return org;
+}
 
   //! remove org by id
   async remove(id: string) {
