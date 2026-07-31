@@ -1,12 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { WallAnswerResponseDto } from './wall-answer-response.dto';
+import { WallQuestionTextDto } from './wall-question-text.dto';
 
 export class WallQuestionResponseDto {
   @ApiProperty()
   id: string;
 
-  @ApiProperty()
-  text: string;
+  @ApiProperty({ type: WallQuestionTextDto })
+  text: WallQuestionTextDto;
 
   @ApiProperty()
   expiresAt: string;

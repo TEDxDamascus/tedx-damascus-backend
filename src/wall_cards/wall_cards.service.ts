@@ -137,7 +137,7 @@ export class WallCardsService {
     const message = await this.t(lang, 'success.PUBLISHED');
     return {
       message,
-      data: mapWallQuestion(created, lang),
+      data: mapWallQuestion(created),
     };
   }
 
@@ -146,7 +146,7 @@ export class WallCardsService {
     answers: WallAnswerResponse[];
   }> {
     const questionDoc = await this.findActiveQuestionDocument(lang);
-    const question = mapWallQuestion(questionDoc, lang);
+    const question = mapWallQuestion(questionDoc);
     const answers = await this.resolveFeaturedAnswers(questionDoc);
 
     return { question, answers };
@@ -192,7 +192,7 @@ export class WallCardsService {
     await questionDoc.save();
 
     const message = await this.t(lang, 'success.FEATURED_ANSWERS_UPDATED');
-    const question = mapWallQuestion(questionDoc, lang);
+    const question = mapWallQuestion(questionDoc);
 
     return {
       message,
@@ -333,7 +333,7 @@ export class WallCardsService {
 
     return {
       message: await this.t(lang, 'success.UPDATED'),
-      data: mapWallQuestion(question, lang),
+      data: mapWallQuestion(question),
     };
   }
 
@@ -468,7 +468,7 @@ export class WallCardsService {
     { question: WallQuestionResponse } & PaginatedResult<WallAnswerResponse>
   > {
     const questionDoc = await this.findQuestionById(questionId, lang);
-    const question = mapWallQuestion(questionDoc, lang);
+    const question = mapWallQuestion(questionDoc);
     const statusFilter = this.resolveHistoryAnswerStatusFilter(query.status);
     const answers = await this.listAnswersForQuestion(
       questionId,
@@ -856,7 +856,7 @@ export class WallCardsService {
     ]);
 
     return buildPaginatedResult(
-      items.map((q) => mapWallQuestion(q, lang)),
+      items.map((q) => mapWallQuestion(q)),
       total,
       page,
       limit,

@@ -1,11 +1,13 @@
 import { Types } from 'mongoose';
-import { translateFieldHelper } from '../../common/utils/translate.helper';
 import { WallAnswerDocument } from '../entities/wall-answer.entity';
-import { WallQuestionDocument } from '../entities/wall-question.entity';
+import {
+  WallQuestionDocument,
+  WallQuestionText,
+} from '../entities/wall-question.entity';
 
 export type WallQuestionResponse = {
   id: string;
-  text: string;
+  text: WallQuestionText;
   expiresAt: string;
   categoryId?: string;
   tags: string[];
@@ -31,13 +33,23 @@ export type WallAnswerResponse = {
   createdAt?: string;
 };
 
+function mapWallQuestionText(text: WallQuestionText): WallQuestionText {
+  const mapped: WallQuestionText = {};
+  if (text?.en) {
+    mapped.en = text.en;
+  }
+  if (text?.ar) {
+    mapped.ar = text.ar;
+  }
+  return mapped;
+}
+
 export function mapWallQuestion(
   doc: WallQuestionDocument,
-  lang: string,
 ): WallQuestionResponse {
   return {
     id: doc.id,
-    text: translateFieldHelper(doc.text, lang),
+    text: mapWallQuestionText(doc.text),
     expiresAt: doc.expiresAt.toISOString(),
     categoryId: doc.categoryId?.toString(),
     tags: doc.tags ?? [],
