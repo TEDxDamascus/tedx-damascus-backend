@@ -8,15 +8,20 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  Validate,
   ValidateNested,
 } from 'class-validator';
-import { TranslationDto } from '../../common/dto/translation.dto';
+import {
+  AtLeastOneWallQuestionLangConstraint,
+  WallQuestionTextDto,
+} from './wall-question-text.dto';
 
 export class PublishWallQuestionDto {
-  @ApiProperty({ type: TranslationDto })
+  @ApiProperty({ type: WallQuestionTextDto })
   @ValidateNested()
-  @Type(() => TranslationDto)
-  text: TranslationDto;
+  @Type(() => WallQuestionTextDto)
+  @Validate(AtLeastOneWallQuestionLangConstraint)
+  text: WallQuestionTextDto;
 
   @ApiProperty({ example: '2026-12-31T23:59:59.000Z' })
   @IsDateString()

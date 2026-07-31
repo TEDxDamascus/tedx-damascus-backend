@@ -1,10 +1,19 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import { translationSchema } from '../../common/utils/translation.schema';
 
 export const WALL_QUESTION_STATUSES = ['active', 'archived', 'expired'] as const;
 
 export type WallQuestionStatus = (typeof WALL_QUESTION_STATUSES)[number];
+
+export type WallQuestionText = {
+  en?: string;
+  ar?: string;
+};
+
+const wallQuestionTextSchema = {
+  en: { type: String, required: false },
+  ar: { type: String, required: false },
+};
 
 export type WallQuestionDocument = HydratedDocument<WallQuestion> & {
   createdAt: Date;
@@ -13,8 +22,8 @@ export type WallQuestionDocument = HydratedDocument<WallQuestion> & {
 
 @Schema({ timestamps: true })
 export class WallQuestion {
-  @Prop({ type: translationSchema, required: true })
-  text: { en: string; ar: string };
+  @Prop({ type: wallQuestionTextSchema, required: true })
+  text: WallQuestionText;
 
   @Prop({ required: true })
   expiresAt: Date;

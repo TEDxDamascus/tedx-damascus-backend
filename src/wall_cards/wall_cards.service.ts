@@ -108,8 +108,16 @@ export class WallCardsService {
       await this.archiveQuestionWithPendingAnswers(previousActive, now);
     }
 
+    const text: { en?: string; ar?: string } = {};
+    if (dto.text.en?.trim()) {
+      text.en = dto.text.en.trim();
+    }
+    if (dto.text.ar?.trim()) {
+      text.ar = dto.text.ar.trim();
+    }
+
     const created = await this.questionModel.create({
-      text: dto.text,
+      text,
       expiresAt,
       categoryId: dto.categoryId
         ? new Types.ObjectId(dto.categoryId)
