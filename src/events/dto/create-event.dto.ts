@@ -139,7 +139,7 @@ export class CreateEventDto {
   speakers!: string[];
 
   //! Team Members
-  @IsDefined()
+  @IsOptional()
   @IsArray()
   @IsMongoId({ each: true })
   @ArrayNotEmpty()

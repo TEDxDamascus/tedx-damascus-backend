@@ -12,7 +12,8 @@ export class Speaker {
     type: translationSchema,
     _id: false,
   })
-  name: TranslationField;
+  name!: TranslationField;
+
 
   //! Bio
   @Prop({
@@ -20,7 +21,31 @@ export class Speaker {
     type: translationSchema,
     _id: false,
   })
-  bio: TranslationField;
+  bio!: TranslationField;
+
+  //! slug
+  @Prop({
+    required: true,
+    type: translationSchema,
+    _id: false,
+  })
+  slug!: TranslationField;
+
+  //! Breif
+  @Prop({
+    required: true,
+    type: translationSchema,
+    _id: false,
+  })
+  brief!: TranslationField;
+
+  //! Experience
+  @Prop({
+    required: true,
+    type: translationSchema,
+    _id: false,
+  })
+  experience!: TranslationField;
 
   //! Description
   @Prop({
@@ -28,7 +53,7 @@ export class Speaker {
     type: translationSchema,
     _id: false,
   })
-  description: TranslationField;
+  description!: TranslationField;
 
   //! Speaker Image
   @Prop({
@@ -36,21 +61,37 @@ export class Speaker {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Media',
   })
-  speaker_image: Media;
+  speaker_image!: Media;
 
   //! Social Link
   @Prop({ required: true })
-  social_links: string[];
+  social_links!: string[];
+
+  //! Contact info
+  @Prop({
+    required: true,
+    _id: false,
+    type: {
+      address: translationSchema,
+      phone: { type: String, required: true },
+      email: { type: String, required: true },
+    },
+  })
+  contact_info!: {
+    address: TranslationField;
+    phone: string;
+    email: string;
+  };
 
   //! Gallery
   @Prop({
     required: true,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Media' }],
   })
-  gallery: Media[];
+  gallery!: Media[];
 
   //! Video Link
   @Prop({ required: true })
-  video_link: string;
+  video_link!: string[];
 }
 export const SpeakerSchema = SchemaFactory.createForClass(Speaker);

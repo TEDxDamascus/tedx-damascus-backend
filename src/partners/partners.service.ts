@@ -30,17 +30,22 @@ export class PartnersService {
   }
 
   //! return all partners + language
+
   async findAll(
     lang: string,
     paginationQueryDto: PaginationQueryDto,
     partnerQuery: PartnerQueryDto, //TODO filter by name and partnership type
   ) {
     const { limit, offset } = paginationQueryDto;
-    const { name } = partnerQuery;
+    const { name, year } = partnerQuery;
 
     const filter: any = {};
     if (name) {
       filter[`name.${lang}`] = { $regex: `^${name}`, $options: 'i' };
+    }
+
+    if (year) {
+      filter.year = Number(year);
     }
 
     const partners = await this.partnerModel
@@ -115,15 +120,28 @@ export class PartnersService {
 
   //! Update existing partner by Id
   async update(id: string, updatePartnerDto: UpdatePartnerDto) {
+    const { image, ...rest } = updatePartnerDto;
+    const payload: Record<string, unknown> = { ...rest };
+
+    if (image) {
+      const partnerImage = await this.storageservice.findOneByURL(image);
+      if (!partnerImage) {
+        throw new NotFoundException(`Media with URL "${image}" not found`);
+      }
+      payload.image = partnerImage._id;
+    }
+
     const partner = await this.partnerModel
-      .findByIdAndUpdate(id, updatePartnerDto, {
+      .findByIdAndUpdate(id, payload, {
         new: true,
         runValidators: true,
       })
       .exec();
+
     if (!partner) {
       throw new NotFoundException(`partner with id ${id} was not found`);
     }
+
     return partner;
   }
 

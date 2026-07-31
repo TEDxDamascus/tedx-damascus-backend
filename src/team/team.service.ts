@@ -58,12 +58,12 @@ export class TeamService {
       .populate('image', 'url -_id')
       .skip(offset ?? 0)
       .limit(limit ?? 10)
-      
+
       .exec();
     return team.map((teamMember) => ({
       ...teamMember,
-      name: translateFieldHelper(teamMember.name, lang),
-      bio: translateFieldHelper(teamMember.bio, lang),
+      // name: translateFieldHelper(teamMember.name, lang),
+      // bio: translateFieldHelper(teamMember.bio, lang),
     }));
   }
 
@@ -78,22 +78,35 @@ export class TeamService {
       throw new NotFoundException(`Team Member with id ${id} was not found`);
     return {
       ...teamMember,
-      name: translateFieldHelper(teamMember.name, lang),
-      bio: translateFieldHelper(teamMember.bio, lang),
+      // name: translateFieldHelper(teamMember.name, lang),
+      // bio: translateFieldHelper(teamMember.bio, lang),
     };
   }
 
   //! Get Team Member By ID
-  update(id: string, updateTeamDto: UpdateTeamDto) {
-    const teamMember = this.teamModel
-      .findByIdAndUpdate(id, updateTeamDto, {
+  async update(id: string, updateTeamDto: UpdateTeamDto) {
+    const { image, ...rest } = updateTeamDto;
+    const payload: Record<string, unknown> = { ...rest };
+
+    if (image) {
+      const teamImage = await this.storageservice.findOneByURL(image);
+      if (!teamImage) {
+        throw new NotFoundException(`Media with URL "${image}" not found`);
+      }
+      payload.image = teamImage._id;
+    }
+
+    const teamMember = await this.teamModel
+      .findByIdAndUpdate(id, payload, {
         new: true,
         runValidators: true,
       })
       .lean()
       .exec();
-    if (!teamMember)
+
+    if (!teamMember) {
       throw new NotFoundException(`Team Member with id ${id} was not found`);
+    }
     return teamMember;
   }
 

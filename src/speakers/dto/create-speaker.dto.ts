@@ -3,12 +3,15 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsDefined,
+  IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsUrl,
   ValidateNested,
 } from 'class-validator';
 import { TranslationDto } from '../../common/dto/translation.dto';
 import { IsExistingMedia } from '../../common/decorators/is-existing-media.decorator';
+import { ContactInfoDto } from 'src/partners/dto/contact-info.dto';
 
 export class CreateSpeakerDto {
   @IsDefined()
@@ -22,6 +25,23 @@ export class CreateSpeakerDto {
   bio!: string;
 
   @IsDefined()
+  @ValidateNested({ message: 'slug must contain both en and ar translations' })
+  @Type(() => TranslationDto)
+  slug!: string;
+
+  @IsDefined()
+  @ValidateNested({ message: 'brief must contain both en and ar translations' })
+  @Type(() => TranslationDto)
+  brief!: string;
+
+  @IsDefined()
+  @ValidateNested({
+    message: 'experience must contain both en and ar translations',
+  })
+  @Type(() => TranslationDto)
+  experience!: string;
+
+  @IsDefined()
   @ValidateNested({
     message: 'description must contain both en and ar translations',
   })
@@ -33,6 +53,17 @@ export class CreateSpeakerDto {
   @IsNotEmpty()
   @IsExistingMedia()
   speaker_image!: string;
+
+  // @IsOptional()
+  // @IsEmail()
+  // @IsNotEmpty()
+  // speaker_email!: string;
+
+  //! contact info
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => ContactInfoDto)
+  contact_info!: ContactInfoDto;
 
   @IsDefined()
   @IsArray()
@@ -50,7 +81,8 @@ export class CreateSpeakerDto {
   gallery!: string[];
 
   @IsDefined()
-  @IsNotEmpty()
-  @IsUrl()
-  video_link!: string;
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsUrl({}, { each: true })
+  video_link!: string[];
 }

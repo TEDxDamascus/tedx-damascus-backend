@@ -14,7 +14,7 @@ export class Team {
     type: translationSchema,
     _id: false,
   })
-  name!: TranslationField; //TODO later later take from storage service
+  name!: TranslationField; 
   //! image
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
   image!: Media;

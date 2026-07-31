@@ -89,28 +89,25 @@ export class EventsService {
       .exec();
     return events.map((event) => ({
       ...event,
-      title: translateFieldHelper(event.title, lang),
-      description: translateFieldHelper(event.description, lang),
-      brief: translateFieldHelper(event.brief, lang),
-      location: translateFieldHelper(event.location, lang),
-      location_description: translateFieldHelper(
-        event.location_description,
-        lang,
-      ),
+      //! removed translations
+      // title: translateFieldHelper(event.title, lang),
+      // description: translateFieldHelper(event.description, lang),
+      // brief: translateFieldHelper(event.brief, lang),
+      // location: translateFieldHelper(event.location, lang),
+      // location_description: translateFieldHelper(
+      //   event.location_description,
+      //   lang,
+      // ),
       event_image: event.event_image?.url,
       speaker_count: event.speakers?.length ?? 0,
       team_count: event.team_members?.length ?? 0,
       gallery: event.gallery?.map((img) => img.url),
-      speakers:
-        event.speakers?.map((speaker) => ({
-          name: translateFieldHelper(speaker.name, lang),
-          bio: translateFieldHelper(speaker.bio, lang),
-        })) ?? [],
-      team_members:
-        event.team_members?.map((member) => ({
-          name: translateFieldHelper(member.name, lang),
-          bio: translateFieldHelper(member.bio, lang),
-        })) ?? [],
+      speakers: event.speakers ?? [],
+      // ?.map((speaker) => ({
+      //   name: translateFieldHelper(speaker.name, lang),
+      //   bio: translateFieldHelper(speaker.bio, lang),
+      // }))
+      team_members: event.team_members ?? [],
     }));
   }
   //! Get Event By Id
@@ -127,41 +124,61 @@ export class EventsService {
       throw new NotFoundException(`Event with id ${id} was not found`);
     return {
       ...event,
-      title: translateFieldHelper(event.title, lang),
-      description: translateFieldHelper(event.description, lang),
-      brief: event.brief ? translateFieldHelper(event.brief, lang) : undefined,
-      location: translateFieldHelper(event.location, lang),
-      location_description: translateFieldHelper(
-        event.location_description,
-        lang,
-      ),
+      //! removed translations
+      // title: translateFieldHelper(event.title, lang),
+      // description: translateFieldHelper(event.description, lang),
+      // brief: event.brief ? translateFieldHelper(event.brief, lang) : undefined,
+      // location: translateFieldHelper(event.location, lang),
+      // location_description: translateFieldHelper(
+      //   event.location_description,
+      //   lang,
+      // ),
       event_image: event.event_image?.url,
       speaker_count: event.speakers?.length ?? 0,
       team_count: event.team_members?.length ?? 0,
       gallery: event.gallery?.map((gall) => gall.url),
-      speakers:
-        event.speakers?.map((speaker) => ({
-          name: translateFieldHelper(speaker.name, lang),
-          bio: translateFieldHelper(speaker.bio, lang),
-        })) ?? [],
-      team_members:
-        event.team_members?.map((member) => ({
-          name: translateFieldHelper(member.name, lang),
-          bio: translateFieldHelper(member.bio, lang),
-        })) ?? [],
+      speakers: event.speakers ?? [],
+      team_members: event.team_members ?? [],
     };
   }
   //! Update Event By Id
-  async update(id: string, updateEventDto: UpdateEventDto) {
-    const event = await this.eventModel.findByIdAndUpdate(id, updateEventDto, {
-      new: true,
-      runValidators: true,
-    });
-    if (!event) {
-      throw new NotFoundException(`Event with id ${id} was not found`);
+async update(id: string, updateEventDto: UpdateEventDto) {
+  const { event_image, gallery, ...rest } = updateEventDto;
+  const payload: Record<string, unknown> = { ...rest };
+
+  if (event_image) {
+    const media = await this.storageservice.findOneByURL(event_image);
+    if (!media) {
+      throw new NotFoundException(`Media with URL "${event_image}" not found`);
     }
-    return event;
+    payload.event_image = media._id;
   }
+
+  if (gallery?.length) {
+    const galleryDocs = await Promise.all(
+      gallery.map((url) => this.storageservice.findOneByURL(url)),
+    );
+    const missingIndex = galleryDocs.findIndex((g) => !g);
+    if (missingIndex !== -1) {
+      throw new NotFoundException(
+        `Media with URL "${gallery[missingIndex]}" not found`,
+      );
+    }
+    payload.gallery = galleryDocs.map((g) => g._id);
+  }
+
+  const event = await this.eventModel.findByIdAndUpdate(id, payload, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!event) {
+    throw new NotFoundException(`Event with id ${id} was not found`);
+  }
+
+  return event;
+}
+
   //! Remove Event By Id
   async remove(id: string) {
     const event = await this.eventModel.findByIdAndDelete(id);

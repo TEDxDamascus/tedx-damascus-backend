@@ -49,9 +49,12 @@ export class SpeakersService {
       .exec();
     return speakers.map((speaker) => ({
       ...speaker,
-      name: translateFieldHelper(speaker.name, lang),
-      bio: translateFieldHelper(speaker.bio, lang),
-      description: translateFieldHelper(speaker.description, lang),
+      // name: translateFieldHelper(speaker.name, lang),
+      // bio: translateFieldHelper(speaker.bio, lang),
+      // slug: translateFieldHelper(speaker.slug, lang),
+      // brief: translateFieldHelper(speaker.brief, lang),
+      // experience: translateFieldHelper(speaker.experience, lang),
+      // description: translateFieldHelper(speaker.description, lang),
       speaker_image: speaker.speaker_image.url,
       gallery: speaker.gallery.map((gall) => gall.url),
     }));
@@ -68,27 +71,57 @@ export class SpeakersService {
       throw new NotFoundException(`Speaker with id ${id} was not found`);
     return {
       ...speaker,
-      name: translateFieldHelper(speaker.name, lang),
-      bio: translateFieldHelper(speaker.bio, lang),
-      description: translateFieldHelper(speaker.description, lang),
+      // name: translateFieldHelper(speaker.name, lang),
+      // bio: translateFieldHelper(speaker.bio, lang),
+      // slug: translateFieldHelper(speaker.slug, lang),
+      // brief: translateFieldHelper(speaker.brief, lang),
+      // experience: translateFieldHelper(speaker.experience, lang),
+      // description: translateFieldHelper(speaker.description, lang),
       speaker_image: speaker.speaker_image.url,
       gallery: speaker.gallery.map((gall) => gall.url),
     };
   }
   //! Update Speaker By Id
   async update(id: string, updateSpeakerDto: UpdateSpeakerDto) {
-    const speaker = await this.speakerModel.findByIdAndUpdate(
-      id,
-      updateSpeakerDto,
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
-    if (!speaker)
+    const { speaker_image, gallery, ...rest } = updateSpeakerDto;
+    const payload: Record<string, unknown> = { ...rest };
+
+    if (speaker_image) {
+      const media = await this.storageservice.findOneByURL(speaker_image);
+      if (!media) {
+        throw new NotFoundException(
+          `Media with URL "${speaker_image}" not found`,
+        );
+      }
+      payload.speaker_image = media._id;
+    }
+
+    if (gallery?.length) {
+      const galleryDocs = await Promise.all(
+        gallery.map((url) => this.storageservice.findOneByURL(url)),
+      );
+      const missingIndex = galleryDocs.findIndex((g) => !g);
+      if (missingIndex !== -1) {
+        throw new NotFoundException(
+          `Media with URL "${gallery[missingIndex]}" not found`,
+        );
+      }
+      payload.gallery = galleryDocs.map((g) => g._id);
+    }
+
+    const speaker = await this.speakerModel.findByIdAndUpdate(id, payload, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!speaker) {
       throw new NotFoundException(`Speaker with id ${id} was not found`);
+    }
+
     return speaker;
   }
+
+  
   //! Delete Speaker By Id
   async remove(id: string) {
     const speaker = await this.speakerModel.findByIdAndDelete(id);
