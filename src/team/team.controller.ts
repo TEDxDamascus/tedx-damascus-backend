@@ -28,9 +28,9 @@ export class TeamController {
 
   //! create new Team Member
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
-  @Permissions(UserPermission.TEAM_CREATE)
+  // @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  // @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  // @Permissions(UserPermission.TEAM_CREATE)
   create(@Body() createTeamDto: CreateTeamDto) {
     return this.teamService.create(createTeamDto);
   }

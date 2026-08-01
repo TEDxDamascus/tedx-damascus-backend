@@ -1,8 +1,11 @@
 import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
+  ArrayUnique,
+  IsArray,
   IsDefined,
   IsInt,
+  IsMongoId,
   IsNotEmpty,
   IsString,
   IsUrl,
@@ -11,6 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
+import { IsExistingEvent } from 'src/common/decorators/is-existing-event.decorator';
 import { TranslationDto } from 'src/common/dto/translation.dto';
 
 export class CreateTeamDto {
@@ -30,6 +34,26 @@ export class CreateTeamDto {
   @Min(2026)
   @Max(2060)
   year!: number;
+  //! role
+  @IsDefined()
+  @ValidateNested({ message: 'role must contain both en and ar translations' })
+  @Type(() => TranslationDto)
+  role!: TranslationDto;
+  //! events
+  @IsDefined()
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsMongoId({ each: true })
+  @IsExistingEvent({ each: true })
+  @ArrayUnique({ message: 'events must not contain duplicate ids' })
+  events!: string[];
+  //! category
+  @IsDefined()
+  @ValidateNested({
+    message: 'category must contain both en and ar translations',
+  })
+  @Type(() => TranslationDto)
+  category!: TranslationDto;
   @IsDefined()
   @ArrayNotEmpty()
   social_link!: string[]; //TODO make it object

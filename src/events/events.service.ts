@@ -83,8 +83,8 @@ export class EventsService {
       .limit(limit)
       .populate('event_image', 'url -_id')
       .populate('gallery', 'url -_id')
-      .populate('speakers', 'name bio')
-      .populate('team_members', 'name bio')
+      .populate('speakers', 'name bio -_id')
+      .populate('team_members', 'name bio -_id')
       .lean()
       .exec();
     return events.map((event) => ({
@@ -116,8 +116,8 @@ export class EventsService {
       .findById(id)
       .populate('event_image', 'url -_id')
       .populate('gallery', 'url -_id')
-      .populate('speakers', 'name bio')
-      .populate('team_members', 'name bio')
+      .populate('speakers', 'name bio -_id')
+      .populate('team_members', 'name bio -_id')
       .lean()
       .exec();
     if (!event)
@@ -142,42 +142,44 @@ export class EventsService {
     };
   }
   //! Update Event By Id
-async update(id: string, updateEventDto: UpdateEventDto) {
-  const { event_image, gallery, ...rest } = updateEventDto;
-  const payload: Record<string, unknown> = { ...rest };
+  async update(id: string, updateEventDto: UpdateEventDto) {
+    const { event_image, gallery, ...rest } = updateEventDto;
+    const payload: Record<string, unknown> = { ...rest };
 
-  if (event_image) {
-    const media = await this.storageservice.findOneByURL(event_image);
-    if (!media) {
-      throw new NotFoundException(`Media with URL "${event_image}" not found`);
+    if (event_image) {
+      const media = await this.storageservice.findOneByURL(event_image);
+      if (!media) {
+        throw new NotFoundException(
+          `Media with URL "${event_image}" not found`,
+        );
+      }
+      payload.event_image = media._id;
     }
-    payload.event_image = media._id;
-  }
 
-  if (gallery?.length) {
-    const galleryDocs = await Promise.all(
-      gallery.map((url) => this.storageservice.findOneByURL(url)),
-    );
-    const missingIndex = galleryDocs.findIndex((g) => !g);
-    if (missingIndex !== -1) {
-      throw new NotFoundException(
-        `Media with URL "${gallery[missingIndex]}" not found`,
+    if (gallery?.length) {
+      const galleryDocs = await Promise.all(
+        gallery.map((url) => this.storageservice.findOneByURL(url)),
       );
+      const missingIndex = galleryDocs.findIndex((g) => !g);
+      if (missingIndex !== -1) {
+        throw new NotFoundException(
+          `Media with URL "${gallery[missingIndex]}" not found`,
+        );
+      }
+      payload.gallery = galleryDocs.map((g) => g._id);
     }
-    payload.gallery = galleryDocs.map((g) => g._id);
+
+    const event = await this.eventModel.findByIdAndUpdate(id, payload, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!event) {
+      throw new NotFoundException(`Event with id ${id} was not found`);
+    }
+
+    return event;
   }
-
-  const event = await this.eventModel.findByIdAndUpdate(id, payload, {
-    new: true,
-    runValidators: true,
-  });
-
-  if (!event) {
-    throw new NotFoundException(`Event with id ${id} was not found`);
-  }
-
-  return event;
-}
 
   //! Remove Event By Id
   async remove(id: string) {
@@ -185,5 +187,12 @@ async update(id: string, updateEventDto: UpdateEventDto) {
     if (!event) {
       throw new NotFoundException(`Event with id ${id} was not found`);
     }
+  }
+
+  //! Exsists
+  // EventsService
+  async exists(id: string): Promise<boolean> {
+    const result = await this.eventModel.exists({ _id: id });
+    return !!result;
   }
 }
