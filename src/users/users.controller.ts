@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Patch,
   Query,
   Req,
@@ -25,6 +26,20 @@ export class UsersController {
   @Roles(UserRole.SUPERADMIN)
   findAdmins(@Query() query: AdminUsersQueryDto) {
     return this.usersService.findAdmins(query);
+  }
+
+  @Get('admins/:id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.SUPERADMIN)
+  findAdminById(@Param('id') id: string) {
+    return this.usersService.findAdminById(id);
+  }
+
+  @Get('permissions')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.SUPERADMIN)
+  findAllPermissions() {
+    return this.usersService.findAllPermissions();
   }
 
   @Get('me')
