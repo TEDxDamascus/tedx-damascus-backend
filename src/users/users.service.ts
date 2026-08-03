@@ -177,6 +177,29 @@ export class UsersService {
     });
   }
 
+  async findAdminById(id: string) {
+    const admin = await this.userModel
+      .findOne({ _id: id, role: UserRole.ADMIN })
+      .select(this.publicUserSelection)
+      .lean();
+
+    if (!admin) {
+      throw new NotFoundException('Admin user not found');
+    }
+
+    return {
+      message: 'Admin user fetched successfully',
+      data: this.toPublicUser(admin as unknown as Record<string, unknown>),
+    };
+  }
+
+  findAllPermissions() {
+    return {
+      message: 'Permissions fetched successfully',
+      data: Object.values(UserPermission),
+    };
+  }
+
   async findOne(id: string) {
     return {
       message: 'User fetched successfully',

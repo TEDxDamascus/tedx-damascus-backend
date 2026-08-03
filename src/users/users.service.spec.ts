@@ -1,18 +1,25 @@
 import { getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
-import { User, UserDocument, UserRole } from './entities/user.entity';
+import {
+  User,
+  UserDocument,
+  UserPermission,
+  UserRole,
+} from './entities/user.entity';
 import { UsersService } from './users.service';
 
 describe('UsersService', () => {
   let service: UsersService;
   let userModel: {
     find: jest.Mock;
+    findOne: jest.Mock;
     countDocuments: jest.Mock;
   };
 
   beforeEach(async () => {
     userModel = {
       find: jest.fn(),
+      findOne: jest.fn(),
       countDocuments: jest.fn(),
     };
 
@@ -83,6 +90,43 @@ describe('UsersService', () => {
     expect(userModel.find).toHaveBeenCalledWith(expectedFilter);
     expect(userModel.countDocuments).toHaveBeenCalledWith(expectedFilter);
   });
+
+  it('returns an admin by id with their permissions', async () => {
+    const admin = {
+      _id: 'admin-id',
+      name: 'Admin User',
+      email: 'admin@example.com',
+      role: UserRole.ADMIN,
+      permissions: [UserPermission.BLOGS_READ],
+      is_active: true,
+    };
+    const query = createFindOneQuery(admin);
+    userModel.findOne.mockReturnValue(query);
+
+    const result = await service.findAdminById('admin-id');
+
+    expect(userModel.findOne).toHaveBeenCalledWith({
+      _id: 'admin-id',
+      role: UserRole.ADMIN,
+    });
+    expect(query.select).toHaveBeenCalledWith(
+      'name email role permissions is_active createdAt updatedAt',
+    );
+    expect(result.data).toEqual({
+      id: 'admin-id',
+      name: 'Admin User',
+      email: 'admin@example.com',
+      role: UserRole.ADMIN,
+      permissions: [UserPermission.BLOGS_READ],
+      is_active: true,
+    });
+  });
+
+  it('returns all available permissions', () => {
+    expect(service.findAllPermissions().data).toEqual(
+      Object.values(UserPermission),
+    );
+  });
 });
 
 function createFindQuery(users: Partial<UserDocument>[]) {
@@ -95,4 +139,11 @@ function createFindQuery(users: Partial<UserDocument>[]) {
   };
 
   return query;
+}
+
+function createFindOneQuery(user: unknown) {
+  return {
+    select: jest.fn().mockReturnThis(),
+    lean: jest.fn().mockResolvedValue(user),
+  };
 }
