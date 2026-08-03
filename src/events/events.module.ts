@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { EventsController } from './events.controller';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -17,7 +17,7 @@ import { StorageModule } from '../storage/storage.module';
       { name: Media.name, schema: MediaSchema },
     ]),
     SpeakersModule,
-    TeamModule,
+    forwardRef(() => TeamModule),
     StorageModule,
   ],
   controllers: [EventsController],
@@ -26,5 +26,6 @@ import { StorageModule } from '../storage/storage.module';
     IsExistingSpeakerConstrain,
     IsExistingTeamConstrain,
   ],
+  exports: [EventsService],
 })
 export class EventsModule {}

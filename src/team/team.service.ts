@@ -56,6 +56,7 @@ export class TeamService {
       .find(filters)
       .lean()
       .populate('image', 'url -_id')
+      .populate('events', 'title brief -_id')
       .skip(offset ?? 0)
       .limit(limit ?? 10)
 
@@ -72,6 +73,7 @@ export class TeamService {
     const teamMember = await this.teamModel
       .findById(id)
       .populate('image', 'url -_id')
+      .populate('events', 'title brief -_id')
       .lean()
       .exec();
     if (!teamMember)
