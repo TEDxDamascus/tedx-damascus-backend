@@ -54,12 +54,13 @@ export class EmailsService {
           dto.htmlMessage,
           dto.imageUrl,
           image,
+          dto.unsubscribeUrls?.[email],
         );
         deliveries.push(delivery);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         this.logger.error(`Failed to send email to ${email}: ${message}`);
-        failures.push({ email, success: false });
+        failures.push({ email, success: false, reason: message });
       }
     }
 
@@ -123,6 +124,7 @@ export class EmailsService {
     htmlMessage: string,
     imageUrl?: string,
     image?: Express.Multer.File,
+    unsubscribeUrl?: string,
   ): Promise<SentEmailDto> {
     const inlineImageCid = image ? `email-image-${Date.now()}@tedx` : undefined;
     const html = this.renderTemplate('email.html', {
@@ -130,6 +132,9 @@ export class EmailsService {
       image: this.buildImageHtml(imageUrl, inlineImageCid),
       message: htmlMessage,
       footer: 'TEDx Damascus Team',
+      unsubscribe: unsubscribeUrl
+        ? `<p style="margin:24px 0 0;font-size:12px;"><a href="${this.escapeHtml(unsubscribeUrl)}">Unsubscribe</a></p>`
+        : '',
     });
 
     await transporter.sendMail({
@@ -179,7 +184,7 @@ export class EmailsService {
 
     for (const [key, value] of Object.entries(variables)) {
       const pattern = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
-      html = html.replace(pattern, value);
+      html = html.replace(pattern, () => value);
     }
 
     return html;
@@ -194,13 +199,8 @@ export class EmailsService {
       .replace(/'/g, '&#039;');
   }
 
-  private buildImageHtml(
-    imageUrl?: string,
-    inlineImageCid?: string,
-  ): string {
-    const source = inlineImageCid
-      ? `cid:${inlineImageCid}`
-      : imageUrl?.trim();
+  private buildImageHtml(imageUrl?: string, inlineImageCid?: string): string {
+    const source = inlineImageCid ? `cid:${inlineImageCid}` : imageUrl?.trim();
 
     if (!source) {
       return '';
