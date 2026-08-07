@@ -1,18 +1,24 @@
 import {
   IsArray,
   IsDateString,
+  IsEnum,
   IsMongoId,
   IsNumber,
   IsObject,
   IsOptional,
   IsString,
+  IsUrl,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiProperty } from '@nestjs/swagger';
 import {
   LocalizedStringArrayDto,
   LocalizedStringDto,
 } from './localized-string.dto';
+import { BlogFont } from '../enums/blog-font.enum';
+import { BlogAuthorType } from '../enums/blog-author-type.enum';
 
 export class CreateBlogDto {
   @IsObject()
@@ -46,6 +52,13 @@ export class CreateBlogDto {
   content: LocalizedStringDto;
 
   @IsOptional()
+  @IsEnum(BlogFont, {
+    message: `content_font must be one of: [${Object.values(BlogFont).join(', ')}]`,
+  })
+  @ApiProperty({ enum: BlogFont, required: false, default: BlogFont.CAIRO })
+  content_font?: BlogFont;
+
+  @IsOptional()
   @IsObject()
   @ValidateNested()
   @Type(() => LocalizedStringArrayDto)
@@ -64,8 +77,34 @@ export class CreateBlogDto {
   category_id?: string;
 
   @IsOptional()
+  @IsEnum(BlogAuthorType)
+  @ApiProperty({ enum: BlogAuthorType, required: false })
+  author_type?: BlogAuthorType;
+
+  @ValidateIf((dto) => dto.author_type === BlogAuthorType.ADMIN)
   @IsMongoId()
-  user_id?: string;
+  author_user_id?: string;
+
+  @ValidateIf((dto) => dto.author_type === BlogAuthorType.EXTERNAL)
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  author_name?: LocalizedStringDto;
+
+  @ValidateIf((dto) => dto.author_type === BlogAuthorType.EXTERNAL)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LocalizedStringDto)
+  author_description?: LocalizedStringDto;
+
+  @IsOptional()
+  @IsMongoId()
+  author_image?: string;
+
+  @IsOptional()
+  @IsUrl({ require_protocol: true })
+  author_image_url?: string;
 
   @IsOptional()
   @IsNumber()

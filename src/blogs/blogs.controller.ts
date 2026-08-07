@@ -7,94 +7,71 @@ import {
   Param,
   Delete,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
-import {
-  BlogPermissionQueryDto,
-  CreateBlogPermissionDto,
-  UpdateBlogPermissionDto,
-} from './dto/blog-permission.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
+
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { UserPermission, UserRole } from '../users/entities/user.entity';
+
+import {
+  UserPermission,
+  UserRole,
+} from '../users/entities/user.entity';
+
 @ApiTags('Blogs')
 @Controller('blogs')
 export class BlogsController {
   constructor(private readonly blogsService: BlogsService) {}
 
+  // Create Blog
   @ApiOperation({ summary: 'Create new Blog' })
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPERADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.BLOGS_CREATE)
   create(@Body() createBlogDto: CreateBlogDto) {
     return this.blogsService.create(createBlogDto);
   }
 
+  // Get All Blogs
   @ApiOperation({ summary: 'Get All Blogs' })
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
-  findAll(
-    @Query() query: any,
-    @Req() req: { user: { id: string; email?: string; role: string } },
-  ) {
-    return this.blogsService.findAll(query, req.user);
+  @Permissions(UserPermission.BLOGS_READ)
+  findAll(@Query() query: any) {
+    return this.blogsService.findAll(query);
   }
 
-  @ApiOperation({ summary: 'Super Admin: Create Blog permission for admin' })
-  @Post('permissions')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPERADMIN)
-  createBlogPermission(@Body() dto: CreateBlogPermissionDto) {
-    return this.blogsService.createBlogPermission(dto);
+  // Get Admin Users Available As Authors
+  @ApiOperation({ summary: 'Get admin users available as blog authors' })
+  @Get('author-options')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.BLOGS_READ)
+  getAuthorOptions() {
+    return this.blogsService.getAuthorOptions();
   }
 
-  @ApiOperation({ summary: 'Super Admin: List Blog permissions' })
-  @Get('permissions')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPERADMIN)
-  listBlogPermissions(@Query() query: BlogPermissionQueryDto) {
-    return this.blogsService.listBlogPermissions(query);
-  }
-
-  @ApiOperation({ summary: 'Super Admin: Update Blog permission' })
-  @Patch('permissions/:permissionId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPERADMIN)
-  updateBlogPermission(
-    @Param('permissionId') permissionId: string,
-    @Body() dto: UpdateBlogPermissionDto,
-  ) {
-    return this.blogsService.updateBlogPermission(permissionId, dto);
-  }
-
-  @ApiOperation({ summary: 'Super Admin: Delete Blog permission' })
-  @Delete('permissions/:permissionId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPERADMIN)
-  removeBlogPermission(@Param('permissionId') permissionId: string) {
-    return this.blogsService.removeBlogPermission(permissionId);
-  }
-
+  // Get Blog By ID
   @ApiOperation({ summary: 'Get Blog By Id' })
   @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
-  findOne(
-    @Param('id') id: string,
-    @Req() req: { user: { id: string; email?: string; role: string } },
-  ) {
-    return this.blogsService.findOne(id, req.user);
+  @Permissions(UserPermission.BLOGS_READ)
+  findOne(@Param('id') id: string) {
+    return this.blogsService.findOne(id);
   }
 
+  // Update Blog
   @ApiOperation({ summary: 'Update Existing Blog By Id' })
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
@@ -103,20 +80,17 @@ export class BlogsController {
   update(
     @Param('id') id: string,
     @Body() updateBlogDto: UpdateBlogDto,
-    @Req() req: { user: { id: string; email?: string; role: string } },
   ) {
-    return this.blogsService.update(id, updateBlogDto, req.user);
+    return this.blogsService.update(id, updateBlogDto);
   }
 
+  // Delete Blog
   @ApiOperation({ summary: 'Delete Existing Blog By Id' })
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
   @Permissions(UserPermission.BLOGS_DELETE)
-  remove(
-    @Param('id') id: string,
-    @Req() req: { user: { id: string; email?: string; role: string } },
-  ) {
-    return this.blogsService.remove(id, req.user);
+  remove(@Param('id') id: string) {
+    return this.blogsService.remove(id);
   }
 }

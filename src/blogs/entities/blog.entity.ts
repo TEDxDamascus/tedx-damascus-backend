@@ -1,5 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { BlogAuthorType } from '../enums/blog-author-type.enum';
+import { BlogFont } from '../enums/blog-font.enum';
 
 export type BlogDocument = Blog &
   Document & {
@@ -15,6 +17,11 @@ const localizedStringSchema = {
 const localizedStringArraySchema = {
   ar: { type: [String], default: [] },
   en: { type: [String], default: [] },
+};
+
+const optionalLocalizedNameSchema = {
+  ar: { type: String, trim: true },
+  en: { type: String, trim: true },
 };
 
 @Schema({ timestamps: true })
@@ -37,6 +44,9 @@ export class Blog {
   @Prop({ type: localizedStringSchema, required: true })
   content: { ar: string; en: string };
 
+  @Prop({ enum: BlogFont, default: BlogFont.CAIRO })
+  content_font: BlogFont;
+
   @Prop({
     type: localizedStringArraySchema,
     default: () => ({ ar: [], en: [] }),
@@ -52,6 +62,25 @@ export class Blog {
   @Prop({ type: Types.ObjectId, ref: 'Category' })
   category_id?: Types.ObjectId;
 
+  @Prop({ enum: BlogAuthorType })
+  author_type?: BlogAuthorType;
+
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  author_user_id?: Types.ObjectId;
+
+  @Prop({ type: optionalLocalizedNameSchema, default: () => ({}) })
+  author_name?: { ar?: string; en?: string };
+
+  @Prop({ type: localizedStringSchema, default: () => ({ ar: '', en: '' }) })
+  author_description?: { ar: string; en: string };
+
+  @Prop({ type: Types.ObjectId, ref: 'Media' })
+  author_image?: Types.ObjectId;
+
+  @Prop({ trim: true })
+  author_image_url?: string;
+
+  /** @deprecated Legacy field — migrated to embedded author on update */
   @Prop({ type: Types.ObjectId, ref: 'User', required: false })
   user_id?: Types.ObjectId;
 
