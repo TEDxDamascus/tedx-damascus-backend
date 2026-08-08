@@ -294,19 +294,13 @@ export class BlogsService {
     });
   }
 
-  async findPublishedAll(query: BlogsQuery) {
-    return this.findAll({
-      ...query,
-      status: 'published',
-    });
+  async findPublishedOne(identifier: string, language?: string) {
+    return this.findOneByFilter(
+      this.buildPublicBlogFilter(identifier),
+      language,
+      'Published blog not found',
+    );
   }
-async findPublishedOne(identifier: string, language?: string) {
-  return this.findOneByFilter(
-    this.buildPublicBlogFilter(identifier),
-    language,
-    'Published blog not found',
-  );
-}
 
 private buildPublicBlogFilter(identifier: string): Record<string, unknown> {
   if (Types.ObjectId.isValid(identifier)) {
@@ -353,7 +347,7 @@ async findOne(id: string) {
       );
       await existingBlog.save();
 
-      return this.findOne(id, user);
+      return this.findOne(id);
     } catch (error) {
       this.handleDuplicateSlugError(error);
     }
