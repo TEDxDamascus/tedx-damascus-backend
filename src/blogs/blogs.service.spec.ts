@@ -3,13 +3,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
 import { Types } from 'mongoose';
+
 import { BlogsService } from './blogs.service';
 import { Blog } from './entities/blog.entity';
-import { BlogPermission } from './entities/blog-permission.entity';
+
 import { Category } from '../categories/entities/category.entity';
 import { BlogReference } from '../blog-references/entities/blog-reference.entity';
 import { Media } from '../storage/entities/media.entity';
-import { User, UserRole } from '../users/entities/user.entity';
+
+import {
+  User,
+  UserRole,
+} from '../users/entities/user.entity';
+
 import { UsersService } from '../users/users.service';
 import { BlogAuthorType } from './enums/blog-author-type.enum';
 
@@ -47,47 +53,50 @@ describe('BlogsService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        BlogsService,
-        {
-          provide: getModelToken(Blog.name),
-          useValue: blogModel,
+    providers: [
+      BlogsService,
+
+      {
+        provide: getModelToken(Blog.name),
+        useValue: blogModel,
+      },
+
+      {
+        provide: getModelToken(Category.name),
+        useValue: {
+          exists: jest.fn().mockResolvedValue(null),
         },
-        {
-          provide: getModelToken(BlogPermission.name),
-          useValue: {},
+      },
+
+      {
+        provide: getModelToken(BlogReference.name),
+        useValue: {
+          find: jest.fn().mockResolvedValue([]),
         },
-        {
-          provide: getModelToken(Category.name),
-          useValue: {
-            exists: jest.fn().mockResolvedValue(null),
-          },
+      },
+
+      {
+        provide: getModelToken(Media.name),
+        useValue: mediaModel,
+      },
+
+      {
+        provide: getModelToken(User.name),
+        useValue: userModel,
+      },
+
+      {
+        provide: UsersService,
+        useValue: usersService,
+      },
+
+      {
+        provide: ConfigService,
+        useValue: {
+          get: jest.fn(),
         },
-        {
-          provide: getModelToken(BlogReference.name),
-          useValue: {
-            find: jest.fn().mockResolvedValue([]),
-          },
-        },
-        {
-          provide: getModelToken(Media.name),
-          useValue: mediaModel,
-        },
-        {
-          provide: getModelToken(User.name),
-          useValue: userModel,
-        },
-        {
-          provide: UsersService,
-          useValue: usersService,
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn(),
-          },
-        },
-      ],
+      },
+    ],
     }).compile();
 
     service = module.get<BlogsService>(BlogsService);
