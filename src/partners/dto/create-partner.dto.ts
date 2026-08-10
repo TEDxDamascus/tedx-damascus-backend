@@ -10,16 +10,13 @@ import {
   ValidateNested,
   Min,
   Max,
-  IsEnum,
   IsOptional,
-  MinLength,
-  MaxLength,
 } from 'class-validator';
 import { IsExistingMedia } from 'src/common/decorators/is-existing-media.decorator';
 import { TranslationDto } from 'src/common/dto/translation.dto';
 import { ServiceDto } from './service.dto';
 import { ContactInfoDto } from './contact-info.dto';
-import { CardSizeEnum } from '../schema/partner.card.size.enum';
+import { TierDto } from './tier.dto';
 
 export class CreatePartnerDto {
   //! name
@@ -38,17 +35,11 @@ export class CreatePartnerDto {
   @Max(2060)
   year!: number;
 
-  @IsDefined({ message: 'partner_ship_type isnt defined' })
-  @IsString()
-  @MinLength(4, { message: 'partner_ship_type must be at least 4 characters' })
-  @MaxLength(25, { message: 'partner_ship_type must not exceed 25 characters' })
-  partner_ship_type!: string;
-
-  @IsOptional()
-  @IsEnum(CardSizeEnum, {
-    message: `custom_card_size be one of: [${Object.values(CardSizeEnum).join(', ')}]`,
-  })
-  custom_card_size!: string;
+  //! tier
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => TierDto)
+  tier!: TierDto;
 
   //! image
   @IsDefined()
@@ -82,10 +73,10 @@ export class CreatePartnerDto {
   short_description!: TranslationDto;
 
   //! contact info
-  @IsDefined()
+  @IsOptional()
   @ValidateNested()
   @Type(() => ContactInfoDto)
-  contact_info!: ContactInfoDto;
+  contact_info?: ContactInfoDto;
 
   //! social links
   @IsDefined()
@@ -96,10 +87,9 @@ export class CreatePartnerDto {
   social_links!: string[];
 
   //! services
-  @IsDefined()
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @ArrayNotEmpty()
   @Type(() => ServiceDto)
-  services!: ServiceDto[];
+  services?: ServiceDto[];
 }

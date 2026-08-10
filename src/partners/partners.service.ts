@@ -8,6 +8,8 @@ import { PaginationQueryDto } from 'src/events/dto/pagination.dto';
 import { PartnerQueryDto } from './dto/partner-pagination.dto';
 import { Model } from 'mongoose';
 import { StorageService } from 'src/storage/storage.service';
+import { TierTypeEnum } from './schema/partner.tier-type.enum';
+import { TierDto } from './dto/tier.dto';
 
 @Injectable()
 export class PartnersService {
@@ -15,6 +17,15 @@ export class PartnersService {
     @InjectModel(Partner.name) private readonly partnerModel: Model<Partner>,
     private readonly storageservice: StorageService,
   ) {}
+
+  private normalizeTier(tier?: TierDto) {
+    if (!tier) return tier;
+    if (tier.type !== TierTypeEnum.OTHER) {
+      const { size: _drop, ...rest } = tier;
+      return rest;
+    }
+    return tier;
+  }
 
   //! Create new partners
   async create(createPartnerDto: CreatePartnerDto) {
@@ -24,6 +35,7 @@ export class PartnersService {
 
     const newPartner = new this.partnerModel({
       ...createPartnerDto,
+      tier: this.normalizeTier(createPartnerDto.tier),
       image: partnerImage._id,
     });
     return newPartner.save();
@@ -120,8 +132,12 @@ export class PartnersService {
 
   //! Update existing partner by Id
   async update(id: string, updatePartnerDto: UpdatePartnerDto) {
-    const { image, ...rest } = updatePartnerDto;
+    const { image, tier, ...rest } = updatePartnerDto;
     const payload: Record<string, unknown> = { ...rest };
+
+    if (tier) {
+      payload.tier = this.normalizeTier(tier);
+    }
 
     if (image) {
       const partnerImage = await this.storageservice.findOneByURL(image);
