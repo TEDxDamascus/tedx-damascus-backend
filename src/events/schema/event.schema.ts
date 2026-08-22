@@ -107,10 +107,10 @@ export class Event {
 
   //! Speakers
   @Prop({
-    required: true,
+    required: false,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Speaker' }],
   })
-  speakers!: Speaker[];
+  speakers?: Speaker[];
 
   //! Team Members
   @Prop({

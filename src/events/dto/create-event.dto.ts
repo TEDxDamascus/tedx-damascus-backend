@@ -130,13 +130,12 @@ export class CreateEventDto {
   date!: Date;
 
   //! Speakers
-  @IsDefined()
+  @IsOptional()
   @IsArray()
   @IsMongoId({ each: true })
-  @ArrayNotEmpty()
   @ArrayUnique({ message: 'Each speaker can only be added once' })
   @IsExistingSpeaker({ each: true })
-  speakers!: string[];
+  speakers?: string[];
 
   //! Team Members
   @IsOptional()

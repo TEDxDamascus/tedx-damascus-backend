@@ -4,6 +4,7 @@ import type { TranslationField } from 'src/common/type/translation-field';
 import { translationSchema } from 'src/common/utils/translation.schema';
 import { Media } from 'src/storage/entities/media.entity';
 import { CardSizeEnum } from './partner.card.size.enum';
+import { TierTypeEnum } from './partner.tier-type.enum';
 
 //! PARTNER SERVICE SCHEMA
 @Schema({ _id: false })
@@ -17,6 +18,20 @@ export class PartnerService {
 export const PartnerServiceSchema =
   SchemaFactory.createForClass(PartnerService);
 
+//! PARTNER TIER SCHEMA
+@Schema({ _id: false })
+export class PartnerTier {
+  @Prop({ required: true })
+  name!: string;
+
+  @Prop({ required: true, enum: TierTypeEnum })
+  type!: TierTypeEnum;
+
+  @Prop({ required: false, enum: CardSizeEnum })
+  size?: CardSizeEnum;
+}
+export const PartnerTierSchema = SchemaFactory.createForClass(PartnerTier);
+
 //! ====================== PARTNER SCHEMA
 
 @Schema({ timestamps: true })
@@ -29,13 +44,9 @@ export class Partner {
   @Prop({ required: true })
   year!: number;
 
-  //! custom card size
-  @Prop({ required: false, enum: CardSizeEnum })
-  custom_card_size!: CardSizeEnum;
-
-  //! partnership type
-  @Prop({ required: true })
-  partner_ship_type!: string;
+  //! tier
+  @Prop({ required: true, _id: false, type: PartnerTierSchema })
+  tier!: PartnerTier;
 
   //! image
   @Prop({ required: false, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
@@ -58,7 +69,7 @@ export class Partner {
 
   //! contact info
   @Prop({
-    required: true,
+    required: false,
     _id: false,
     type: {
       //TODO make this translated also
@@ -67,14 +78,14 @@ export class Partner {
       email: { type: String, required: true },
     },
   })
-  contact_info!: {
+  contact_info?: {
     address: TranslationField;
     phone: string;
     email: string;
   };
 
   // services
-  @Prop({ required: true, _id: false, type: [PartnerServiceSchema] })
-  services!: PartnerService[];
+  @Prop({ required: false, _id: false, type: [PartnerServiceSchema] })
+  services?: PartnerService[];
 }
 export const PartnerSchema = SchemaFactory.createForClass(Partner);

@@ -20,10 +20,7 @@ import { SetFeaturedAnswersDto } from './dto/set-featured-answers.dto';
 import { UpdateBlockedWordDto } from './dto/update-blocked-word.dto';
 import { UpdateWallQuestionDto } from './dto/update-wall-question.dto';
 import { WallAnswerQueryDto } from './dto/wall-answer-query.dto';
-import {
-  WallHistoryAnswerQueryDto,
-  WallHistoryAnswerStatus,
-} from './dto/wall-history-answer-query.dto';
+import { WallHistoryAnswerQueryDto } from './dto/wall-history-answer-query.dto';
 import { WallQuestionQueryDto } from './dto/wall-question-query.dto';
 import {
   WallAnswer,
@@ -469,11 +466,10 @@ export class WallCardsService {
   > {
     const questionDoc = await this.findQuestionById(questionId, lang);
     const question = mapWallQuestion(questionDoc);
-    const statusFilter = this.resolveHistoryAnswerStatusFilter(query.status);
     const answers = await this.listAnswersForQuestion(
       questionId,
       query,
-      statusFilter,
+      'public',
     );
 
     return { question, ...answers };
@@ -861,16 +857,6 @@ export class WallCardsService {
       page,
       limit,
     );
-  }
-
-  private resolveHistoryAnswerStatusFilter(
-    status?: WallHistoryAnswerStatus,
-  ): WallAnswerStatus | WallAnswerStatus[] {
-    if (!status) {
-      return ['pending', 'public'];
-    }
-
-    return status === 'approved' ? 'public' : status;
   }
 
   private async listAnswersForQuestion(

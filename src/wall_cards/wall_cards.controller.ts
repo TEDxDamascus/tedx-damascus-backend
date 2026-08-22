@@ -80,8 +80,7 @@ export class WallCardsController {
 
   @Get('history/:questionId/answers')
   @ApiOperation({
-    summary:
-      'Question details with paginated pending and approved answers (optional status filter)',
+    summary: 'Question details with paginated approved answers (public)',
   })
   @ApiOkResponse({ type: WallHistoryAnswersResponseDto })
   listHistoryAnswers(
@@ -129,6 +128,9 @@ export class WallCardsController {
   }
 
   @Patch('blocked-words/:blockwordId')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_BLOCKED_WORDS_MANAGE)
   @ApiOperation({ summary: 'Update a blocked word' })
   @ApiOkResponse({ type: BlockedWordResponseDto })
   updateBlockedWord(
@@ -192,6 +194,9 @@ export class WallCardsController {
   }
 
   @Patch('questions/:questionId')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_UPDATE)
   @ApiOperation({ summary: 'Update a question text and/or status' })
   @ApiOkResponse({ type: WallQuestionResponseDto })
   updateQuestion(
@@ -203,6 +208,9 @@ export class WallCardsController {
   }
 
   @Delete('questions/:questionId')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Permissions(UserPermission.WALL_CARDS_UPDATE)
   @ApiOperation({ summary: 'Delete a question and its answers' })
   removeQuestion(
     @I18n() i18n: I18nContext,
