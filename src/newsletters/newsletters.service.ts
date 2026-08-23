@@ -351,7 +351,7 @@ export class NewsletterService {
 
   private buildUnsubscribeUrl(email: string) {
     const token = this.createUnsubscribeToken(email);
-    return `${this.config.publicSiteUrl}/newsletters/unsubscribe?token=${encodeURIComponent(token)}`;
+    return `${this.config.frontendUrl}/unsubscribe?token=${encodeURIComponent(token)}`;
   }
 
   private createUnsubscribeToken(email: string) {
