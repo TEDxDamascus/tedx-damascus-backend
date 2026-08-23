@@ -84,11 +84,6 @@ export class NewsletterService {
     };
   }
 
-  async validateUnsubscribeToken(token: string) {
-    const { email } = this.verifyUnsubscribeToken(token);
-    return { email };
-  }
-
   async unsubscribeByToken(token: string) {
     const { email } = this.verifyUnsubscribeToken(token);
     return this.updateOwnSubscription(email, false);

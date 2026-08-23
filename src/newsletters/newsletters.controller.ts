@@ -18,11 +18,9 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
-  ApiProduces,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import type { Response } from 'express';
 import { Permissions } from '../auth/decorators/permissions.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -35,16 +33,12 @@ import { SubscribeNewsletterDto } from './dto/subscribe-newsletter.dto';
 import { UnsubscribeNewsletterDto } from './dto/unsubscribe-newsletter.dto';
 import { UpdateNewsletterDto } from './dto/update-newsletter.dto';
 import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
-import { NewsletterUnsubscribePageRenderer } from './newsletter-unsubscribe-page.renderer';
 import { NewsletterService } from './newsletters.service';
 
 @ApiTags('newsletters')
 @Controller('newsletters')
 export class NewslettersController {
-  constructor(
-    private readonly newsletterService: NewsletterService,
-    private readonly unsubscribePageRenderer: NewsletterUnsubscribePageRenderer,
-  ) {}
+  constructor(private readonly newsletterService: NewsletterService) {}
 
   @Post('subscribe')
   @ApiOperation({
@@ -58,26 +52,6 @@ export class NewslettersController {
   })
   subscribe(@Body() dto: SubscribeNewsletterDto) {
     return this.newsletterService.subscribe(dto);
-  }
-
-  @Get('unsubscribe')
-  @ApiProduces('text/html')
-  @ApiOperation({
-    summary: 'Unsubscribe from an email link',
-    description:
-      'Public endpoint used by the opaque token embedded in every newsletter. It displays a confirmation form and does not change the subscription by opening the link.',
-  })
-  @ApiOkResponse({
-    description: 'A confirmation page for a valid unsubscribe token.',
-  })
-  async unsubscribeConfirmation(
-    @Query() query: UnsubscribeNewsletterDto,
-    @Res() response: Response,
-  ) {
-    await this.newsletterService.validateUnsubscribeToken(query.token);
-    response.type('html').send(
-      this.unsubscribePageRenderer.renderConfirmation(query.token),
-    );
   }
 
   @Post('unsubscribe')

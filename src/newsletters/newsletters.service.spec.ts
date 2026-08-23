@@ -54,11 +54,4 @@ describe('NewsletterService', () => {
     );
   });
 
-  it('accepts a valid signed unsubscribe token', async () => {
-    const token = (service as any).createUnsubscribeToken('user@example.com');
-
-    await expect(service.validateUnsubscribeToken(token)).resolves.toEqual({
-      email: 'user@example.com',
-    });
-  });
 });
