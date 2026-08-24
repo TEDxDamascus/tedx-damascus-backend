@@ -7,6 +7,7 @@ import {
   IsInt,
   IsMongoId,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUrl,
   Max,
@@ -35,12 +36,12 @@ export class CreateTeamDto {
   @Max(2060)
   year!: number;
   //! role
-  @IsDefined()
+  @IsOptional()
   @ValidateNested({ message: 'role must contain both en and ar translations' })
   @Type(() => TranslationDto)
   role!: TranslationDto;
   //! events
-  @IsDefined()
+  @IsOptional()
   @IsArray()
   @ArrayNotEmpty()
   @IsMongoId({ each: true })
@@ -48,15 +49,17 @@ export class CreateTeamDto {
   @ArrayUnique({ message: 'events must not contain duplicate ids' })
   events!: string[];
   //! category
-  @IsDefined()
+  @IsOptional()
   @ValidateNested({
     message: 'category must contain both en and ar translations',
   })
   @Type(() => TranslationDto)
   category!: TranslationDto;
+  //! social links
   @IsDefined()
   @ArrayNotEmpty()
-  social_link!: string[]; //TODO make it object
+  social_links!: string[];
+  //! BIo
   @IsDefined()
   @ValidateNested({ message: 'bio must contain both en and ar translations' })
   @Type(() => TranslationDto)

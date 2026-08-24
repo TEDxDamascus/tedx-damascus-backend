@@ -24,7 +24,7 @@ export class CreateSpeakerDto {
   @Type(() => TranslationDto)
   bio!: string;
 
-  @IsDefined()
+  @IsOptional()
   @ValidateNested({ message: 'slug must contain both en and ar translations' })
   @Type(() => TranslationDto)
   slug!: string;
@@ -60,27 +60,28 @@ export class CreateSpeakerDto {
   // speaker_email!: string;
 
   //! contact info
-  @IsDefined()
+  @IsOptional()
   @ValidateNested()
   @Type(() => ContactInfoDto)
   contact_info!: ContactInfoDto;
 
-  @IsDefined()
+  @IsOptional()
   @IsArray()
   @ArrayNotEmpty()
   @IsUrl({}, { each: true })
-  social_links!: string[]; //$ until i make the Link Schema (hol up )
+  social_links!: string[];
 
-  @IsDefined()
-  @IsUrl({}, { each: true })
+  @IsOptional()
+  @IsArray()
   @ArrayNotEmpty()
+  @IsUrl({}, { each: true })
   @IsExistingMedia({
     each: true,
     message: 'One or more gallery images do not exist in storage',
   })
   gallery!: string[];
 
-  @IsDefined()
+  @IsOptional()
   @IsArray()
   @ArrayNotEmpty()
   @IsUrl({}, { each: true })

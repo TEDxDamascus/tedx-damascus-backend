@@ -18,7 +18,7 @@ export class PartnerService {
 export const PartnerServiceSchema =
   SchemaFactory.createForClass(PartnerService);
 
-//! PARTNER TIER SCHEMA
+//! ====================== PARTNER TIER SCHEMA
 @Schema({ _id: false })
 export class PartnerTier {
   @Prop({ required: true })
@@ -49,7 +49,7 @@ export class Partner {
   tier!: PartnerTier;
 
   //! image
-  @Prop({ required: false, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
+  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
   image!: Media;
 
   //! Slug
@@ -63,16 +63,15 @@ export class Partner {
   @Prop({ required: true, _id: false, type: translationSchema })
   long_description!: TranslationField;
 
-  //! social links
-  @Prop({ required: true })
+  //! social links Optional
+  @Prop({ required: false, type: [String], default: [] })
   social_links!: string[];
 
-  //! contact info
+  //! contact info Optional
   @Prop({
     required: false,
     _id: false,
     type: {
-      //TODO make this translated also
       address: translationSchema,
       phone: { type: String, required: true },
       email: { type: String, required: true },
@@ -84,8 +83,13 @@ export class Partner {
     email: string;
   };
 
-  // services
-  @Prop({ required: false, _id: false, type: [PartnerServiceSchema] })
+  //! services Optional
+  @Prop({
+    required: false,
+    _id: false,
+    type: [PartnerServiceSchema],
+    default: [],
+  })
   services?: PartnerService[];
 }
 export const PartnerSchema = SchemaFactory.createForClass(Partner);

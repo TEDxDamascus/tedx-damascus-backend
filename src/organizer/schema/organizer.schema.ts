@@ -19,17 +19,18 @@ export class Organizer {
   @Prop({ required: true, type: translationSchema, _id: false })
   bio!: TranslationField;
 
-  @Prop({ type: [String], default: [] })
+  @Prop({ required: true, type: [String], default: undefined })
   social_links!: string[];
 
   @Prop({ required: true })
   role!: string;
 
   @Prop({
-    required: true,
+    required: false,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Media' }],
+    default: [],
   })
-  gallery!: Media[];
+  gallery?: Media[];
 }
 
 export const OrganizerSchema = SchemaFactory.createForClass(Organizer);
