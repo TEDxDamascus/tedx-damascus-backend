@@ -156,17 +156,21 @@ export class EventsService {
       payload.event_image = media._id;
     }
 
-    if (gallery?.length) {
-      const galleryDocs = await Promise.all(
-        gallery.map((url) => this.storageservice.findOneByURL(url)),
-      );
-      const missingIndex = galleryDocs.findIndex((g) => !g);
-      if (missingIndex !== -1) {
-        throw new NotFoundException(
-          `Media with URL "${gallery[missingIndex]}" not found`,
+    if (gallery !== undefined) {
+      if (gallery.length === 0) {
+        payload.gallery = [];
+      } else {
+        const galleryDocs = await Promise.all(
+          gallery.map((url) => this.storageservice.findOneByURL(url)),
         );
+        const missingIndex = galleryDocs.findIndex((g) => !g);
+        if (missingIndex !== -1) {
+          throw new NotFoundException(
+            `Media with URL "${gallery[missingIndex]}" not found`,
+          );
+        }
+        payload.gallery = galleryDocs.map((g) => g._id);
       }
-      payload.gallery = galleryDocs.map((g) => g._id);
     }
 
     const event = await this.eventModel.findByIdAndUpdate(id, payload, {

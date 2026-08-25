@@ -102,6 +102,7 @@ export class Event {
   @Prop({
     required: false,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Media' }],
+    default: [],
   })
   gallery?: Media[];
 
@@ -109,6 +110,7 @@ export class Event {
   @Prop({
     required: false,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Speaker' }],
+    default: [],
   })
   speakers?: Speaker[];
 
@@ -116,8 +118,9 @@ export class Event {
   @Prop({
     required: false,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Team' }],
+    default: [],
   })
-  team_members: Team[];
+  team_members?: Team[];
 
   @Prop({ required: true })
   @Type(() => Number)

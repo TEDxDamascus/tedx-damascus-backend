@@ -4,6 +4,7 @@ import {
   IsDefined,
   IsEnum,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUrl,
   ValidateNested,
@@ -36,7 +37,7 @@ export class CreateOrganizerDto {
   @IsString() 
   role!: string;
 
-  @IsDefined()
+  @IsOptional()
   @IsUrl({}, { each: true })
   @ArrayNotEmpty()
   @IsExistingMedia({
