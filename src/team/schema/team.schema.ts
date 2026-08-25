@@ -11,7 +11,7 @@ import { Event } from 'src/events/schema/event.schema';
 export class Team {
   //! name
   @Prop({
-    required: false,
+    required: true,
     type: translationSchema,
     _id: false,
   })
@@ -19,7 +19,7 @@ export class Team {
   //! image
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Media' })
   image!: Media;
-  @Prop()
+  @Prop({ required: true, type: Number, id: false })
   year!: number;
   //! role
   @Prop({
@@ -42,11 +42,11 @@ export class Team {
   })
   category!: TranslationField;
   //! social links
-  @Prop()
-  social_link!: string[]; //TODO make this object of brand:link
+  @Prop({ required: true, type: [String], id: false })
+  social_links!: string[]; //TODO make this object of brand:link
   //! bio
   @Prop({
-    required: false,
+    required: true,
     type: translationSchema,
     _id: false,
   })

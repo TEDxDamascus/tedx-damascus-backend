@@ -79,7 +79,7 @@ export class CreatePartnerDto {
   contact_info?: ContactInfoDto;
 
   //! social links
-  @IsDefined()
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   @ArrayNotEmpty()
@@ -89,6 +89,7 @@ export class CreatePartnerDto {
   //! services
   @IsOptional()
   @IsArray()
+  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => ServiceDto)
   services?: ServiceDto[];

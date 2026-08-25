@@ -132,6 +132,7 @@ export class CreateEventDto {
   //! Speakers
   @IsOptional()
   @IsArray()
+  @ArrayNotEmpty()
   @IsMongoId({ each: true })
   @ArrayUnique({ message: 'Each speaker can only be added once' })
   @IsExistingSpeaker({ each: true })
@@ -140,6 +141,7 @@ export class CreateEventDto {
   //! Team Members
   @IsOptional()
   @IsArray()
+  @ArrayNotEmpty()
   @IsMongoId({ each: true })
   @ArrayNotEmpty()
   @ArrayUnique({ message: 'Each team member can only be added once' })
@@ -154,6 +156,8 @@ export class CreateEventDto {
 
   //! Gallery
   @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
   @IsUrl({}, { each: true })
   @IsExistingMedia({
     each: true,

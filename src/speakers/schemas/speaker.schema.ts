@@ -14,7 +14,6 @@ export class Speaker {
   })
   name!: TranslationField;
 
-
   //! Bio
   @Prop({
     required: true,
@@ -25,7 +24,7 @@ export class Speaker {
 
   //! slug
   @Prop({
-    required: true,
+    required: false,
     type: translationSchema,
     _id: false,
   })
@@ -64,12 +63,12 @@ export class Speaker {
   speaker_image!: Media;
 
   //! Social Link
-  @Prop({ required: true })
-  social_links!: string[];
+  @Prop({ required: false, type: [String], default: [] })
+  social_links?: string[];
 
   //! Contact info
   @Prop({
-    required: true,
+    required: false,
     _id: false,
     type: {
       address: translationSchema,
@@ -85,13 +84,14 @@ export class Speaker {
 
   //! Gallery
   @Prop({
-    required: true,
+    required: false,
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Media' }],
+    default: [],
   })
   gallery!: Media[];
 
   //! Video Link
-  @Prop({ required: true })
-  video_link!: string[];
+  @Prop({ required: false, type: [String], default: [] })
+  video_link?: string[];
 }
 export const SpeakerSchema = SchemaFactory.createForClass(Speaker);

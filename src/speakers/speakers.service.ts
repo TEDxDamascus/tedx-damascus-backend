@@ -16,28 +16,40 @@ export class SpeakersService {
   ) {}
   //! Create Speaker
   async create(createSpeakerDto: CreateSpeakerDto) {
+    const { gallery, ...rest } = createSpeakerDto;
+
     const speakerImage = await this.storageservice.findOneByURL(
       createSpeakerDto.speaker_image,
     );
+    if (!speakerImage) {
+      throw new NotFoundException(
+        `Media with URL "${createSpeakerDto.speaker_image}" not found`,
+      );
+    }
 
-    const gallery = await Promise.all(
-      createSpeakerDto.gallery.map((url) =>
-        this.storageservice.findOneByURL(url),
-      ),
-    );
-
-    const newSpeaker = new this.speakerModel({
-      ...createSpeakerDto,
+    const payload: Record<string, unknown> = {
+      ...rest,
       speaker_image: speakerImage._id,
-      gallery: gallery.map((g) => g._id),
-    });
+    };
 
+    if (gallery?.length) {
+      const galleryDocs = await Promise.all(
+        gallery.map((url) => this.storageservice.findOneByURL(url)),
+      );
+      const missingIndex = galleryDocs.findIndex((g) => !g);
+      if (missingIndex !== -1) {
+        throw new NotFoundException(
+          `Media with URL "${gallery[missingIndex]}" not found`,
+        );
+      }
+      payload.gallery = galleryDocs.map((g) => g._id);
+    }
+
+    const newSpeaker = new this.speakerModel(payload);
     return newSpeaker.save();
   }
-
   //! Get all Speakers
   async findAll(lang: string, paginationQueryDto: PaginationQueryDto) {
-    //TODO add filter by name
     const { limit, offset } = paginationQueryDto;
     const speakers = await this.speakerModel
       .find()
@@ -49,16 +61,11 @@ export class SpeakersService {
       .exec();
     return speakers.map((speaker) => ({
       ...speaker,
-      // name: translateFieldHelper(speaker.name, lang),
-      // bio: translateFieldHelper(speaker.bio, lang),
-      // slug: translateFieldHelper(speaker.slug, lang),
-      // brief: translateFieldHelper(speaker.brief, lang),
-      // experience: translateFieldHelper(speaker.experience, lang),
-      // description: translateFieldHelper(speaker.description, lang),
-      speaker_image: speaker.speaker_image.url,
-      gallery: speaker.gallery.map((gall) => gall.url),
+      speaker_image: speaker.speaker_image?.url,
+      gallery: speaker.gallery?.map((gall) => gall.url) ?? [],
     }));
   }
+
   //! Find Speaker By Id
   async findOne(id: string, lang: string) {
     const speaker = await this.speakerModel
@@ -71,14 +78,8 @@ export class SpeakersService {
       throw new NotFoundException(`Speaker with id ${id} was not found`);
     return {
       ...speaker,
-      // name: translateFieldHelper(speaker.name, lang),
-      // bio: translateFieldHelper(speaker.bio, lang),
-      // slug: translateFieldHelper(speaker.slug, lang),
-      // brief: translateFieldHelper(speaker.brief, lang),
-      // experience: translateFieldHelper(speaker.experience, lang),
-      // description: translateFieldHelper(speaker.description, lang),
-      speaker_image: speaker.speaker_image.url,
-      gallery: speaker.gallery.map((gall) => gall.url),
+      speaker_image: speaker.speaker_image?.url,
+      gallery: speaker.gallery?.map((gall) => gall.url) ?? [],
     };
   }
   //! Update Speaker By Id
@@ -96,17 +97,21 @@ export class SpeakersService {
       payload.speaker_image = media._id;
     }
 
-    if (gallery?.length) {
-      const galleryDocs = await Promise.all(
-        gallery.map((url) => this.storageservice.findOneByURL(url)),
-      );
-      const missingIndex = galleryDocs.findIndex((g) => !g);
-      if (missingIndex !== -1) {
-        throw new NotFoundException(
-          `Media with URL "${gallery[missingIndex]}" not found`,
+    if (gallery !== undefined) {
+      if (gallery.length === 0) {
+        payload.gallery = [];
+      } else {
+        const galleryDocs = await Promise.all(
+          gallery.map((url) => this.storageservice.findOneByURL(url)),
         );
+        const missingIndex = galleryDocs.findIndex((g) => !g);
+        if (missingIndex !== -1) {
+          throw new NotFoundException(
+            `Media with URL "${gallery[missingIndex]}" not found`,
+          );
+        }
+        payload.gallery = galleryDocs.map((g) => g._id);
       }
-      payload.gallery = galleryDocs.map((g) => g._id);
     }
 
     const speaker = await this.speakerModel.findByIdAndUpdate(id, payload, {
@@ -120,8 +125,6 @@ export class SpeakersService {
 
     return speaker;
   }
-
-  
   //! Delete Speaker By Id
   async remove(id: string) {
     const speaker = await this.speakerModel.findByIdAndDelete(id);

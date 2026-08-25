@@ -16,21 +16,34 @@ export class OrganizerService {
   ) {}
 
   //! Creating new Org
+  //! Creating new Org
   async create(createOrganizerDto: CreateOrganizerDto) {
-    const orgImage = await this.storageservice.findOneByURL(
-      createOrganizerDto.image,
-    );
-    const orgGallery = await Promise.all(
-      createOrganizerDto.gallery.map((url) =>
-        this.storageservice.findOneByURL(url),
-      ),
-    );
+    const { image, gallery, ...rest } = createOrganizerDto;
 
-    const org = new this.organizerModel({
-      ...createOrganizerDto,
+    const orgImage = await this.storageservice.findOneByURL(image);
+    if (!orgImage) {
+      throw new NotFoundException(`Media with URL "${image}" not found`);
+    }
+
+    const payload: Record<string, unknown> = {
+      ...rest,
       image: orgImage._id,
-      gallery: orgGallery.map((g) => g._id),
-    });
+    };
+
+    if (gallery?.length) {
+      const orgGallery = await Promise.all(
+        gallery.map((url) => this.storageservice.findOneByURL(url)),
+      );
+      const missingIndex = orgGallery.findIndex((g) => !g);
+      if (missingIndex !== -1) {
+        throw new NotFoundException(
+          `Media with URL "${gallery[missingIndex]}" not found`,
+        );
+      }
+      payload.gallery = orgGallery.map((g) => g._id);
+    }
+
+    const org = new this.organizerModel(payload);
     return org.save();
   }
   //! Get ALl orgs
@@ -66,43 +79,47 @@ export class OrganizerService {
   }
 
   //! update org details by id
-//! update org details by id
-async update(id: string, updateOrganizerDto: UpdateOrganizerDto) {
-  const { image, gallery, ...rest } = updateOrganizerDto;
-  const payload: Record<string, unknown> = { ...rest };
+  //! update org details by id
+  async update(id: string, updateOrganizerDto: UpdateOrganizerDto) {
+    const { image, gallery, ...rest } = updateOrganizerDto;
+    const payload: Record<string, unknown> = { ...rest };
 
-  if (image) {
-    const orgImage = await this.storageservice.findOneByURL(image);
-    if (!orgImage) {
-      throw new NotFoundException(`Media with URL "${image}" not found`);
+    if (image) {
+      const orgImage = await this.storageservice.findOneByURL(image);
+      if (!orgImage) {
+        throw new NotFoundException(`Media with URL "${image}" not found`);
+      }
+      payload.image = orgImage._id;
     }
-    payload.image = orgImage._id;
-  }
 
-  if (gallery?.length) {
-    const orgGallery = await Promise.all(
-      gallery.map((url) => this.storageservice.findOneByURL(url)),
-    );
-    const missingIndex = orgGallery.findIndex((g) => !g);
-    if (missingIndex !== -1) {
-      throw new NotFoundException(
-        `Media with URL "${gallery[missingIndex]}" not found`,
-      );
+    if (gallery !== undefined) {
+      if (gallery.length === 0) {
+        payload.gallery = [];
+      } else {
+        const orgGallery = await Promise.all(
+          gallery.map((url) => this.storageservice.findOneByURL(url)),
+        );
+        const missingIndex = orgGallery.findIndex((g) => !g);
+        if (missingIndex !== -1) {
+          throw new NotFoundException(
+            `Media with URL "${gallery[missingIndex]}" not found`,
+          );
+        }
+        payload.gallery = orgGallery.map((g) => g._id);
+      }
     }
-    payload.gallery = orgGallery.map((g) => g._id);
+
+    const org = await this.organizerModel.findByIdAndUpdate(id, payload, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!org) {
+      throw new NotFoundException(`Organizer with id ${id} was not found`);
+    }
+
+    return org;
   }
-
-  const org = await this.organizerModel.findByIdAndUpdate(id, payload, {
-    new: true,
-    runValidators: true,
-  });
-
-  if (!org) {
-    throw new NotFoundException(`org with id ${id} was not found`);
-  }
-
-  return org;
-}
 
   //! remove org by id
   async remove(id: string) {
