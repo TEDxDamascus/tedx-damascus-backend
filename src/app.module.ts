@@ -22,6 +22,7 @@ import { BlogReferencesModule } from './blog-references/blog-references.module';
 import { CategoriesModule } from './categories/categories.module';
 import { HomeSettingsModule } from './home-settings/home-settings.module';
 import { WallCardsModule } from './wall_cards/wall_cards.module';
+import { NewslettersModule } from './newsletters/newsletters.module';
 
 @Module({
   imports: [
@@ -61,7 +62,8 @@ import { WallCardsModule } from './wall_cards/wall_cards.module';
     CategoriesModule,
     HomeSettingsModule,
     EmailsModule,
-    WallCardsModule
+    WallCardsModule,
+    NewslettersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

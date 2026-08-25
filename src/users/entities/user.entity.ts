@@ -65,6 +65,10 @@ export enum UserPermission {
   WALL_CARDS_UPDATE = 'wall-cards:update',
   WALL_CARDS_MODERATE = 'wall-cards:moderate',
   WALL_CARDS_BLOCKED_WORDS_MANAGE = 'wall-cards:blocked-words:manage',
+  NEWSLETTERS_READ = 'newsletters:read',
+  NEWSLETTERS_CREATE = 'newsletters:create',
+  NEWSLETTERS_UPDATE = 'newsletters:update',
+  NEWSLETTERS_SEND = 'newsletters:send',
 }
 
 const localizedStringSchema = {
@@ -134,6 +138,10 @@ export const SUPERADMIN_DEFAULT_PERMISSIONS: UserPermission[] = [
   UserPermission.WALL_CARDS_UPDATE,
   UserPermission.WALL_CARDS_MODERATE,
   UserPermission.WALL_CARDS_BLOCKED_WORDS_MANAGE,
+  UserPermission.NEWSLETTERS_READ,
+  UserPermission.NEWSLETTERS_CREATE,
+  UserPermission.NEWSLETTERS_UPDATE,
+  UserPermission.NEWSLETTERS_SEND,
 ];
 
 @Schema({ timestamps: true })

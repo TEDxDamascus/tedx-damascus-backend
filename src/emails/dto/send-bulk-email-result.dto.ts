@@ -6,6 +6,9 @@ export class FailedEmailDto {
 
   @ApiProperty({ example: false })
   success: boolean;
+
+  @ApiProperty({ example: 'SMTP authentication failed', required: false })
+  reason?: string;
 }
 
 export class SentEmailDto {

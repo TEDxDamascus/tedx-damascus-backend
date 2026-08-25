@@ -81,4 +81,6 @@ export class SendBulkEmailDto {
   @MaxLength(2000)
   imageUrl?: string;
 
+  unsubscribeUrls?: Record<string, string>;
+
 }

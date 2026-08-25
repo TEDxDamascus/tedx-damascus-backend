@@ -76,6 +76,7 @@ describe('EmailsService', () => {
       '<p><strong>Message</strong></p>',
       'https://example.com/image.jpg',
       undefined,
+      undefined,
     );
     expect(transporter.close).toHaveBeenCalled();
     expect(result).toEqual({

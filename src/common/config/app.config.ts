@@ -29,6 +29,7 @@ const envSchema = Joi.object({
   JWT_EXPIRES_IN: Joi.string().min(2).default('7d'),
   PORT: Joi.number().port().default(3000),
   PUBLIC_SITE_URL: Joi.string().uri().default('http://localhost:3000'),
+  FRONTEND_URL: Joi.string().uri().optional(),
   SMTP_HOST: Joi.string().min(1).optional(),
   SMTP_PORT: Joi.number().port().optional(),
   SMTP_SECURE: Joi.boolean().optional(),
@@ -63,6 +64,7 @@ function validateEnv(config: NodeJS.ProcessEnv) {
     JWT_EXPIRES_IN: string;
     PORT: number;
     PUBLIC_SITE_URL: string;
+    FRONTEND_URL?: string;
     SMTP_HOST?: string;
     SMTP_PORT?: number;
     SMTP_SECURE?: boolean;
@@ -91,6 +93,7 @@ export const appConfig = registerAs('app', () => {
     jwtExpiresIn: env.JWT_EXPIRES_IN,
     port: env.PORT,
     publicSiteUrl: env.PUBLIC_SITE_URL.replace(/\/$/, ''),
+    frontendUrl: (env.FRONTEND_URL || env.PUBLIC_SITE_URL).replace(/\/$/, ''),
     smtpHost: env.SMTP_HOST,
     smtpPort: env.SMTP_PORT,
     smtpSecure: env.SMTP_SECURE,

@@ -89,6 +89,9 @@ importers:
       slugify:
         specifier: ^1.6.6
         version: 1.6.6
+      swagger-ui-dist:
+        specifier: ^5.32.12
+        version: 5.32.12
       uuid:
         specifier: ^13.0.0
         version: 13.0.0
@@ -3204,6 +3207,9 @@ packages:
 
   swagger-ui-dist@5.31.0:
     resolution: {integrity: sha512-zSUTIck02fSga6rc0RZP3b7J7wgHXwLea8ZjgLA3Vgnb8QeOl3Wou2/j5QkzSGeoz6HusP/coYuJl33aQxQZpg==}
+
+  swagger-ui-dist@5.32.12:
+    resolution: {integrity: sha512-ceXE+KNc5LXafhh36trB6nxK+U2EIKUWzHT7sBiMosf2eJLAefalYnTwMouQBmSyED6m7Yz+GYZEcL+Glt3sww==}
 
   symbol-observable@4.0.0:
     resolution: {integrity: sha512-b19dMThMV4HVFynSAM1++gBHAbk2Tc/osgLIBZMKsyqh34jb2e8Os7T6ZW/Bt3pJFdBTd2JwAnAAEQV7rSNvcQ==}
@@ -7004,6 +7010,10 @@ snapshots:
       has-flag: 4.0.0
 
   swagger-ui-dist@5.31.0:
+    dependencies:
+      '@scarf/scarf': 1.4.0
+
+  swagger-ui-dist@5.32.12:
     dependencies:
       '@scarf/scarf': 1.4.0
 

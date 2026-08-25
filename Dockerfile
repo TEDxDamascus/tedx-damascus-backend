@@ -41,6 +41,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 
 COPY --from=build /app/dist ./dist
+COPY src/emails/templates ./dist/emails/templates
 
 EXPOSE 3000
 
