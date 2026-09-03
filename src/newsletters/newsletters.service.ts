@@ -84,6 +84,20 @@ export class NewsletterService {
     };
   }
 
+  async getOwnSubscription(email: string) {
+    const normalizedEmail = this.normalizeEmail(email);
+    const subscriber = await this.subscriberModel
+      .findOne({ email: normalizedEmail })
+      .select('email isActive')
+      .lean()
+      .exec();
+
+    return {
+      email: normalizedEmail,
+      isActive: subscriber?.isActive ?? false,
+    };
+  }
+
   async unsubscribeByToken(token: string) {
     const { email } = this.verifyUnsubscribeToken(token);
     return this.updateOwnSubscription(email, false);

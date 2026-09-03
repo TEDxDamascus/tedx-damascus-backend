@@ -86,6 +86,21 @@ export class NewslettersController {
     );
   }
 
+  @Get('subscription')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearer')
+  @ApiOperation({
+    summary: 'Get the current account subscription status',
+    description:
+      'Uses the email from the current JWT. Accounts without a subscription are returned as inactive.',
+  })
+  @ApiOkResponse({
+    description: 'The current account subscription status.',
+  })
+  getOwnSubscription(@Req() req: { user: { email: string } }) {
+    return this.newsletterService.getOwnSubscription(req.user.email);
+  }
+
   @Get('subscribers')
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
