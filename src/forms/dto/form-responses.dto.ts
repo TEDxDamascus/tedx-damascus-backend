@@ -106,6 +106,12 @@ export class FormTemplateSummaryResponseDto {
   max_submissions?: number;
 
   @ApiPropertyOptional({
+    description: 'Optional linked event id',
+    example: '507f1f77bcf86cd799439011',
+  })
+  eventId?: string;
+
+  @ApiPropertyOptional({
     type: LocalizedTextDto,
     description: 'Human-readable URL slugs. Unique per locale.',
   })

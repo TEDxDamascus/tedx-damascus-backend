@@ -6,6 +6,7 @@ import {
   Min,
   ValidateNested,
   IsDateString,
+  IsMongoId,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -74,6 +75,14 @@ export class CreateFormTemplateDto {
   @IsInt()
   @Min(1)
   max_submissions?: number;
+
+  @ApiPropertyOptional({
+    description: 'Optional event this attendance form belongs to',
+    example: '507f1f77bcf86cd799439011',
+  })
+  @IsOptional()
+  @IsMongoId()
+  eventId?: string;
 
   @ApiPropertyOptional({
     type: SlugI18nDto,

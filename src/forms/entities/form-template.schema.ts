@@ -15,6 +15,9 @@ export class FormTemplate {
   @Prop({ type: Types.ObjectId, ref: 'User', required: false })
   createdByAdminId?: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'Event', required: false })
+  eventId?: Types.ObjectId;
+
   @Prop({ type: String, required: true, enum: TARGET_ROLES })
   targetRole: TargetRole;
 

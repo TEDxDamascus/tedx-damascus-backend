@@ -134,6 +134,7 @@ export function mapFormTemplateToSummary(
     ends_at: t.ends_at,
     expires_at: t.expires_at,
     max_submissions: t.max_submissions,
+    eventId: t.eventId ? toId(t.eventId) : undefined,
     slug:
       t.slug && (t.slug.en || t.slug.ar)
         ? { en: t.slug.en ?? '', ar: t.slug.ar ?? '' }

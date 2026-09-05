@@ -25,6 +25,21 @@ type SmtpConfig = {
   fromName: string;
 };
 
+export type InlineEmailAttachment = {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+  cid: string;
+};
+
+export type SendPersonalizedHtmlParams = {
+  to: string;
+  subject: string;
+  htmlMessage: string;
+  imageUrl?: string;
+  inlineAttachments?: InlineEmailAttachment[];
+};
+
 @Injectable()
 export class EmailsService {
   private readonly logger = new Logger(EmailsService.name);
@@ -73,6 +88,23 @@ export class EmailsService {
       deliveries,
       failures,
     };
+  }
+
+  async sendPersonalizedHtml(
+    params: SendPersonalizedHtmlParams,
+  ): Promise<SentEmailDto> {
+    const smtpConfig = this.getSmtpConfig();
+    const transporter = this.createTransporter(smtpConfig);
+
+    try {
+      return await this.sendPersonalizedToRecipient(
+        transporter,
+        smtpConfig,
+        params,
+      );
+    } finally {
+      transporter.close();
+    }
   }
 
   private getSmtpConfig(): SmtpConfig {
@@ -127,10 +159,55 @@ export class EmailsService {
     unsubscribeUrl?: string,
   ): Promise<SentEmailDto> {
     const inlineImageCid = image ? `email-image-${Date.now()}@tedx` : undefined;
+    return this.sendPersonalizedToRecipient(transporter, config, {
+      to: recipient,
+      subject,
+      htmlMessage,
+      imageUrl,
+      inlineAttachments: image
+        ? [
+            {
+              filename: image.originalname || 'email-image',
+              content: image.buffer,
+              contentType: image.mimetype,
+              cid: inlineImageCid!,
+            },
+          ]
+        : undefined,
+    });
+  }
+
+  private async sendPersonalizedToRecipient(
+    transporter: Transporter,
+    config: SmtpConfig,
+    params: SendPersonalizedHtmlParams,
+  ): Promise<SentEmailDto> {
+    const bannerAttachment = params.inlineAttachments?.find((a) =>
+      a.cid.startsWith('email-image-'),
+    );
+    const qrAttachment = params.inlineAttachments?.find((a) =>
+      a.cid.startsWith('invitation-qr-'),
+    );
+
+    const messageWithQr = qrAttachment
+      ? `${params.htmlMessage}
+        <div style="margin-top:24px;text-align:center;">
+          <p style="margin:0 0 12px;font-size:14px;color:#555;">Your entry QR code</p>
+          <img
+            src="cid:${qrAttachment.cid}"
+            alt="Invitation QR code"
+            style="display:inline-block;width:200px;height:200px;"
+          />
+        </div>`
+      : params.htmlMessage;
+
     const html = this.renderTemplate('email.html', {
       title: 'TEDx Damascus',
-      image: this.buildImageHtml(imageUrl, inlineImageCid),
-      message: htmlMessage,
+      image: this.buildImageHtml(
+        params.imageUrl,
+        bannerAttachment?.cid,
+      ),
+      message: messageWithQr,
       footer: 'TEDx Damascus Team',
       unsubscribe: unsubscribeUrl
         ? `<p style="margin:24px 0 0;font-size:12px;"><a href="${this.escapeHtml(unsubscribeUrl)}">Unsubscribe</a></p>`
@@ -139,28 +216,24 @@ export class EmailsService {
 
     await transporter.sendMail({
       from: `"${config.fromName}" <${config.fromEmail}>`,
-      to: recipient,
+      to: params.to,
       replyTo: config.fromEmail,
-      subject,
-      text: this.htmlToText(htmlMessage),
+      subject: params.subject,
+      text: this.htmlToText(params.htmlMessage),
       html,
       headers: {
         'X-Mailer': 'TEDx Damascus Mailer',
       },
-      attachments: image
-        ? [
-            {
-              filename: image.originalname || 'email-image',
-              content: image.buffer,
-              contentType: image.mimetype,
-              cid: inlineImageCid,
-            },
-          ]
-        : undefined,
+      attachments: params.inlineAttachments?.map((attachment) => ({
+        filename: attachment.filename,
+        content: attachment.content,
+        contentType: attachment.contentType,
+        cid: attachment.cid,
+      })),
     });
 
     return {
-      email: recipient,
+      email: params.to,
       success: true,
     };
   }

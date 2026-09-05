@@ -211,6 +211,7 @@ export class FormsService {
       expires_at: dto.expires_at ? new Date(dto.expires_at) : undefined,
       max_submissions: dto.max_submissions,
       status: 'Draft' as FormStatus,
+      ...(dto.eventId ? { eventId: new Types.ObjectId(dto.eventId) } : {}),
       ...(slug && { slug }),
       ...(shareable_url && { shareable_url }),
     });
@@ -271,6 +272,11 @@ export class FormsService {
     }
     if (dto.max_submissions !== undefined) {
       template.max_submissions = dto.max_submissions;
+    }
+    if (dto.eventId !== undefined) {
+      template.eventId = dto.eventId
+        ? new Types.ObjectId(dto.eventId)
+        : undefined;
     }
     const currentSlugEn = template.slug?.en?.trim() ?? '';
     const currentSlugAr = template.slug?.ar?.trim() ?? '';
