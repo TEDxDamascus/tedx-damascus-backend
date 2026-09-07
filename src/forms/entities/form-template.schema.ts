@@ -3,8 +3,12 @@ import { HydratedDocument, Types } from 'mongoose';
 import { FormQuestion, FormQuestionSchema } from './form-question.schema';
 
 export const FORM_STATUSES = ['Draft', 'Published'] as const;
-export const TARGET_ROLES = ['Speaker', 'Partner', 'Attender'] as const;
-
+export const TARGET_ROLES = [
+  'Speaker',
+  'Partner',
+  'Attender',
+  'Team',
+] as const;
 export type FormStatus = (typeof FORM_STATUSES)[number];
 export type TargetRole = (typeof TARGET_ROLES)[number];
 

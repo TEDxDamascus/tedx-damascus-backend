@@ -514,15 +514,60 @@ export class FormsService {
     return mapFormTemplateToSchema(template);
   }
 
-  async listAvailableForms(
-    userRole: TargetRole,
-  ): Promise<FormTemplateSummaryResponse[]> {
-    const templates = await this.formTemplateModel
-      .find({ status: 'Published', targetRole: userRole })
-      .sort({ publishedAt: -1 })
-      .exec();
-    return templates.map((t) => mapFormTemplateToSummary(t));
+async listAvailableForms(
+  userRole: TargetRole,
+  eventId?: string,
+): Promise<FormTemplateSummaryResponse[]> {
+  const now = new Date();
+
+  const filter: Record<string, unknown> = {
+    status: 'Published',
+    targetRole: userRole,
+
+    $and: [
+      {
+        $or: [
+          { starts_at: { $exists: false } },
+          { starts_at: null },
+          { starts_at: { $lte: now } },
+        ],
+      },
+      {
+        $or: [
+          { ends_at: { $exists: false } },
+          { ends_at: null },
+          { ends_at: { $gte: now } },
+        ],
+      },
+      {
+        $or: [
+          { expires_at: { $exists: false } },
+          { expires_at: null },
+          { expires_at: { $gt: now } },
+        ],
+      },
+    ],
+  };
+
+  // Speaker and Attender forms may be linked to a specific event.
+  if (
+    eventId &&
+    (userRole === 'Speaker' || userRole === 'Attender')
+  ) {
+    if (!Types.ObjectId.isValid(eventId)) {
+      return [];
+    }
+
+    filter.eventId = new Types.ObjectId(eventId);
   }
+
+  const templates = await this.formTemplateModel
+    .find(filter)
+    .sort({ publishedAt: -1 })
+    .exec();
+
+  return templates.map((t) => mapFormTemplateToSummary(t));
+}
 
   /**
    * Stores a file under users/{userId}/forms/{formId}/... without creating Media.
