@@ -85,22 +85,35 @@ export class FormsController {
     return this.formsService.create(dto);
   }
 
-  @Get('available')
-  @ApiOperation({ summary: 'User: List published forms for role' })
-  @ApiQuery({
-    name: 'role',
-    required: false,
-    enum: TARGET_ROLES,
-    description:
-      'Target role of the current user. Defaults to Attender when omitted or invalid.',
-  })
-  @ApiOkResponse({ type: [FormTemplateSummaryResponseDto] })
-  listAvailable(@Query('role') role: (typeof TARGET_ROLES)[number]) {
-    if (!role || !TARGET_ROLES.includes(role)) {
-      role = 'Attender';
-    }
-    return this.formsService.listAvailableForms(role);
+@Get('available')
+@ApiOperation({
+  summary: 'User: List currently available published forms for role',
+})
+@ApiQuery({
+  name: 'role',
+  required: false,
+  enum: TARGET_ROLES,
+  description:
+    'Target role. Defaults to Attender when omitted or invalid.',
+})
+@ApiQuery({
+  name: 'event_id',
+  required: false,
+  type: String,
+  description:
+    'Optional event ID used to filter Speaker and Attender forms for a specific event.',
+})
+@ApiOkResponse({ type: [FormTemplateSummaryResponseDto] })
+listAvailable(
+  @Query('role') role: (typeof TARGET_ROLES)[number],
+  @Query('event_id') eventId?: string,
+) {
+  if (!role || !TARGET_ROLES.includes(role)) {
+    role = 'Attender';
   }
+
+  return this.formsService.listAvailableForms(role, eventId);
+}
 
   @Get()
   @ApiOperation({ summary: 'Admin: List all form templates' })
