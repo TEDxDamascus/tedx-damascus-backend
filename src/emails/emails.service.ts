@@ -38,6 +38,7 @@ export type SendPersonalizedHtmlParams = {
   htmlMessage: string;
   imageUrl?: string;
   inlineAttachments?: InlineEmailAttachment[];
+  unsubscribeUrl?: string;
 };
 
 @Injectable()
@@ -164,6 +165,7 @@ export class EmailsService {
       subject,
       htmlMessage,
       imageUrl,
+      unsubscribeUrl,
       inlineAttachments: image
         ? [
             {
@@ -209,8 +211,8 @@ export class EmailsService {
       ),
       message: messageWithQr,
       footer: 'TEDx Damascus Team',
-      unsubscribe: unsubscribeUrl
-        ? `<p style="margin:24px 0 0;font-size:12px;"><a href="${this.escapeHtml(unsubscribeUrl)}">Unsubscribe</a></p>`
+      unsubscribe: params.unsubscribeUrl
+        ? `<p style="margin:24px 0 0;font-size:12px;"><a href="${this.escapeHtml(params.unsubscribeUrl)}">Unsubscribe</a></p>`
         : '',
     });
 
