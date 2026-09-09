@@ -26,7 +26,7 @@ import {
   UserRole,
 } from '../users/entities/user.entity';
 
-@ApiTags('Blogs')
+@ApiTags('Blogs') 
 @Controller('blogs')
 export class BlogsController {
   constructor(private readonly blogsService: BlogsService) {}

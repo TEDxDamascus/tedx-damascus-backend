@@ -24,7 +24,7 @@ export class CreateBlogDto {
   @IsObject()
   @ValidateNested()
   @Type(() => LocalizedStringDto)
-  title: LocalizedStringDto;
+  title?: LocalizedStringDto;
 
   @IsOptional()
   @IsObject()
@@ -49,7 +49,7 @@ export class CreateBlogDto {
   @IsObject()
   @ValidateNested()
   @Type(() => LocalizedStringDto)
-  content: LocalizedStringDto;
+  content?: LocalizedStringDto;
 
   @IsOptional()
   @IsEnum(BlogFont, {
@@ -85,14 +85,21 @@ export class CreateBlogDto {
   @IsMongoId()
   author_user_id?: string;
 
-  @ValidateIf((dto) => dto.author_type === BlogAuthorType.EXTERNAL)
-  @IsOptional()
+  @ValidateIf(
+    (dto) =>
+      dto.author_type === BlogAuthorType.EXTERNAL ||
+      dto.author_type === BlogAuthorType.ADMIN,
+  )
   @IsObject()
   @ValidateNested()
   @Type(() => LocalizedStringDto)
   author_name?: LocalizedStringDto;
 
-  @ValidateIf((dto) => dto.author_type === BlogAuthorType.EXTERNAL)
+  @ValidateIf(
+    (dto) =>
+      dto.author_type === BlogAuthorType.EXTERNAL ||
+      dto.author_type === BlogAuthorType.ADMIN,
+  )
   @IsObject()
   @ValidateNested()
   @Type(() => LocalizedStringDto)
