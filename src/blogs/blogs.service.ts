@@ -493,6 +493,18 @@ private assertValidObjectId(value: string, message: string) {
       return this.resolveExternalAuthorPayload(payload, existingBlog);
     }
 
+    if (authorType === BlogAuthorType.NO_AUTHOR) {
+      return {
+        author_type: BlogAuthorType.NO_AUTHOR,
+        author_user_id: undefined,
+        author_name: undefined,
+        author_description: undefined,
+        author_image: undefined,
+        author_image_url: undefined,
+        user_id: undefined,
+      };
+    }
+
     throw new BadRequestException('Invalid author_type');
   }
 
@@ -643,16 +655,16 @@ private assertValidObjectId(value: string, message: string) {
       throw new BadRequestException('Author is required when publishing a blog');
     }
 
-    const description = blog.author_description as Partial<LocalizedText> | undefined;
+    // const description = blog.author_description as Partial<LocalizedText> | undefined;
 
-    if (
-      !description ||
-      (!description.ar?.trim() && !description.en?.trim())
-    ) {
-      throw new BadRequestException(
-        'Author description is required when publishing a blog',
-      );
-    }
+    // if (
+    //   !description ||
+    //   (!description.ar?.trim() && !description.en?.trim())
+    // ) {
+    //   throw new BadRequestException(
+    //     'Author description is required when publishing a blog',
+    //   );
+    // }
 
     if (
       blog.author_type === BlogAuthorType.ADMIN &&
