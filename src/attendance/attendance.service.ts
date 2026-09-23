@@ -118,7 +118,7 @@ export class AttendanceService {
           submissionId: submission._id,
           email: identity.email,
           ...(identity.name ? { name: identity.name } : {}),
-          status: AttendanceStatusEnum.ACCEPTED,
+          status: AttendanceStatusEnum.NOT_SENT,
         });
         created.push(this.toResponse(doc));
       } catch (error) {
@@ -143,7 +143,7 @@ export class AttendanceService {
         eventId: new Types.ObjectId(dto.eventId),
         email: dto.email.trim().toLowerCase(),
         ...(dto.name?.trim() ? { name: dto.name.trim() } : {}),
-        status: AttendanceStatusEnum.ACCEPTED,
+        status: AttendanceStatusEnum.NOT_SENT,
       });
       return this.toResponse(doc);
     } catch (error) {
@@ -217,7 +217,10 @@ export class AttendanceService {
       }
 
       try {
-        if (!record.invitationToken) {
+        if (
+          record.status === AttendanceStatusEnum.REVOKED ||
+          !record.invitationToken
+        ) {
           record.invitationToken = randomBytes(32).toString('hex');
           await record.save();
         }
@@ -244,12 +247,14 @@ export class AttendanceService {
           ],
         });
 
-        record.status = AttendanceStatusEnum.INVITED;
+        record.status = AttendanceStatusEnum.SENT;
         record.invitationSentAt = new Date();
         await record.save();
 
         deliveries.push({ email: record.email, success: true });
       } catch {
+        record.status = AttendanceStatusEnum.FAILED;
+        await record.save();
         failures.push({ email: record.email, success: false });
       }
     }
@@ -268,14 +273,12 @@ export class AttendanceService {
     const result = await this.attendanceModel.updateMany(
       {
         _id: { $in: objectIds },
-        status: {
-          $in: [
-            AttendanceStatusEnum.ACCEPTED,
-            AttendanceStatusEnum.INVITED,
-          ],
-        },
+        status: AttendanceStatusEnum.SENT,
       },
-      { $set: { status: AttendanceStatusEnum.REVOKED } },
+      {
+        $set: { status: AttendanceStatusEnum.REVOKED },
+        $unset: { invitationToken: 1 },
+      },
     );
 
     const revokedDocs = await this.attendanceModel
@@ -305,7 +308,7 @@ export class AttendanceService {
       .findOneAndUpdate(
         {
           invitationToken: token,
-          status: AttendanceStatusEnum.INVITED,
+          status: AttendanceStatusEnum.SENT,
         },
         {
           $set: {

@@ -81,7 +81,7 @@ export class AttendanceController {
 
   @Post('revoke')
   @Permissions(UserPermission.ATTENDANCE_REVOKE)
-  @ApiOperation({ summary: 'Revoke invitations / accepted attendance' })
+  @ApiOperation({ summary: 'Revoke sent invitations' })
   @ApiOkResponse({ type: RevokeAttendanceResultDto })
   revoke(
     @Body() dto: RevokeAttendanceDto,

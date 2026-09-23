@@ -28,7 +28,7 @@ export class Attendance {
     type: String,
     required: true,
     enum: ATTENDANCE_STATUSES,
-    default: AttendanceStatusEnum.ACCEPTED,
+    default: AttendanceStatusEnum.NOT_SENT,
   })
   status: AttendanceStatusEnum;
 

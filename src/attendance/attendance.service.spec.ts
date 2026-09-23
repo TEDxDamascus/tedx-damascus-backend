@@ -80,7 +80,7 @@ describe('AttendanceService', () => {
       _id: id,
       eventId: new Types.ObjectId(),
       email: 'guest@example.com',
-      status: AttendanceStatusEnum.ACCEPTED,
+      status: AttendanceStatusEnum.NOT_SENT,
       invitationToken: undefined as string | undefined,
       invitationSentAt: undefined as Date | undefined,
       attendedAt: undefined as Date | undefined,
@@ -134,12 +134,55 @@ describe('AttendanceService', () => {
 
       expect(doc.invitationToken).toBe(firstToken);
       expect(emailsService.sendPersonalizedHtml).toHaveBeenCalledTimes(2);
-      expect(doc.status).toBe(AttendanceStatusEnum.INVITED);
+      expect(doc.status).toBe(AttendanceStatusEnum.SENT);
+    });
+
+    it('sets status to failed when invite email fails', async () => {
+      const doc = makeAttendanceDoc();
+      attendanceModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([doc]),
+      });
+      emailsService.sendPersonalizedHtml.mockRejectedValue(
+        new Error('smtp down'),
+      );
+
+      const result = await service.invite({
+        attendanceIds: [doc._id.toString()],
+        subject: 'Invite',
+        htmlMessage: '<p>Hello</p>',
+      });
+
+      expect(result.failed).toBe(1);
+      expect(doc.status).toBe(AttendanceStatusEnum.FAILED);
+    });
+
+    it('issues a new token when re-inviting a revoked attendance', async () => {
+      const doc = makeAttendanceDoc({
+        status: AttendanceStatusEnum.REVOKED,
+        invitationToken: undefined,
+      });
+      attendanceModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([doc]),
+      });
+      emailsService.sendPersonalizedHtml.mockResolvedValue({
+        email: doc.email,
+        success: true,
+      });
+
+      const result = await service.invite({
+        attendanceIds: [doc._id.toString()],
+        subject: 'Invite',
+        htmlMessage: '<p>Hello</p>',
+      });
+
+      expect(result.sent).toBe(1);
+      expect(doc.invitationToken).toBeDefined();
+      expect(doc.status).toBe(AttendanceStatusEnum.SENT);
     });
   });
 
   describe('revoke', () => {
-    it('revokes accepted and invited records', async () => {
+    it('revokes only sent records and clears invitation tokens', async () => {
       const id = new Types.ObjectId();
       attendanceModel.updateMany.mockResolvedValue({ modifiedCount: 1 });
       attendanceModel.find.mockReturnValue({
@@ -154,12 +197,21 @@ describe('AttendanceService', () => {
 
       expect(result.revoked).toBe(1);
       expect(result.attendanceIds).toEqual([id.toString()]);
-      expect(attendanceModel.updateMany).toHaveBeenCalled();
+      expect(attendanceModel.updateMany).toHaveBeenCalledWith(
+        {
+          _id: { $in: [expect.any(Types.ObjectId)] },
+          status: AttendanceStatusEnum.SENT,
+        },
+        {
+          $set: { status: AttendanceStatusEnum.REVOKED },
+          $unset: { invitationToken: 1 },
+        },
+      );
     });
   });
 
   describe('scan', () => {
-    it('checks in invited attendance atomically', async () => {
+    it('checks in sent attendance atomically', async () => {
       const doc = makeAttendanceDoc({
         status: AttendanceStatusEnum.ATTENDED,
         attendedAt: new Date('2026-08-21T10:00:00.000Z'),
@@ -175,6 +227,20 @@ describe('AttendanceService', () => {
 
       expect(result.valid).toBe(true);
       expect(result.attendedAt).toEqual(doc.attendedAt);
+      expect(attendanceModel.findOneAndUpdate).toHaveBeenCalledWith(
+        {
+          invitationToken: 'token-1',
+          status: AttendanceStatusEnum.SENT,
+        },
+        {
+          $set: {
+            status: AttendanceStatusEnum.ATTENDED,
+            attendedAt: expect.any(Date),
+            checkedInBy: expect.any(Types.ObjectId),
+          },
+        },
+        { new: true },
+      );
     });
 
     it('returns already_attended on double scan', async () => {
