@@ -26,6 +26,7 @@ import { AttendanceService } from './attendance.service';
 import {
   AttendanceResponseDto,
   CreateFromSubmissionsResultDto,
+  CreateManualAttendanceResultDto,
   RevokeAttendanceResultDto,
   ScanAttendanceResultDto,
 } from './dto/attendance-response.dto';
@@ -56,11 +57,11 @@ export class AttendanceController {
 
   @Post('manual')
   @Permissions(UserPermission.ATTENDANCE_CREATE)
-  @ApiOperation({ summary: 'Manually add an attendee' })
-  @ApiOkResponse({ type: AttendanceResponseDto })
+  @ApiOperation({ summary: 'Manually add attendees by email (bulk)' })
+  @ApiOkResponse({ type: CreateManualAttendanceResultDto })
   createManual(
     @Body() dto: CreateManualAttendanceDto,
-  ): Promise<AttendanceResponseDto> {
+  ): Promise<CreateManualAttendanceResultDto> {
     return this.attendanceService.createManual(dto);
   }
 

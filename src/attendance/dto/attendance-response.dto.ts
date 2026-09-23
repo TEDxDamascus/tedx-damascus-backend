@@ -56,6 +56,22 @@ export class CreateFromSubmissionsResultDto {
   failures: CreateFromSubmissionsFailureDto[];
 }
 
+export class CreateManualAttendanceFailureDto {
+  @ApiProperty()
+  email: string;
+
+  @ApiProperty()
+  reason: string;
+}
+
+export class CreateManualAttendanceResultDto {
+  @ApiProperty({ type: [AttendanceResponseDto] })
+  created: AttendanceResponseDto[];
+
+  @ApiProperty({ type: [CreateManualAttendanceFailureDto] })
+  failures: CreateManualAttendanceFailureDto[];
+}
+
 export class ScanAttendanceResultDto {
   @ApiProperty()
   valid: boolean;

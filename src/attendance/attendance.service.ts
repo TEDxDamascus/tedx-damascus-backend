@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -25,6 +24,7 @@ import {
 import {
   AttendanceResponseDto,
   CreateFromSubmissionsResultDto,
+  CreateManualAttendanceResultDto,
   RevokeAttendanceResultDto,
   ScanAttendanceResultDto,
 } from './dto/attendance-response.dto';
@@ -135,25 +135,40 @@ export class AttendanceService {
 
   async createManual(
     dto: CreateManualAttendanceDto,
-  ): Promise<AttendanceResponseDto> {
+  ): Promise<CreateManualAttendanceResultDto> {
     await this.assertEventExists(dto.eventId);
 
-    try {
-      const doc = await this.attendanceModel.create({
-        eventId: new Types.ObjectId(dto.eventId),
-        email: dto.email.trim().toLowerCase(),
-        ...(dto.name?.trim() ? { name: dto.name.trim() } : {}),
-        status: AttendanceStatusEnum.NOT_SENT,
-      });
-      return this.toResponse(doc);
-    } catch (error) {
-      if (this.isDuplicateKeyError(error)) {
-        throw new ConflictException(
-          'Attendance already exists for this email on this event',
-        );
+    const eventObjectId = new Types.ObjectId(dto.eventId);
+    const created: AttendanceResponseDto[] = [];
+    const failures: CreateManualAttendanceResultDto['failures'] = [];
+    const seen = new Set<string>();
+
+    for (const attendee of dto.attendees) {
+      const email = attendee.email.trim().toLowerCase();
+      if (seen.has(email)) {
+        failures.push({ email, reason: 'duplicate_in_request' });
+        continue;
       }
-      throw error;
+      seen.add(email);
+
+      try {
+        const doc = await this.attendanceModel.create({
+          eventId: eventObjectId,
+          email,
+          ...(attendee.name?.trim() ? { name: attendee.name.trim() } : {}),
+          status: AttendanceStatusEnum.NOT_SENT,
+        });
+        created.push(this.toResponse(doc));
+      } catch (error) {
+        if (this.isDuplicateKeyError(error)) {
+          failures.push({ email, reason: 'duplicate' });
+          continue;
+        }
+        throw error;
+      }
     }
+
+    return { created, failures };
   }
 
   async findAll(query: ListAttendanceQueryDto) {

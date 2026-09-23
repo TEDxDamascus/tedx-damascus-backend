@@ -301,7 +301,7 @@ describe('AttendanceService', () => {
       await expect(
         service.createManual({
           eventId: new Types.ObjectId().toString(),
-          email: 'a@b.com',
+          attendees: [{ email: 'a@b.com' }],
         }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
