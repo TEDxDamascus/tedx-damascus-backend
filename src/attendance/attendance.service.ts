@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -43,6 +44,8 @@ import { extractSubmissionIdentity } from './utils/extract-submission-email.util
 
 @Injectable()
 export class AttendanceService {
+  private readonly logger = new Logger(AttendanceService.name);
+
   constructor(
     @InjectModel(Attendance.name)
     private readonly attendanceModel: Model<AttendanceDocument>,
@@ -210,11 +213,19 @@ export class AttendanceService {
   }
 
   async invite(dto: InviteAttendanceDto) {
+    this.logger.log(
+      `Invitation start: count=${dto.attendanceIds.length} subject="${dto.subject}"`,
+    );
+
     const objectIds = dto.attendanceIds.map((id) => new Types.ObjectId(id));
     const records = await this.attendanceModel
       .find({ _id: { $in: objectIds } })
       .exec();
     const byId = new Map(records.map((r) => [r._id.toString(), r]));
+
+    this.logger.log(
+      `Invitation records loaded: requested=${dto.attendanceIds.length} found=${records.length}`,
+    );
 
     const deliveries: SentEmailDto[] = [];
     const failures: FailedEmailDto[] = [];
@@ -222,22 +233,43 @@ export class AttendanceService {
     for (const attendanceId of dto.attendanceIds) {
       const record = byId.get(attendanceId);
       if (!record) {
-        failures.push({ email: attendanceId, success: false });
+        this.logger.warn(
+          `Invitation skipped: attendance not found id=${attendanceId}`,
+        );
+        failures.push({
+          email: attendanceId,
+          success: false,
+          reason: 'attendance_not_found',
+        });
         continue;
       }
 
       if (record.status === AttendanceStatusEnum.ATTENDED) {
-        failures.push({ email: record.email, success: false });
+        this.logger.warn(
+          `Invitation skipped: already attended email=${record.email} id=${attendanceId}`,
+        );
+        failures.push({
+          email: record.email,
+          success: false,
+          reason: 'already_attended',
+        });
         continue;
       }
 
       try {
+        this.logger.log(
+          `Invitation sending: email=${record.email} id=${attendanceId} status=${record.status}`,
+        );
+
         if (
           record.status === AttendanceStatusEnum.REVOKED ||
           !record.invitationToken
         ) {
           record.invitationToken = randomBytes(32).toString('hex');
           await record.save();
+          this.logger.log(
+            `Invitation token issued for email=${record.email} id=${attendanceId}`,
+          );
         }
 
         const qrBuffer = await QRCode.toBuffer(record.invitationToken, {
@@ -267,20 +299,40 @@ export class AttendanceService {
         await record.save();
 
         deliveries.push({ email: record.email, success: true });
-      } catch {
+        this.logger.log(
+          `Invitation sent successfully: email=${record.email} id=${attendanceId}`,
+        );
+      } catch (error) {
+        const reason =
+          error instanceof Error ? error.message : String(error);
+        this.logger.error(
+          `Invitation failed: email=${record.email} id=${attendanceId} reason=${reason}`,
+          error instanceof Error ? error.stack : undefined,
+        );
         record.status = AttendanceStatusEnum.FAILED;
         await record.save();
-        failures.push({ email: record.email, success: false });
+        failures.push({ email: record.email, success: false, reason });
       }
     }
 
-    return {
+    const result = {
       message: 'Invitation emails processed',
       sent: deliveries.length,
       failed: failures.length,
       deliveries,
       failures,
     };
+
+    this.logger.log(
+      `Invitation finished: sent=${result.sent} failed=${result.failed}`,
+    );
+    if (failures.length > 0) {
+      this.logger.warn(
+        `Invitation failures: ${failures.map((f) => `${f.email} (${f.reason ?? 'unknown'})`).join('; ')}`,
+      );
+    }
+
+    return result;
   }
 
   async revoke(dto: RevokeAttendanceDto): Promise<RevokeAttendanceResultDto> {

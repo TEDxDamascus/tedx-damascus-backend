@@ -153,6 +153,13 @@ describe('AttendanceService', () => {
       });
 
       expect(result.failed).toBe(1);
+      expect(result.failures).toEqual([
+        {
+          email: doc.email,
+          success: false,
+          reason: 'smtp down',
+        },
+      ]);
       expect(doc.status).toBe(AttendanceStatusEnum.FAILED);
     });
 

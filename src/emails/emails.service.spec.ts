@@ -128,6 +128,7 @@ describe('EmailsService', () => {
       {
         email: 'failed@example.com',
         success: false,
+        reason: 'SMTP rejected recipient',
       },
     ]);
   });

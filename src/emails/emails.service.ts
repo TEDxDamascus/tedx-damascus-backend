@@ -54,14 +54,23 @@ export class EmailsService {
     dto: SendBulkEmailDto,
     image?: Express.Multer.File,
   ): Promise<SendBulkEmailResultDto> {
+    this.logger.log(
+      `Bulk email start: recipients=${dto.emails.length} subject="${dto.subject}" hasUpload=${Boolean(image)} hasImageUrl=${Boolean(dto.imageUrl)}`,
+    );
+
     const smtpConfig = this.getSmtpConfig();
     const transporter = this.createTransporter(smtpConfig);
     const uniqueEmails = [...new Set(dto.emails.map((email) => email.trim()))];
     const deliveries: SentEmailDto[] = [];
     const failures: SendBulkEmailResultDto['failures'] = [];
 
+    this.logger.log(
+      `Bulk email unique recipients=${uniqueEmails.length} (from ${dto.emails.length} requested)`,
+    );
+
     for (const email of uniqueEmails) {
       try {
+        this.logger.log(`Sending bulk email to ${email}...`);
         const delivery = await this.sendToRecipient(
           transporter,
           smtpConfig,
@@ -73,36 +82,61 @@ export class EmailsService {
           dto.unsubscribeUrls?.[email],
         );
         deliveries.push(delivery);
+        this.logger.log(`Bulk email sent successfully to ${email}`);
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        this.logger.error(`Failed to send email to ${email}: ${message}`);
+        const message = this.errorMessage(error);
+        this.logger.error(`Failed to send email to ${email}: ${message}`, error instanceof Error ? error.stack : undefined);
         failures.push({ email, success: false, reason: message });
       }
     }
 
     transporter.close();
 
-    return {
+    const result = {
       message: 'Bulk email processed',
       sent: uniqueEmails.length - failures.length,
       failed: failures.length,
       deliveries,
       failures,
     };
+
+    this.logger.log(
+      `Bulk email finished: sent=${result.sent} failed=${result.failed}`,
+    );
+    if (failures.length > 0) {
+      this.logger.warn(
+        `Bulk email failures: ${failures.map((f) => `${f.email} (${f.reason ?? 'unknown'})`).join('; ')}`,
+      );
+    }
+
+    return result;
   }
 
   async sendPersonalizedHtml(
     params: SendPersonalizedHtmlParams,
   ): Promise<SentEmailDto> {
+    this.logger.log(
+      `Personalized email start: to=${params.to} subject="${params.subject}" attachments=${params.inlineAttachments?.length ?? 0} hasImageUrl=${Boolean(params.imageUrl)}`,
+    );
+
     const smtpConfig = this.getSmtpConfig();
     const transporter = this.createTransporter(smtpConfig);
 
     try {
-      return await this.sendPersonalizedToRecipient(
+      const delivery = await this.sendPersonalizedToRecipient(
         transporter,
         smtpConfig,
         params,
       );
+      this.logger.log(`Personalized email sent successfully to ${params.to}`);
+      return delivery;
+    } catch (error) {
+      const message = this.errorMessage(error);
+      this.logger.error(
+        `Personalized email failed for ${params.to}: ${message}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw error;
     } finally {
       transporter.close();
     }
@@ -115,12 +149,15 @@ export class EmailsService {
     const fromEmail = this.config.smtpFromEmail || user;
 
     if (!host || !user || !pass || !fromEmail) {
+      this.logger.error(
+        `SMTP config incomplete: host=${Boolean(host)} user=${Boolean(user)} pass=${Boolean(pass)} fromEmail=${Boolean(fromEmail)}`,
+      );
       throw new BadRequestException(
         'SMTP_HOST, SMTP_USER, SMTP_PASS, and SMTP_FROM_EMAIL must be configured',
       );
     }
 
-    return {
+    const smtpConfig = {
       host,
       port: this.config.smtpPort ?? 465,
       secure: this.config.smtpSecure ?? true,
@@ -129,6 +166,16 @@ export class EmailsService {
       fromEmail,
       fromName: this.config.smtpFromName ?? 'TEDx Damascus',
     };
+
+    this.logger.log(
+      `SMTP config: host=${smtpConfig.host} port=${smtpConfig.port} secure=${smtpConfig.secure} user=${smtpConfig.user} from="${smtpConfig.fromName}" <${smtpConfig.fromEmail}> passLength=${pass.length}`,
+    );
+
+    return smtpConfig;
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 
   private createTransporter(config: SmtpConfig): Transporter {
@@ -203,6 +250,10 @@ export class EmailsService {
         </div>`
       : params.htmlMessage;
 
+    this.logger.debug(
+      `Rendering email template for ${params.to}: hasBanner=${Boolean(bannerAttachment)} hasQr=${Boolean(qrAttachment)}`,
+    );
+
     const html = this.renderTemplate('email.html', {
       title: 'TEDx Damascus',
       image: this.buildImageHtml(
@@ -216,7 +267,11 @@ export class EmailsService {
         : '',
     });
 
-    await transporter.sendMail({
+    this.logger.log(
+      `Calling SMTP sendMail: to=${params.to} from=${config.fromEmail} subject="${params.subject}" attachmentCount=${params.inlineAttachments?.length ?? 0}`,
+    );
+
+    const info = await transporter.sendMail({
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: params.to,
       replyTo: config.fromEmail,
@@ -233,6 +288,10 @@ export class EmailsService {
         cid: attachment.cid,
       })),
     });
+
+    this.logger.log(
+      `SMTP accepted message for ${params.to}: messageId=${info?.messageId ?? 'n/a'} response=${info?.response ?? 'n/a'}`,
+    );
 
     return {
       email: params.to,
@@ -255,6 +314,11 @@ export class EmailsService {
     const templatePath = existsSync(distTemplatePath)
       ? distTemplatePath
       : sourceTemplatePath;
+
+    this.logger.log(
+      `Loading email template: path=${templatePath} source=${existsSync(distTemplatePath) ? 'dist' : 'src'}`,
+    );
+
     let html = readFileSync(templatePath, 'utf-8');
 
     for (const [key, value] of Object.entries(variables)) {
